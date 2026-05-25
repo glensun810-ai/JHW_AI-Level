@@ -28,6 +28,18 @@
       <text class="page-checkin__reward-pop-text">{{ rewardText }}</text>
     </view>
 
+    <!-- 签到后分享引导（损失厌恶：断签会重置） -->
+    <view v-if="showSharePrompt" class="page-checkin__share-prompt">
+      <text class="page-checkin__share-prompt-icon">📤</text>
+      <view class="page-checkin__share-prompt-body">
+        <text class="page-checkin__share-prompt-title">{{ sharePromptTitle }}</text>
+        <text class="page-checkin__share-prompt-desc">{{ sharePromptDesc }}</text>
+      </view>
+      <button class="page-checkin__share-prompt-btn" open-type="share" @click="onShareClick">
+        炫耀一下
+      </button>
+    </view>
+
     <!-- 日历 -->
     <view class="page-checkin__calendar-wrap">
       <CheckInCalendar
@@ -85,7 +97,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import CheckInCalendar from '@/components/CheckInCalendar/CheckInCalendar.vue';
-import { doCheckIn as checkIn, fetchWeeklyStats } from '@/utils/api.js';
+import { doCheckIn as checkIn, fetchWeeklyStats, getUserOpenidSync, requestSubscribeMessage } from '@/utils/api.js';
 import { trackCheckIn, trackPageView } from '@/utils/analytics.js';
 import { useExperienceStore } from '@/store/experience.js';
 
@@ -97,6 +109,9 @@ const justChecked = ref(false);
 const showReward = ref(false);
 const rewardIcon = ref('');
 const rewardText = ref('');
+const showSharePrompt = ref(false);
+const sharePromptTitle = ref('');
+const sharePromptDesc = ref('');
 
 const now = new Date();
 const calYear = ref(now.getFullYear());
@@ -104,18 +119,18 @@ const calMonth = ref(now.getMonth() + 1);
 
 const rewards = [
   { day: 1, desc: '「坚持打卡」徽章' },
-  { day: 3, desc: '额外 1 次免费测试次数' },
+  { day: 3, desc: '+30 XP 进化值' },
   { day: 5, desc: '解锁 1 道签到专属趣味题' },
-  { day: 7, desc: '解锁称号「AI践行者」+ 额外 2 次测试' },
+  { day: 7, desc: '解锁称号「AI践行者」+ 50 XP' },
   { day: 14, desc: '解锁称号「AI探索家」' },
   { day: 30, desc: '解锁称号「AI进化者」+ 专属段位卡边框' },
 ];
 
 const REWARD_SPECIAL = {
   1:  { icon: '🏅', text: '获得「坚持打卡」徽章！' },
-  3:  { icon: '🎫', text: '获得额外 1 次免费测试！' },
+  3:  { icon: '⚡', text: '获得 +30 XP 进化值！' },
   5:  { icon: '🎮', text: '解锁 1 道签到专属趣味题！' },
-  7:  { icon: '👑', text: '解锁称号「AI践行者」！+ 额外 2 次测试' },
+  7:  { icon: '👑', text: '解锁称号「AI践行者」！+50 XP' },
   14: { icon: '🔭', text: '解锁称号「AI探索家」！' },
   30: { icon: '🌟', text: '解锁称号「AI进化者」！+ 专属段位卡边框' },
 };
@@ -135,7 +150,7 @@ onMounted(async () => {
       checkedDates.value = res.data.checkedDates || loadLocalCheckedDates();
       weeklyRising.value = res.data.weeklyRising || [];
     }
-  } catch {
+  } catch (e) {
     consecutiveDays.value = uni.getStorageSync('checkin_streak') || 0;
     checkedDates.value = loadLocalCheckedDates();
   }
@@ -199,14 +214,39 @@ async function handleCheckIn() {
     uni.showToast({ title: `签到成功！已连续 ${newStreak} 天`, icon: 'success' });
   }
 
-  // 同步到服务端 + F14 经验值
-  // v0.9: 签到奖励（额外测试次数）改由服务端 getWeeklyStats 发放 bonusTestsRemaining
-  // 客户端不再直接修改本地 test_count，由 submitScore 服务端统一校验
+  // 签到后分享引导（损失厌恶框架）
+  if (newStreak >= 3) {
+    sharePromptTitle.value = `已连续签到 ${newStreak} 天！`;
+    sharePromptDesc.value = '断签会重置天数哦～分享给好友互相提醒';
+  } else {
+    sharePromptTitle.value = '签到成功！';
+    sharePromptDesc.value = '分享你的进化之路，看看好友的段位';
+  }
+  showSharePrompt.value = true;
+  setTimeout(() => { showSharePrompt.value = false; }, 8000);
+
+  // 同步到服务端 + 经验值
   trackCheckIn(newStreak);
   const res = await checkIn();
   // 云函数确认成功后再加经验值
   if (res.code === 0) {
     useExperienceStore().addExp('checkin');
+    // v1.0: 连续签到3天后提示开启签到提醒
+    if (newStreak >= 3 && newStreak % 3 === 0) {
+      setTimeout(() => {
+        uni.showModal({
+          title: '开启签到提醒',
+          content: '你已经连续签到多天，开启提醒不怕断签哦（断签会重置连续天数）',
+          confirmText: '开启提醒',
+          cancelText: '暂不需要',
+          success: (modalRes) => {
+            if (modalRes.confirm) {
+              requestSubscribeMessage(['checkinReminder']);
+            }
+          },
+        });
+      }, 2000);
+    }
   } else {
     // 服务端失败 → 回滚到快照状态
     checkedToday.value = snapshot.checkedToday;
@@ -222,15 +262,26 @@ async function handleCheckIn() {
   setTimeout(() => { justChecked.value = false; }, 1500);
 }
 
-onShareAppMessage(() => ({
-  title: '连续签到打卡！测测你的AI段位变化了吗？🧬',
-  path: '/pages/index/index',
-}));
+function onShareClick() {
+  trackCheckIn(consecutiveDays.value, 'share');
+}
 
-onShareTimeline(() => ({
-  title: '每日打卡追踪AI段位变化，看看你的进化之路 🚀',
-  query: '',
-}));
+onShareAppMessage(() => {
+  const uid = getUserOpenidSync();
+  return {
+    title: `连续签到${consecutiveDays.value}天！测测你的AI段位变化了吗？🧬`,
+    path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
+    imageUrl: '/static/images/default-share.png',
+  };
+});
+
+onShareTimeline(() => {
+  const uid = getUserOpenidSync();
+  return {
+    title: '每日打卡追踪AI段位变化，看看你的进化之路 🚀',
+    query: uid ? `from_uid=${uid}` : '',
+  };
+});
 </script>
 
 <style scoped lang="scss">
@@ -324,6 +375,54 @@ onShareTimeline(() => ({
       font-size: 26rpx;
       color: $color-gold;
       font-weight: 500;
+    }
+  }
+
+  // ====== 签到后分享引导 ======
+  &__share-prompt {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+    padding: 20rpx 24rpx;
+    margin-bottom: 24rpx;
+    background: rgba(124, 58, 237, 0.08);
+    border: 1rpx solid rgba(124, 58, 237, 0.2);
+    border-radius: 16rpx;
+    animation: fade-in 0.5s ease-out both;
+
+    &-icon {
+      font-size: 36rpx;
+      flex-shrink: 0;
+    }
+
+    &-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4rpx;
+      min-width: 0;
+    }
+
+    &-title {
+      font-size: 26rpx;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    &-desc {
+      font-size: 22rpx;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    &-btn {
+      flex-shrink: 0;
+      padding: 12rpx 24rpx;
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      border-radius: 24rpx;
+      font-size: 24rpx;
+      color: #fff;
+      border: none;
+      line-height: 1.4;
     }
   }
 

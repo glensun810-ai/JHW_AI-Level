@@ -28,14 +28,16 @@ exports.main = async (event, context) => {
 
     // 缓存命中
     if (cachedData && (now - cacheTime) < CACHE_TTL) {
-      // 更新当前用户的段位和百分位（这部分不能缓存）
-      const userData = await getUserStats(OPENID);
-
+      const [userData, testingNow] = await Promise.all([
+        getUserStats(OPENID),
+        getTestingNow(),
+      ]);
       return {
         code: 0,
         message: 'ok (cached)',
         data: {
           ...cachedData,
+          testingNow,
           userTier: userData.userTier,
           userPercentile: userData.userPercentile,
         },
@@ -67,10 +69,12 @@ exports.main = async (event, context) => {
     cachedData = { totalUsers, distribution };
     cacheTime = now;
 
+    const testingNow = await getTestingNow();
+
     // 获取当前用户数据
     const userData = await getUserStats(OPENID);
 
-    console.log(`[getTierDistribution] totalUsers=${totalUsers} cached=true`);
+    console.log(`[getTierDistribution] totalUsers=${totalUsers} testingNow=${testingNow} cached=true`);
 
     return {
       code: 0,
@@ -78,6 +82,7 @@ exports.main = async (event, context) => {
       data: {
         totalUsers,
         distribution,
+        testingNow,
         userTier: userData.userTier,
         userPercentile: userData.userPercentile,
       },
@@ -123,5 +128,20 @@ async function getUserStats(openid) {
     };
   } catch (err) {
     return { userTier: '未知', userPercentile: 0 };
+  }
+}
+
+/**
+ * 统计近 10 分钟内活跃测试人数
+ */
+async function getTestingNow() {
+  try {
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const { total } = await db.collection('test_records')
+      .where({ createdAt: db.command.gte(tenMinAgo) })
+      .count();
+    return total;
+  } catch (e) {
+    return 0;
   }
 }

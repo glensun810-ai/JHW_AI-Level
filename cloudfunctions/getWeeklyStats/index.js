@@ -9,6 +9,44 @@ exports.main = async (event, context) => {
     const OPENID = wxContext.OPENID;
     const action = event.action || 'stats';
 
+    // 获取当前用户 openid（供前端分享跟踪用）
+    if (action === 'getOpenid') {
+      return { code: 0, data: { openid: OPENID } };
+    }
+
+    // XP 进化值服务端同步
+    if (action === 'syncExp') {
+      const { exp, level } = event;
+      if (event.mode === 'get') {
+        // 从服务端读取 XP，供 app 启动时合并
+        const { data: userData } = await db.collection('users')
+          .where({ _openid: OPENID })
+          .field({ exp: true, level: true })
+          .get();
+        if (userData.length > 0) {
+          return { code: 0, data: { exp: userData[0].exp || 0, level: userData[0].level || 1 } };
+        }
+        return { code: 0, data: { exp: 0, level: 1 } };
+      }
+      // 写入：取客户端和服务端的最大值
+      if (exp !== undefined) {
+        const { data: existing } = await db.collection('users')
+          .where({ _openid: OPENID })
+          .field({ exp: true })
+          .get();
+        const serverExp = existing.length > 0 ? (existing[0].exp || 0) : 0;
+        const mergedExp = Math.max(exp, serverExp);
+        const mergedLevel = Math.max(level || 1, existing.length > 0 ? (existing[0].level || 1) : 1);
+        await db.collection('users')
+          .where({ _openid: OPENID })
+          .update({
+            data: { exp: mergedExp, level: mergedLevel, updatedAt: new Date() },
+          });
+        return { code: 0, data: { exp: mergedExp, level: mergedLevel } };
+      }
+      return { code: 0, data: null };
+    }
+
     // 签到打卡
     if (action === 'checkin') {
       const today = new Date().toISOString().slice(0, 10);
@@ -50,16 +88,11 @@ exports.main = async (event, context) => {
         throw e;
       }
 
-      // 更新用户连续签到天数 + 签到奖励（额外测试次数）
-      const bonusAdd = consecutiveDays === 3 ? 1 : consecutiveDays === 7 ? 2 : 0;
-      const userUpdateData = { consecutiveDays, updatedAt: new Date() };
-      if (bonusAdd > 0) {
-        userUpdateData.bonusTestsRemaining = _.inc(bonusAdd);
-      }
+      // 更新用户连续签到天数
       await db.collection('users')
         .where({ _openid: OPENID })
         .update({
-          data: userUpdateData,
+          data: { consecutiveDays, updatedAt: new Date() },
         });
 
       console.log(`[getWeeklyStats] checkin openid=${OPENID.slice(0,8)}... day=${consecutiveDays}`);
@@ -103,6 +136,54 @@ exports.main = async (event, context) => {
       return { code: 0, message: '反馈已记录', data: null };
     }
 
+    // 知识卡收藏
+    if (action === 'collectCard') {
+      const { cardId } = event;
+      if (!cardId) return { code: 400, message: '缺少 cardId', data: null };
+      await db.collection('users')
+        .where({ _openid: OPENID })
+        .update({
+          data: {
+            collectedCards: _.addToSet(cardId),
+            updatedAt: new Date(),
+          },
+        });
+      const { data: updated } = await db.collection('users')
+        .where({ _openid: OPENID })
+        .field({ collectedCards: true })
+        .get();
+      return {
+        code: 0,
+        data: { collectedCards: updated.length > 0 ? (updated[0].collectedCards || []) : [] },
+      };
+    }
+
+    // 获取小程序码（供段位长图使用）
+    if (action === 'getMiniCode') {
+      try {
+        const qrRes = await cloud.openapi.wxacode.getUnlimited({
+          scene: 'share',
+          page: 'pages/index/index',
+          width: 280,
+          autoColor: false,
+          lineColor: { r: 255, g: 215, b: 0 },
+          isHyaline: true,
+        });
+        const fileID = await cloud.uploadFile({
+          cloudPath: `qrcodes/${OPENID}_share.png`,
+          fileContent: qrRes.buffer,
+        });
+        return {
+          code: 0,
+          data: { miniCodeUrl: fileID.fileID },
+        };
+      } catch (e) {
+        // getUnlimited 需要云函数权限，降级返回空
+        console.log('[getWeeklyStats] getMiniCode failed:', e.message);
+        return { code: 0, data: { miniCodeUrl: '' } };
+      }
+    }
+
     // 默认：获取每周统计
     // 本周晋升最快
     const weekStart = getWeekStart();
@@ -139,9 +220,10 @@ exports.main = async (event, context) => {
 
     const { data: userData } = await db.collection('users')
       .where({ _openid: OPENID })
-      .field({ consecutiveDays: true })
+      .field({ consecutiveDays: true, collectedCards: true })
       .get();
     const consecutiveDays = userData[0]?.consecutiveDays || 0;
+    const collectedCards = userData[0]?.collectedCards || [];
 
     // 获取所有签到日期（用于日历展示）
     const { data: allCheckIns } = await db.collection('check_ins')
@@ -194,6 +276,7 @@ exports.main = async (event, context) => {
         checkedToday: todayCheck.length > 0,
         consecutiveDays,
         checkedDates,
+        collectedCards,
         weeklyRising: weeklyRising.map(r => ({
           nickname: nicknameMap[r._openid] || '匿名用户',
           prevTier: r.prevTier,
@@ -243,7 +326,7 @@ function formatRelativeDate(dateStr) {
     if (diffDays <= 7) return `${diffDays}天前`;
     if (diffDays <= 30) return `${Math.floor(diffDays / 7)}周前`;
     return `${Math.floor(diffDays / 30)}个月前`;
-  } catch {
+  } catch (e) {
     return '未知';
   }
 }

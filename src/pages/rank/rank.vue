@@ -20,6 +20,9 @@
         @change="onPrivacyToggle"
       />
     </view>
+    <view class="page-rank__privacy-link" @click="showPrivacyModal = true">
+      <text>📜 隐私政策与用户协议</text>
+    </view>
 
     <!-- 4 Tab -->
     <view class="page-rank__tabs">
@@ -39,6 +42,21 @@
     <scroll-view v-if="activeTab === 'friend'" scroll-y class="page-rank__list">
       <view v-if="friendLoading" class="page-rank__loading">加载中…</view>
       <template v-else>
+        <!-- 段位悬赏结果通知 -->
+        <view v-if="bountyResults.length > 0" class="page-rank__bounty-section">
+          <view v-for="b in bountyResults" :key="b._id" class="page-rank__bounty-card" @click="dismissBounty(b._id)">
+            <view class="page-rank__bounty-header">
+              <text class="page-rank__bounty-icon">{{ b.isCorrect ? '🎯' : '❌' }}</text>
+              <text class="page-rank__bounty-title">
+                {{ b.isCorrect ? '猜对了！' : '猜错了…' }}
+              </text>
+            </view>
+            <text class="page-rank__bounty-detail">
+              你猜 {{ b.targetName }} 是「{{ b.guessedTier }}」→ 实际是「{{ b.actualTier }}」（{{ b.actualScore }}分）
+            </text>
+            <text class="page-rank__bounty-hint">点击关闭</text>
+          </view>
+        </view>
         <view v-if="isGlobalFallback && friendList.length > 0" class="page-rank__fallback-notice">
           <text>ℹ️ 暂未添加好友，展示全服高手榜。分享给好友即可查看好友排名</text>
         </view>
@@ -65,6 +83,33 @@
           <text class="page-rank__empty-text">暂无好友数据</text>
           <text class="page-rank__empty-hint">分享给好友，看看他们的段位吧</text>
           <button class="page-rank__empty-btn" open-type="share">📤 邀请好友来测</button>
+        </view>
+      </template>
+    </scroll-view>
+
+    <!-- Tab 1.5: 知识星榜 -->
+    <scroll-view v-if="activeTab === 'star'" scroll-y class="page-rank__list">
+      <view v-if="starLoading" class="page-rank__loading">加载中…</view>
+      <template v-else>
+        <view v-if="myCollectRank" class="page-rank__star-my">
+          <text class="page-rank__star-my-icon">🌟</text>
+          <text class="page-rank__star-my-text">你收集了 {{ myCollectCount }} 颗星，排名第 {{ myCollectRank }} 位</text>
+        </view>
+        <view v-if="starList.length > 0" class="page-rank__items">
+          <view v-for="(s, i) in starList" :key="s._openid || i" class="page-rank__item"
+            :class="{ 'page-rank__item--me': s._openid === myOpenid }">
+            <text class="page-rank__rank" :class="{ 'page-rank__rank--top': i < 3 }">{{ i + 1 }}</text>
+            <image class="page-rank__avatar" :src="s.avatar || defaultAvatar" mode="aspectFill" />
+            <view class="page-rank__info">
+              <text class="page-rank__name">{{ s.nickname || '匿名用户' }}</text>
+            </view>
+            <text class="page-rank__score">🌟 {{ s.collectCount || 0 }}颗</text>
+          </view>
+        </view>
+        <view v-else class="page-rank__empty">
+          <text class="page-rank__empty-icon">🌌</text>
+          <text class="page-rank__empty-text">暂无好友收集数据</text>
+          <text class="page-rank__empty-hint">分享给好友，比比谁的知识星更多</text>
         </view>
       </template>
     </scroll-view>
@@ -151,18 +196,21 @@
         </view>
       </template>
     </scroll-view>
+    <PrivacyModal :forceShow="showPrivacyModal" @close="showPrivacyModal = false" />
   </view>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
-import { fetchFriendRank, fetchTierDistribution, fetchWeeklyStats, updatePrivacy } from '@/utils/api.js';
+import { fetchFriendRank, fetchTierDistribution, fetchWeeklyStats, updatePrivacy, markBountyViewed, getUserOpenidSync } from '@/utils/api.js';
 import { TIERS } from '@/utils/tier.js';
 import { trackPageView, trackRankingView } from '@/utils/analytics.js';
+import PrivacyModal from '@/components/PrivacyModal/PrivacyModal.vue';
 
 const tabs = ref([
   { key: 'friend', label: '好友段位榜' },
+  { key: 'star', label: '知识星榜' },
   { key: 'national', label: '全国分布' },
   { key: 'weekly', label: '本周晋升最快' },
   { key: 'group', label: '群挑战榜' },
@@ -170,6 +218,7 @@ const tabs = ref([
 
 const activeTab = ref('friend');
 const privacyHidden = ref(false);
+const showPrivacyModal = ref(false);
 const myOpenid = ref('');
 
 // Tab 1
@@ -191,8 +240,17 @@ const weeklyRising = ref([]);
 const groupLoading = ref(true);
 const groupList = ref([]);
 
+// Tab 1.5: 知识星榜
+const starLoading = ref(true);
+const starList = ref([]);
+const myCollectRank = ref(null);
+const myCollectCount = ref(0);
+
 // 好友榜降级标记
 const isGlobalFallback = ref(false);
+
+// 段位悬赏结果
+const bountyResults = ref([]);
 
 const defaultAvatar = '/static/icons/default-avatar.png';
 
@@ -206,7 +264,7 @@ onMounted(() => {
   loadFriendRank();
   trackRankingView('friend');
   updateCountdown();
-  countdownTimer = setInterval(updateCountdown, 60000);
+  countdownTimer = setInterval(updateCountdown, 1000);
   // F12: 截图引导 3 秒后自动消失
   setTimeout(() => { showScreenshotHint.value = false; }, 3000);
 });
@@ -222,7 +280,8 @@ function updateCountdown() {
   const diff = midnight - now;
   const hours = Math.floor(diff / 3600000);
   const minutes = Math.floor((diff % 3600000) / 60000);
-  countdownText.value = `${hours}小时${minutes}分钟`;
+  const seconds = Math.floor((diff % 60000) / 1000);
+  countdownText.value = `${hours}小时${minutes}分钟${seconds}秒`;
 }
 
 function switchTab(key) {
@@ -230,6 +289,7 @@ function switchTab(key) {
   trackRankingView(key);
   if (!loadedTabs.value[key]) {
     loadedTabs.value[key] = true;
+    if (key === 'star') loadStarRank();
     if (key === 'national') loadDistribution();
     if (key === 'weekly') loadWeeklyRising();
     if (key === 'group') loadGroupRank();
@@ -239,44 +299,62 @@ function switchTab(key) {
 // ── Tab 1: 好友段位榜 ──
 async function loadFriendRank() {
   friendLoading.value = true;
-  const res = await fetchFriendRank();
-  if (res.code === 0 && res.data) {
-    friendList.value = res.data.friendRankings || [];
-    myOpenid.value = res.data.userOpenid || '';
-    isGlobalFallback.value = res.data.isGlobalFallback || false;
-    tabs.value[0].label = isGlobalFallback.value ? '全服高手榜' : '好友段位榜';
+  try {
+    const res = await fetchFriendRank();
+    if (res.code === 0 && res.data) {
+      friendList.value = res.data.friendRankings || [];
+      myOpenid.value = res.data.userOpenid || '';
+      isGlobalFallback.value = res.data.isGlobalFallback || false;
+      bountyResults.value = res.data.bountyResults || [];
+      tabs.value[0].label = isGlobalFallback.value ? '全服高手榜' : '好友段位榜';
+    }
+  } catch (e) {
+    console.error('[rank] loadFriendRank failed:', e);
+  } finally {
+    friendLoading.value = false;
   }
-  friendLoading.value = false;
 }
 
 // ── Tab 2: 全国分布 ──
 async function loadDistribution() {
   distLoading.value = true;
-  const res = await fetchTierDistribution();
-  if (res.code === 0 && res.data) {
-    distribution.value = res.data.distribution || [];
-    totalUsers.value = res.data.totalUsers || 0;
-    userTier.value = res.data.userTier || '';
-    userPercentile.value = res.data.userPercentile || 0;
+  try {
+    const res = await fetchTierDistribution();
+    if (res.code === 0 && res.data) {
+      distribution.value = res.data.distribution || [];
+      totalUsers.value = res.data.totalUsers || 0;
+      userTier.value = res.data.userTier || '';
+      userPercentile.value = res.data.userPercentile || 0;
+    }
+  } catch (e) {
+    console.error('[rank] loadDistribution failed:', e);
+  } finally {
+    distLoading.value = false;
   }
-  distLoading.value = false;
 }
 
 // ── Tab 3: 本周晋升最快 ──
 async function loadWeeklyRising() {
   weeklyLoading.value = true;
-  const res = await fetchWeeklyStats();
-  if (res.code === 0 && res.data) {
-    weeklyRising.value = res.data.weeklyRising || [];
+  try {
+    const res = await fetchWeeklyStats();
+    if (res.code === 0 && res.data) {
+      weeklyRising.value = res.data.weeklyRising || [];
+    }
+  } catch (e) {
+    console.error('[rank] loadWeeklyRising failed:', e);
+  } finally {
+    weeklyLoading.value = false;
   }
-  weeklyLoading.value = false;
 }
 
 // ── Tab 4: 群挑战榜 ──
 async function loadGroupRank() {
   groupLoading.value = true;
   try {
-    const res = await fetchFriendRank('groupRank');
+    const app = getApp();
+    const groupId = app.globalData.groupId || '';
+    const res = await fetchFriendRank('groupRank', { openGId: groupId });
     if (res.code === 0 && res.data) {
       groupList.value = res.data.groupRankings || [];
     }
@@ -284,6 +362,23 @@ async function loadGroupRank() {
     // 静默失败
   } finally {
     groupLoading.value = false;
+  }
+}
+
+// ── 知识星榜 ──
+async function loadStarRank() {
+  starLoading.value = true;
+  try {
+    const res = await fetchFriendRank('collectRank');
+    if (res.code === 0 && res.data) {
+      starList.value = res.data.collectRankings || [];
+      myCollectRank.value = res.data.myCollectRank;
+      myCollectCount.value = res.data.myCollectCount;
+    }
+  } catch (e) {
+    console.error('[rank] loadStarRank failed:', e);
+  } finally {
+    starLoading.value = false;
   }
 }
 
@@ -300,6 +395,12 @@ async function onPrivacyToggle(e) {
   await loadFriendRank();
 }
 
+// ── 段位悬赏：关闭通知 ──
+async function dismissBounty(bountyId) {
+  await markBountyViewed(bountyId);
+  bountyResults.value = bountyResults.value.filter(b => b._id !== bountyId);
+}
+
 // ── 辅助函数 ──
 function getTierEmoji(tierName) {
   const t = TIERS.find(t => t.name === tierName);
@@ -311,15 +412,22 @@ function getTierBarColor(tierName) {
   return t ? t.color : '#7c3aed';
 }
 
-onShareAppMessage(() => ({
-  title: '测测你的AI段位！看看你在好友中排第几 🏆',
-  path: '/pages/index/index',
-}));
+onShareAppMessage(() => {
+  const uid = getUserOpenidSync();
+  return {
+    title: '测测你的AI段位！看看你在好友中排第几 🏆',
+    path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
+    imageUrl: '/static/images/default-share.png',
+  };
+});
 
-onShareTimeline(() => ({
-  title: '你的AI段位排第几？看看全国段位分布 →',
-  query: '',
-}));
+onShareTimeline(() => {
+  const uid = getUserOpenidSync();
+  return {
+    title: '你的AI段位排第几？看看全国段位分布 →',
+    query: uid ? `from_uid=${uid}` : '',
+  };
+});
 </script>
 
 <style scoped lang="scss">
@@ -379,6 +487,16 @@ onShareTimeline(() => ({
   &__privacy-label {
     font-size: 22rpx;
     color: $color-text-muted;
+  }
+
+  &__privacy-link {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8rpx 28rpx 16rpx;
+    font-size: 22rpx;
+    color: $color-gold;
+    opacity: 0.8;
+    text-decoration: underline;
   }
 
   // ====== Tab 栏 ======

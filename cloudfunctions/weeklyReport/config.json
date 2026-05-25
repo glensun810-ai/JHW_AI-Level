@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "openapi": ["subscribeMessage.send"]
+  },
+  "triggers": [
+    {
+      "name": "weeklyReport",
+      "type": "timer",
+      "config": "0 0 10 * * 1 *"
+    }
+  ]
+}

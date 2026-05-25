@@ -45,11 +45,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
+
+const props = defineProps({
+  forceShow: { type: Boolean, default: false },
+});
 
 const visible = ref(false);
 
 const STORAGE_KEY = 'privacy_agreed';
+
+watch(() => props.forceShow, (val) => {
+  if (val) visible.value = true;
+});
 
 function check() {
   const agreed = uni.getStorageSync(STORAGE_KEY);
@@ -63,16 +71,22 @@ function check() {
 function handleAgree() {
   uni.setStorageSync(STORAGE_KEY, Date.now());
   visible.value = false;
+  emit('close');
 }
 
 function handleDecline() {
   visible.value = false;
+  if (props.forceShow) {
+    emit('close');
+    return;
+  }
   // 退出小程序
   if (typeof wx !== 'undefined' && wx.exitMiniProgram) {
     wx.exitMiniProgram();
   }
 }
 
+const emit = defineEmits(['close']);
 defineExpose({ check });
 </script>
 

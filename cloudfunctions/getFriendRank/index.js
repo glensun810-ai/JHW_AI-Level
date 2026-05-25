@@ -9,6 +9,20 @@ exports.main = async (event, context) => {
     const OPENID = wxContext.OPENID;
     const action = event.action || 'rank';
 
+    if (action === 'markBountyViewed') {
+      const { bountyId } = event;
+      if (!bountyId) return { code: 400, message: '缺少 bountyId', data: null };
+      try {
+        await db.collection('bounty_results').doc(bountyId).update({
+          data: { viewed: true },
+        });
+        return { code: 0, message: 'ok', data: null };
+      } catch (e) {
+        console.log('[getFriendRank] markBountyViewed 失败:', e.message);
+        return { code: 500, message: '操作失败', data: null };
+      }
+    }
+
     if (action === 'updatePrivacy') {
       const { privacyHidden } = event;
       const { data: users } = await db.collection('users')
@@ -43,6 +57,50 @@ exports.main = async (event, context) => {
 
       console.log(`[getFriendRank] privacy updated openid=${OPENID.slice(0, 8)}... hidden=${privacyHidden}`);
       return { code: 0, message: 'ok', data: { privacyHidden: !!privacyHidden } };
+    }
+
+    if (action === 'collectRank') {
+      // 获取好友列表
+      let friendOpenids = [];
+      try {
+        const { data: friendships } = await db.collection('friendships')
+          .where(_.or([{ userA: OPENID }, { userB: OPENID }]))
+          .field({ userA: true, userB: true })
+          .get();
+        for (const f of (friendships || [])) {
+          const friendId = f.userA === OPENID ? f.userB : f.userA;
+          if (!friendOpenids.includes(friendId)) friendOpenids.push(friendId);
+        }
+      } catch (e) {
+        console.warn('[getFriendRank] collectRank friendships 查询失败:', e.message);
+      }
+
+      // 包含自己 + 好友
+      const allIds = [OPENID, ...friendOpenids];
+      const { data: users } = await db.collection('users')
+        .where({ _openid: _.in(allIds) })
+        .field({ _openid: true, nickname: true, avatar: true, collectedCards: true })
+        .get();
+
+      const ranked = (users || [])
+        .map(u => ({
+          _openid: u._openid,
+          nickname: u.nickname || '匿名用户',
+          avatar: u.avatar || '',
+          collectCount: (u.collectedCards || []).length,
+        }))
+        .sort((a, b) => b.collectCount - a.collectCount);
+
+      const myRank = ranked.findIndex(u => u._openid === OPENID) + 1;
+
+      return {
+        code: 0, message: 'ok',
+        data: {
+          collectRankings: ranked,
+          myCollectRank: myRank > 0 ? myRank : null,
+          myCollectCount: ranked.find(u => u._openid === OPENID)?.collectCount || 0,
+        },
+      };
     }
 
     // 默认：获取好友排名
@@ -118,34 +176,63 @@ exports.main = async (event, context) => {
     // 代码中排序（避免 orderBy 需要复合索引）
     allUsers.sort((a, b) => (b.highestScore || 0) - (a.highestScore || 0));
 
-    // 修复6：群挑战榜 action（在挑战数据查询前提前返回，节省资源）
+    // 修复6：群挑战榜 action — 按 openGId 过滤同群用户
     if (action === 'groupRank') {
-      const invitedList = allUsers.slice(0, 10);
+      const openGId = event.openGId || '';
+      let groupList = [];
+
+      if (openGId) {
+        try {
+          // 查询同群会话的用户
+          const { data: sessions } = await db.collection('group_sessions')
+            .where({ openGId })
+            .field({ openid: true })
+            .limit(100)
+            .get();
+
+          if (sessions.length > 0) {
+            const groupOpenids = [...new Set(sessions.map(s => s.openid))];
+            // 从 allUsers 中筛选同群用户
+            groupList = allUsers.filter(u => groupOpenids.includes(u._openid));
+          }
+        } catch (e) {
+          console.log('[getFriendRank] groupRank 查询失败:', e.message);
+        }
+      }
+
+      // 降级：无 openGId 或无群会话记录时，返回邀请好友列表
+      if (groupList.length === 0) {
+        groupList = allUsers.slice(0, 10);
+      }
+
       return {
         code: 0,
         message: 'ok',
         data: {
-          groupRankings: invitedList,
-          isGlobalFallback,
-          friendCount: friendOpenids.length,
-          invitedCount: friendOpenids.length,
+          groupRankings: groupList,
+          isGlobalFallback: groupList.length === 0 || !openGId,
+          friendCount: groupList.length,
+          invitedCount: groupList.length,
         },
       };
     }
 
-    // 并行查询挑战数据（不阻塞，失败返回空）
+    // 并行查询挑战数据 + 悬赏结果（不阻塞，失败返回空）
     const [
-      winRes, loseRes, drawRes,
-      opponentWinRes, opponentLoseRes,
+      winRes, loseRes, drawAsChallenger,
+      opponentWinRes, opponentLoseRes, drawAsTarget,
       pendingRes, sentRes,
+      bountyRes,
     ] = await Promise.all([
       safeCount(db, 'challenges', { challengerOpenid: OPENID, status: 'completed', result: 'challenger_win' }),
       safeCount(db, 'challenges', { challengerOpenid: OPENID, status: 'completed', result: 'target_win' }),
       safeCount(db, 'challenges', { challengerOpenid: OPENID, status: 'completed', result: 'draw' }),
       safeCount(db, 'challenges', { targetOpenid: OPENID, status: 'completed', result: 'target_win' }),
       safeCount(db, 'challenges', { targetOpenid: OPENID, status: 'completed', result: 'challenger_win' }),
+      safeCount(db, 'challenges', { targetOpenid: OPENID, status: 'completed', result: 'draw' }),
       safeGet(db, 'challenges', { targetOpenid: OPENID, status: 'pending' }, { orderBy: ['createdAt', 'desc'], limit: 10 }),
       safeGet(db, 'challenges', { challengerOpenid: OPENID, status: 'pending' }, { field: { targetOpenid: true } }),
+      safeGet(db, 'bounty_results', { predictorOpenid: OPENID, viewed: false }, { orderBy: ['createdAt', 'desc'], limit: 5 }),
     ]);
 
     // 查找用户排名
@@ -178,7 +265,7 @@ exports.main = async (event, context) => {
         friendCount: friendOpenids.length,
         winCount: winRes.total + opponentLoseRes.total,
         loseCount: loseRes.total + opponentWinRes.total,
-        drawCount: drawRes.total,
+        drawCount: drawAsChallenger.total + drawAsTarget.total,
         pendingChallenges: (pendingRes.data || []).map(c => ({
           _id: c._id,
           challengerOpenid: c.challengerOpenid,
@@ -188,6 +275,15 @@ exports.main = async (event, context) => {
           targetName: c.targetName || '',
         })),
         sentChallengeTargets: (sentRes.data || []).map(c => c.targetOpenid),
+        bountyResults: (bountyRes.data || []).map(b => ({
+          _id: b._id,
+          targetName: b.targetName,
+          guessedTier: b.guessedTier,
+          actualTier: b.actualTier,
+          actualScore: b.actualScore,
+          isCorrect: b.isCorrect,
+          createdAt: b.createdAt,
+        })),
       },
     };
   } catch (err) {

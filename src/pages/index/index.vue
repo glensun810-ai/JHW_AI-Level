@@ -4,10 +4,28 @@
     <PrivacyModal ref="privacyRef" />
     <view v-if="showOverlay" class="page-index__overlay" />
 
-    <!-- 帮朋友测 Banner -->
+    <!-- 段位悬赏结果通知 -->
+    <view v-if="bountyNotifications.length > 0" class="page-index__bounty-toast">
+      <view v-for="b in bountyNotifications" :key="b._id" class="page-index__bounty-toast-card" @click="dismissBountyNotify(b._id)">
+        <text class="page-index__bounty-toast-icon">{{ b.isCorrect ? '🎯' : '😅' }}</text>
+        <view class="page-index__bounty-toast-body">
+          <text class="page-index__bounty-toast-title">{{ b.isCorrect ? '猜对了！' : '猜错了…' }}</text>
+          <text class="page-index__bounty-toast-detail">你猜 {{ b.targetName }} 是「{{ b.guessedTier }}」→ 实际「{{ b.actualTier }}」</text>
+        </view>
+        <text class="page-index__bounty-toast-close">✕</text>
+      </view>
+    </view>
+
+    <!-- 帮朋友测 Banner（个性化：显示好友段位） -->
     <view v-if="friendName" class="page-index__friend-banner">
       <text class="page-index__friend-banner-text">
-        🔍 <text class="page-index__friend-banner-name">@{{ friendName }}</text> 帮 TA 测测AI段位
+        <template v-if="friendTier">
+          <text class="page-index__friend-banner-tier">{{ friendTierEmoji }} {{ friendTier }}</text>
+          <text class="page-index__friend-banner-name">@{{ friendName }}</text> 邀你来测AI段位
+        </template>
+        <template v-else>
+          🔍 <text class="page-index__friend-banner-name">@{{ friendName }}</text> 帮 TA 测测AI段位
+        </template>
       </text>
     </view>
 
@@ -26,19 +44,31 @@
         <text class="page-index__prejudge-hint">测完就知道准不准 →</text>
       </view>
       <text class="page-index__guide">5道情景题 · 2分钟 · 测出你的AI真实段位</text>
-      <button
-        class="page-index__cta"
-        :class="{ 'page-index__cta--urgent': isUrgent }"
-        :disabled="transitioning"
-        @click="handleStart"
-      >{{ ctaText }}</button>
-      <text v-if="showHint" class="page-index__hint">3秒测出你的AI段位</text>
+
+      <!-- 每日主题预告 -->
+      <view class="page-index__theme-badge">
+        <text class="page-index__theme-icon">{{ themeIcon }}</text>
+        <text class="page-index__theme-label">{{ themeLabel }}</text>
+      </view>
+
+      <!-- 今日状态条 -->
+      <view class="page-index__status-bar">
+        <text v-if="!freeTestUsed">🎁 今日首次测评 · 免费</text>
+        <text v-else>📺 看 15 秒广告继续测 · 结果计入段位</text>
+      </view>
+
+      <!-- 实时：X 人正在测试 -->
+      <view v-if="testingNow > 0" class="page-index__testing-now">
+        <text class="page-index__testing-now-dot" />
+        <text class="page-index__testing-now-text">{{ testingNow }} 人正在测试</text>
+      </view>
+
+      <!-- 社交证明：总用户数 + 好友段位气泡（CTA 上方，最大化决策影响力） -->
       <view class="page-index__proof">
         <text class="page-index__proof-num">{{ displayUsers.toLocaleString() }}</text>
         <text class="page-index__proof-label">人已完成定段</text>
       </view>
 
-      <!-- F2: 好友段位预览气泡 -->
       <view v-if="friendBubble" class="page-index__friend-bubble" @click="handleStart">
         <text class="page-index__friend-bubble-text">
           <template v-if="friendBubble.isGlobalFallback">
@@ -50,6 +80,14 @@
         </text>
       </view>
 
+      <button
+        class="page-index__cta"
+        :class="{ 'page-index__cta--urgent': isUrgent }"
+        :disabled="transitioning"
+        @click="handleStart"
+      >{{ ctaText }}</button>
+      <text v-if="showHint" class="page-index__hint">3秒测出你的AI段位</text>
+
       <!-- F14: 进化值展示 -->
       <view class="page-index__exp-bar">
         <text class="page-index__exp-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
@@ -58,7 +96,18 @@
         </view>
       </view>
 
-      <!-- v0.9: 深度定段入口 (Lv.18+ 解锁) -->
+      <!-- 段位晋升进度条（回访用户） -->
+      <view v-if="nextTierInfo" class="page-index__tier-teaser" @click="handleStart">
+        <text class="page-index__tier-teaser-text">
+          距「{{ nextTierInfo.name }}」{{ nextTierInfo.emoji }} 还差 {{ nextTierInfo.gap }} 分
+        </text>
+        <view class="page-index__tier-teaser-bar">
+          <view class="page-index__tier-teaser-fill" :style="{ width: nextTierInfo.progress + '%' }" />
+        </view>
+        <text class="page-index__tier-teaser-cta">再测一次很可能就升段 →</text>
+      </view>
+
+      <!-- v0.9: 深度定段入口 (Lv.5+ 解锁) -->
       <view v-if="expStore.unlocks.deepMode" class="page-index__deep-entry" @click="handleDeepStart">
         <text class="page-index__deep-entry-icon">🧬</text>
         <text class="page-index__deep-entry-text">深度定段 · 10题版</text>
@@ -69,27 +118,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { onShareAppMessage, onShareTimeline, onShow } from '@dcloudio/uni-app';
 import ParticleBg from '@/components/ParticleBg/ParticleBg.vue';
 import PrivacyModal from '@/components/PrivacyModal/PrivacyModal.vue';
-import { fetchTierDistribution, fetchFriendRank, preloadDailyQuestions } from '@/utils/api.js';
-import { MAX_FREE_TESTS } from '@/utils/numeric-constants.js';
+import { fetchTierDistribution, fetchFriendRank, preloadDailyQuestions, fetchWeeklyStats, getUserOpenid, getUserOpenidSync, markBountyViewed, callCloudFunction } from '@/utils/api.js';
 import { trackPageViewHome, trackHomeHesitate, trackInviteUnlock, trackTestStart, trackShareClick } from '@/utils/analytics.js';
-import { canWatchAd, getAvailableUnlocks, showRewardedAd } from '@/utils/ad.js';
+import { hasUsedFreeTestToday, markFreeTestUsed, showRewardedAd } from '@/utils/ad.js';
 import { useExperienceStore } from '@/store/experience.js';
 import { useQuizStore } from '@/store/quiz.js';
-import { TIERS } from '@/utils/tier.js';
+import { TIERS, pointsToNextTier, getNextTier, getTier } from '@/utils/tier.js';
 
 const particleRef = ref(null);
 const privacyRef = ref(null);
 const displayUsers = ref(0);
+const testingNow = ref(0);
 const isUrgent = ref(false);
 const showHint = ref(false);
 const transitioning = ref(false);
 const btnShrink = ref(false);
 const showOverlay = ref(false);
 const friendName = ref('');
+const friendTier = ref('');
+const friendTierEmoji = ref('');
 let t5 = null, t10 = null, ctaTimer = null;
 
 // F1: CTA 按钮文案轮换
@@ -105,6 +156,9 @@ const ctaText = ref(CTA_COPIES[0]);
 
 // F2: 好友段位气泡
 const friendBubble = ref(null); // { count, topTier, topTierEmoji }
+
+// 段位悬赏通知
+const bountyNotifications = ref([]);
 
 // F14: 进化值
 const expStore = useExperienceStore();
@@ -138,6 +192,56 @@ const PREJUDGE_TEXTS = [
 const isFirstVisit = ref(!uni.getStorageSync('has_tested'));
 const prejudgeText = ref(PREJUDGE_TEXTS[Math.floor(Math.random() * PREJUDGE_TEXTS.length)]);
 
+// ── 每日主题 ──
+const THEME_MAP = {
+  1: { icon: '🔬', label: '周一硬核 — 你在 AI 浪潮的第几层？' },
+  2: { icon: '💼', label: '周二职场 — AI 替你干活时，老板知道吗？' },
+  3: { icon: '🛠️', label: '周三应用 — AI 同事来了，你准备好了吗？' },
+  4: { icon: '🎨', label: '周四脑洞 — 如果 AI 有朋友圈，它会发什么？' },
+  5: { icon: '🎮', label: '周五趣味 — 周末模式，测测 AI 有多懂你' },
+  6: { icon: '🌿', label: '周末感悟 — AI 时代的生活智慧，你有几分？' },
+  0: { icon: '🌿', label: '周末感悟 — AI 时代的生活智慧，你有几分？' },
+};
+const themeIcon = computed(() => THEME_MAP[new Date().getDay()]?.icon || '🔬');
+const themeLabel = computed(() => THEME_MAP[new Date().getDay()]?.label || '每日 AI 段位测试');
+
+// ── 今日状态 ──
+const freeTestUsed = computed(() => hasUsedFreeTestToday());
+
+// ── 段位进度（回访用户）──
+const nextTierInfo = ref(null);
+
+async function loadTierProgress() {
+  try {
+    const res = await fetchWeeklyStats();
+    if (res.code === 0 && res.data && res.data.consecutiveDays !== undefined) {
+      // 用户已完成过测试，有签到/测试记录
+      const lastScore = res.data.lastScore; // 可能来自 userData
+      if (!lastScore) {
+        // 尝试从 test_records 推断
+        return;
+      }
+      const nextTier = getNextTier(lastScore);
+      const gap = pointsToNextTier(lastScore);
+      if (nextTier && gap > 0) {
+        const currentTierObj = getTier(lastScore);
+        const nextTierObj = TIERS.find(t => t.name === nextTier);
+        const currentMin = currentTierObj ? currentTierObj.min : 5;
+        const nextMin = nextTierObj ? nextTierObj.min : 50;
+        const totalRange = nextMin - currentMin;
+        const progressInTier = lastScore - currentMin;
+        const progress = totalRange > 0 ? Math.floor((progressInTier / totalRange) * 100) : 0;
+        nextTierInfo.value = {
+          name: nextTier,
+          emoji: nextTierObj ? nextTierObj.emoji : '',
+          gap,
+          progress: Math.min(99, Math.max(1, progress)),
+        };
+      }
+    }
+  } catch (e) { /* 静默 */ }
+}
+
 onMounted(async () => {
   // 隐私政策检查（首次启动弹窗）
   if (privacyRef.value) privacyRef.value.check();
@@ -155,11 +259,21 @@ onMounted(async () => {
     uni.setStorageSync('friend_name', friendName.value);
   }
 
-  const today = new Date().toISOString().slice(0, 10);
-  if (uni.getStorageSync('test_date') !== today) {
-    uni.setStorageSync('test_date', today);
-    uni.setStorageSync('test_count', 0);
+  // 段位悬赏：接收分享链接中的悬赏参数
+  if (options.bounty_tier && options.target_name) {
+    app.globalData.bountyTier = decodeURIComponent(options.bounty_tier);
+    app.globalData.bountyTargetName = decodeURIComponent(options.target_name);
+    // 同时用于个性化 banner：显示好友的段位
+    if (!friendName.value) {
+      friendName.value = decodeURIComponent(options.target_name);
+    }
+    friendTier.value = decodeURIComponent(options.bounty_tier);
+    friendTierEmoji.value = getTierEmojiForName(friendTier.value);
   }
+  if (options.from_uid) {
+    app.globalData.shareFromUid = options.from_uid;
+  }
+
   // F1: CTA 按钮文案轮换（随机起始 + 8s 轮换）
   const startIdx = Math.floor(Math.random() * CTA_COPIES.length);
   ctaText.value = CTA_COPIES[startIdx];
@@ -178,11 +292,16 @@ onMounted(async () => {
   }, 3000);
 
   preloadDailyQuestions();
+  getUserOpenid(); // 预加载用户 openid，供分享跟踪（静默）
   const res = await fetchTierDistribution();
-  if (res.code === 0 && res.data) animateNumber(res.data.totalUsers || 0);
+  if (res.code === 0 && res.data) {
+    animateNumber(res.data.totalUsers || 0);
+    testingNow.value = res.data.testingNow || 0;
+  }
 
   // F2: 静默加载好友段位数据
   loadFriendBubble();
+  loadTierProgress(); // 回访用户段位进度（静默）
 
   // 埋点：首页浏览
   trackPageViewHome({
@@ -201,6 +320,13 @@ onMounted(async () => {
 
 onBeforeUnmount(() => { clearTimeout(t5); clearTimeout(t10); clearInterval(ctaTimer); clearInterval(aiEvalTimer); clearInterval(animateTimer); });
 
+// 页面重新显示时重置状态（修复从 quiz 返回后按钮卡死）
+onShow(() => {
+  transitioning.value = false;
+  btnShrink.value = false;
+  showOverlay.value = false;
+});
+
 // F2: 加载好友段位气泡
 async function loadFriendBubble() {
   try {
@@ -208,6 +334,10 @@ async function loadFriendBubble() {
     if (res.code === 0 && res.data && res.data.friendRankings) {
       const friends = res.data.friendRankings;
       const isGlobalFallback = res.data.isGlobalFallback;
+      // 段位悬赏结果
+      if (res.data.bountyResults && res.data.bountyResults.length > 0) {
+        bountyNotifications.value = res.data.bountyResults;
+      }
       if (friends.length > 0) {
         // 取最高频段位
         const tierCount = {};
@@ -229,7 +359,12 @@ async function loadFriendBubble() {
         };
       }
     }
-  } catch { /* 静默 */ }
+  } catch (e) { /* 静默 */ }
+}
+
+async function dismissBountyNotify(bountyId) {
+  await markBountyViewed(bountyId);
+  bountyNotifications.value = bountyNotifications.value.filter(b => b._id !== bountyId);
 }
 
 function getTierEmojiForName(name) {
@@ -250,77 +385,123 @@ function animateNumber(target) {
 
 async function handleStart() {
   if (transitioning.value) return;
-  const count = uni.getStorageSync('test_count') || 0;
-  const effectiveMax = expStore.unlocks.extraDailyTest ? MAX_FREE_TESTS + 1 : MAX_FREE_TESTS;
-  if (count >= effectiveMax) {
-    const { ad } = getAvailableUnlocks();
-    const hasAd = ad > 0;
 
-    const itemList = [];
-    if (hasAd) itemList.push('📺 看广告再测 1 次');
-    itemList.push('📤 邀请好友解锁');
-
-    uni.showActionSheet({
-      itemList,
-      success: async (res) => {
-        const choice = itemList[res.tapIndex];
-        if (choice.includes('看广告')) {
-          trackInviteUnlock(0);
-          uni.showToast({ title: '广告加载中…', icon: 'loading', duration: 5000 });
-          const adResult = await showRewardedAd();
-          uni.hideToast();
-          if (adResult === 'completed') {
-            uni.showToast({ title: '解锁成功！', icon: 'success' });
-            startQuiz();
-          } else {
-            uni.showToast({ title: '广告未完成，请重试', icon: 'none' });
-          }
-        } else if (choice.includes('邀请好友')) {
-          trackInviteUnlock(0);
-          wx.shareAppMessage({
-            title: '测测你的AI段位！我在进化湾等你',
-            path: '/pages/index/index',
-          });
-        }
-      },
-    });
+  // ① 每日免费测试
+  if (!hasUsedFreeTestToday()) {
+    startQuiz();
     return;
   }
-  startQuiz();
+
+  // ② 邀请解锁（优先 — 社交裂变）
+  try {
+    // 3s 超时保护：云函数冷启动或网络波动时自动降级
+    const claimPromise = callCloudFunction('submitScore', { action: 'claimInviteUnlock' }, { retry: false });
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ code: -1, data: null }), 3000));
+    const claimRes = await Promise.race([claimPromise, timeoutPromise]);
+    if (claimRes.code === 0 && claimRes.data && claimRes.data.available) {
+      trackInviteUnlock(1);
+      uni.showToast({ title: '已使用邀请解锁次数！', icon: 'success' });
+      startQuiz();
+      return;
+    }
+  } catch (e) {
+    console.warn('[handleStart] claimInviteUnlock 失败，降级:', e);
+  }
+
+  // ③ 连续签到奖励（>=5 天）
+  const streak = Number(uni.getStorageSync('checkin_streak') || 0);
+  if (streak >= 5) {
+    const { confirm: useStreak } = await new Promise((resolve) => {
+      uni.showModal({
+        title: `连续签到 ${streak} 天奖励`,
+        content: '你已连续签到超过5天，可使用签到奖励再测一次！',
+        confirmText: '使用奖励',
+        cancelText: '稍后再说',
+        success: resolve,
+      });
+    });
+    if (useStreak) {
+      trackInviteUnlock(2);
+      startQuiz();
+      return;
+    }
+  }
+
+  // ④ 广告降级方案
+  const { confirm } = await new Promise((resolve) => {
+    uni.showModal({
+      title: '今日免费测评已用完',
+      content: '邀请好友完成测试可解锁新次数，或看一段广告即可继续',
+      confirmText: '看广告解锁',
+      cancelText: '稍后再说',
+      success: resolve,
+    });
+  });
+  if (!confirm) return;
+
+  trackInviteUnlock(0);
+  uni.showToast({ title: '广告加载中…', icon: 'loading' });
+  const adResult = await showRewardedAd();
+  uni.hideToast();
+
+  if (adResult === 'completed') {
+    uni.showToast({ title: '解锁成功！', icon: 'success' });
+    startQuiz();
+  } else {
+    uni.showToast({ title: '广告未完成，请重试', icon: 'none' });
+  }
 }
 
 function startQuiz() {
+  quizStore.reset();
   quizStore.setDeepMode(false);
+  uni.removeStorageSync('quiz_breakpoint'); // 清除旧断点，确保全新开始
   trackTestStart('new', ctaText.value);
   transitioning.value = true;
   if (particleRef.value) particleRef.value.accelerate();
   btnShrink.value = true;
   setTimeout(() => { showOverlay.value = true; }, 300);
-  setTimeout(() => { uni.navigateTo({ url: '/pages/quiz/quiz' }); }, 500);
+  setTimeout(() => {
+    uni.navigateTo({
+      url: '/pages/quiz/quiz',
+      fail: () => {
+        transitioning.value = false;
+        btnShrink.value = false;
+        showOverlay.value = false;
+      },
+    });
+  }, 500);
 }
 
 function handleDeepStart() {
   if (transitioning.value) return;
-  const count = uni.getStorageSync('test_count') || 0;
-  const effectiveMax = expStore.unlocks.extraDailyTest ? MAX_FREE_TESTS + 1 : MAX_FREE_TESTS;
-  if (count >= effectiveMax) {
-    uni.showToast({ title: '今日次数已用完，明天再来深度定段吧', icon: 'none' });
-    return;
-  }
+  quizStore.reset();
   quizStore.setDeepMode(true);
+  uni.removeStorageSync('quiz_breakpoint');
   trackTestStart('deep', ctaText.value);
   transitioning.value = true;
   if (particleRef.value) particleRef.value.accelerate();
   btnShrink.value = true;
   setTimeout(() => { showOverlay.value = true; }, 300);
-  setTimeout(() => { uni.navigateTo({ url: '/pages/quiz/quiz' }); }, 500);
+  setTimeout(() => {
+    uni.navigateTo({
+      url: '/pages/quiz/quiz',
+      fail: () => {
+        transitioning.value = false;
+        btnShrink.value = false;
+        showOverlay.value = false;
+      },
+    });
+  }, 500);
 }
 
 onShareAppMessage(() => {
   trackShareClick('home', 'share');
+  const uid = getUserOpenidSync();
   return {
     title: '测测你的AI段位！我在进化湾等你 🧬',
-    path: '/pages/index/index',
+    path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
+    imageUrl: '/static/images/default-share.png',
   };
 });
 
@@ -360,6 +541,12 @@ onShareTimeline(() => {
     &-name {
       color: $color-gold;
       font-weight: bold;
+    }
+
+    &-tier {
+      color: $color-gold;
+      font-weight: bold;
+      margin-right: 4rpx;
     }
   }
 
@@ -443,8 +630,67 @@ onShareTimeline(() => {
     margin-top: 12rpx;
   }
 
+  // 每日主题预告
+  &__theme-badge {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+    margin-top: 20rpx;
+    padding: 10rpx 24rpx;
+    background: rgba(124, 58, 237, 0.08);
+    border: 1rpx solid rgba(124, 58, 237, 0.15);
+    border-radius: 20rpx;
+    animation: fade-in 0.5s ease-out both;
+  }
+
+  &__theme-icon {
+    font-size: 28rpx;
+    flex-shrink: 0;
+  }
+
+  &__theme-label {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.4;
+  }
+
+  // 今日状态条
+  &__status-bar {
+    margin-top: 14rpx;
+    padding: 8rpx 24rpx;
+    background: rgba(245, 158, 11, 0.06);
+    border: 1rpx solid rgba(245, 158, 11, 0.12);
+    border-radius: 12rpx;
+    font-size: 22rpx;
+    color: $color-gold;
+    text-align: center;
+  }
+
+  // 实时：X 人正在测试
+  &__testing-now {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    margin-top: 14rpx;
+    animation: fade-in 0.5s ease-out both;
+  }
+
+  &__testing-now-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: eval-dot-pulse 1.5s ease-in-out infinite;
+  }
+
+  &__testing-now-text {
+    font-size: 22rpx;
+    color: rgba(34, 197, 94, 0.7);
+  }
+
   &__cta {
-    width: 400rpx; height: 112rpx; margin-top: 80rpx;
+    width: 400rpx; height: 112rpx; margin-top: 44rpx;
     background: linear-gradient(135deg, #7c3aed, #f59e0b);
     border-radius: 56rpx; font-size: 36rpx; font-weight: 700;
     color: #fff; border: none;
@@ -460,7 +706,7 @@ onShareTimeline(() => {
   }
 
   &__proof {
-    display: flex; align-items: baseline; gap: 8rpx; margin-top: 48rpx;
+    display: flex; align-items: baseline; gap: 8rpx; margin-top: 28rpx;
     &-num { font-size: 32rpx; font-weight: 700; color: rgba(255,255,255,0.55); }
     &-label { font-size: 24rpx; color: rgba(255,255,255,0.3); }
   }
@@ -509,6 +755,47 @@ onShareTimeline(() => {
     border-radius: 3rpx;
     background: linear-gradient(90deg, #7c3aed, $color-gold);
     transition: width 0.5s ease;
+  }
+
+  // 段位晋升进度条（回访用户）
+  &__tier-teaser {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    margin-top: 24rpx;
+    padding: 16rpx 28rpx;
+    background: rgba(245, 158, 11, 0.06);
+    border: 1rpx solid rgba(245, 158, 11, 0.12);
+    border-radius: 16rpx;
+    animation: fade-in 0.5s ease-out both;
+
+    &-text {
+      font-size: 24rpx;
+      color: $color-gold;
+      font-weight: 500;
+    }
+
+    &-bar {
+      width: 280rpx;
+      height: 8rpx;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4rpx;
+      overflow: hidden;
+    }
+
+    &-fill {
+      height: 100%;
+      background: linear-gradient(90deg, $color-gold, $color-accent);
+      border-radius: 4rpx;
+      transition: width 0.6s ease-out;
+    }
+
+    &-cta {
+      font-size: 22rpx;
+      color: $color-accent;
+      opacity: 0.8;
+    }
   }
 
   // v0.9: 深度定段入口

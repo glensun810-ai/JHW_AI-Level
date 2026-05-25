@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>进化湾 - 分享卡片</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #1a1a2e;
+    font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+
+  /* ============================================
+     CARD — 800×640, WeChat share card ratio (5:4)
+     ============================================ */
+  .card {
+    width: 800px;
+    height: 640px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(170deg, #0b0720 0%, #12052a 20%, #1a0533 40%, #0d1b2a 65%, #0a0e1a 100%);
+    border-radius: 2px;
+  }
+
+  /* ── Starfield (CSS box-shadow technique) ── */
+  .stars {
+    position: absolute; inset: 0;
+  }
+  .stars::before {
+    content: '';
+    position: absolute; width: 1px; height: 1px; border-radius: 50%; background: transparent;
+    box-shadow:
+       56px  45px 0 #fff,  723px  88px 0 #fff,  345px 512px 0 #fff,  678px 234px 0 #fff,
+      123px 567px 0 #fff,  456px  78px 0 #fff,  234px 345px 0 #fff,  567px 456px 0 #fff,
+       89px 123px 0 rgba(255,255,255,0.85),  654px 321px 0 rgba(255,255,255,0.85),
+      390px 280px 0 rgba(255,255,255,0.85),   12px 400px 0 rgba(255,255,255,0.8),
+      770px 610px 0 rgba(255,255,255,0.8),    30px 620px 0 rgba(255,255,255,0.7),
+      500px  30px 0 rgba(255,255,255,0.7),   200px 610px 0 rgba(255,255,255,0.6),
+       12px  89px 0 rgba(255,255,255,0.50),  145px 234px 0 rgba(255,255,255,0.50),
+      278px  56px 0 rgba(255,255,255,0.50),  389px 189px 0 rgba(255,255,255,0.50),
+      490px 345px 0 rgba(255,255,255,0.50),  156px 478px 0 rgba(255,255,255,0.50),
+      612px  67px 0 rgba(255,255,255,0.50),  701px 189px 0 rgba(255,255,255,0.50),
+       34px 290px 0 rgba(255,255,255,0.50),  756px 390px 0 rgba(255,255,255,0.50),
+      190px 600px 0 rgba(255,255,255,0.50),  500px 590px 0 rgba(255,255,255,0.50),
+      650px 500px 0 rgba(255,255,255,0.50),  300px 160px 0 rgba(255,255,255,0.50),
+       23px  45px 0 rgba(255,255,255,0.22),   67px 167px 0 rgba(255,255,255,0.22),
+       89px 290px 0 rgba(255,255,255,0.22),  134px 400px 0 rgba(255,255,255,0.22),
+      200px  50px 0 rgba(255,255,255,0.22),  250px 150px 0 rgba(255,255,255,0.22),
+      310px 300px 0 rgba(255,255,255,0.22),  420px 100px 0 rgba(255,255,255,0.22),
+      530px 250px 0 rgba(255,255,255,0.22),  600px 400px 0 rgba(255,255,255,0.22),
+      700px  50px 0 rgba(255,255,255,0.22),  750px 200px 0 rgba(255,255,255,0.22),
+       45px 500px 0 rgba(255,255,255,0.22),  150px 350px 0 rgba(255,255,255,0.22),
+      350px 450px 0 rgba(255,255,255,0.22),  450px 550px 0 rgba(255,255,255,0.22),
+      550px 100px 0 rgba(255,255,255,0.22),  680px 350px 0 rgba(255,255,255,0.22),
+      780px 480px 0 rgba(255,255,255,0.22),  100px  50px 0 rgba(255,255,255,0.22),
+      430px 420px 0 rgba(255,255,255,0.22),  320px 560px 0 rgba(255,255,255,0.22),
+      160px 180px 0 rgba(255,255,255,0.22),  590px 140px 0 rgba(255,255,255,0.22);
+    animation: twinkleA 4s ease-in-out infinite alternate;
+  }
+  .stars::after {
+    content: '';
+    position: absolute; width: 1px; height: 1px; border-radius: 50%; background: transparent;
+    box-shadow:
+       78px 190px 0 rgba(255,255,255,0.40),  200px 300px 0 rgba(255,255,255,0.40),
+      400px  80px 0 rgba(255,255,255,0.40),  600px 200px 0 rgba(255,255,255,0.40),
+      120px 450px 0 rgba(255,255,255,0.40),  320px 520px 0 rgba(255,255,255,0.40),
+      500px 400px 0 rgba(255,255,255,0.40),  720px 100px 0 rgba(255,255,255,0.40),
+       50px 350px 0 rgba(255,255,255,0.30),  180px  80px 0 rgba(255,255,255,0.30),
+      280px 420px 0 rgba(255,255,255,0.30),  440px 200px 0 rgba(255,255,255,0.30),
+      580px 500px 0 rgba(255,255,255,0.30),  690px 280px 0 rgba(255,255,255,0.30),
+      760px 550px 0 rgba(255,255,255,0.30),   15px 150px 0 rgba(255,255,255,0.30),
+      330px  30px 0 rgba(255,255,255,0.30),  510px 360px 0 rgba(255,255,255,0.30);
+    animation: twinkleB 5s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes twinkleA { 0% { opacity: 0.5; } 100% { opacity: 1; } }
+  @keyframes twinkleB { 0% { opacity: 0.4; } 100% { opacity: 0.9; } }
+
+  /* ── Ambient nebula glows ── */
+  .glow-p { /* purple, top-left */
+    position: absolute; top: -120px; left: -40px;
+    width: 460px; height: 460px;
+    background: radial-gradient(circle, rgba(124,58,237,0.10) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .glow-a { /* amber, bottom-right */
+    position: absolute; bottom: -100px; right: -30px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(245,158,11,0.07) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .glow-c { /* subtle center */
+    position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
+    width: 520px; height: 340px;
+    background: radial-gradient(ellipse, rgba(124,58,237,0.04) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  /* ── Large decorative ring ── */
+  .ring {
+    position: absolute; top: 48.5%; left: 50%; transform: translate(-50%, -50%);
+    width: 370px; height: 370px; border-radius: 50%;
+    border: 1px solid rgba(255,215,0,0.08);
+    box-shadow: 0 0 60px rgba(255,215,0,0.04), 0 0 120px rgba(255,215,0,0.02);
+  }
+
+  /* ── Shooting star ── */
+  .meteor {
+    position: absolute;
+    width: 120px; height: 2px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.8), transparent);
+    top: 70px; left: 58%;
+    transform: rotate(-22deg);
+    z-index: 8;
+    animation: meteor 5.5s ease-in infinite 1.5s;
+  }
+  @keyframes meteor {
+    0%   { opacity: 0; transform: rotate(-22deg) translateX(0) translateY(0); }
+    6%   { opacity: 1; }
+    22%  { opacity: 0; transform: rotate(-22deg) translateX(-420px) translateY(300px); }
+    100% { opacity: 0; transform: rotate(-22deg) translateX(-420px) translateY(300px); }
+  }
+
+  /* ============================================
+     TIER EVOLUTION ARC
+     ============================================ */
+  .tier-arc {
+    position: absolute;
+    top: 44px; left: 20px; right: 20px;
+    height: 225px;
+    z-index: 5;
+  }
+  /* Each tier badge absolutely positioned. Width=82px, centered on its position. */
+  .tier-badge {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 82px;
+    transform: translateX(-50%);
+  }
+  /*
+     Arc curve: a symmetric arch.
+     Peak at index 3 & 4 (协作者, 驾驭者). Ends at index 0 & 7 (萌新, 无界).
+  */
+  .tier-badge--0 { left: 5.9%;  top: 148px; }  /* 萌新 — bottom-left */
+  .tier-badge--1 { left: 19.1%; top: 105px; }  /* 调戏师 */
+  .tier-badge--2 { left: 32.4%; top:  55px; }  /* 工具人 */
+  .tier-badge--3 { left: 45.6%; top:   0px; }  /* 协作者 — PEAK */
+  .tier-badge--4 { left: 58.8%; top:   0px; }  /* 驾驭者 — PEAK */
+  .tier-badge--5 { left: 72.1%; top:  55px; }  /* 炼金术士 */
+  .tier-badge--6 { left: 85.3%; top: 105px; }  /* 觉醒者 */
+  .tier-badge--7 { left: 98.4%; top: 148px; }  /* 无界 — bottom-right */
+
+  .tier-badge__emoji {
+    font-size: 46px; line-height: 1;
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.10));
+  }
+  .tier-badge--3 .tier-badge__emoji,
+  .tier-badge--4 .tier-badge__emoji {
+    font-size: 56px;
+    filter: drop-shadow(0 0 18px rgba(255,215,0,0.22));
+  }
+  .tier-badge--7 .tier-badge__emoji {
+    filter: drop-shadow(0 0 22px rgba(255,215,0,0.45));
+  }
+
+  .tier-badge__name {
+    font-size: 12px; font-weight: 600;
+    color: rgba(255,255,255,0.48);
+    letter-spacing: 1.5px; white-space: nowrap;
+    margin-top: 2px;
+  }
+  .tier-badge--3 .tier-badge__name,
+  .tier-badge--4 .tier-badge__name {
+    color: rgba(255,255,255,0.82); font-size: 13px;
+  }
+  .tier-badge--7 .tier-badge__name { color: #ffd700; }
+
+  .tier-badge__dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: rgba(255,215,0,0.22); margin-top: 5px;
+  }
+  .tier-badge--3 .tier-badge__dot,
+  .tier-badge--4 .tier-badge__dot {
+    background: rgba(255,215,0,0.45);
+    box-shadow: 0 0 6px rgba(255,215,0,0.28);
+  }
+  .tier-badge--7 .tier-badge__dot {
+    background: #ffd700;
+    box-shadow: 0 0 10px rgba(255,215,0,0.5);
+  }
+
+  /* ── SVG arc curve ── */
+  .arc-svg {
+    position: absolute;
+    top: 46px; left: 20px; right: 20px;
+    height: 223px;
+    z-index: 4;
+  }
+
+  /* ============================================
+     CENTRAL TITLE
+     ============================================ */
+  .title-area {
+    position: absolute;
+    top: 49%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 6;
+    margin-top: 6px;
+  }
+  .title-main {
+    font-size: 70px; font-weight: 900;
+    color: #fff;
+    letter-spacing: 6px; line-height: 1.15;
+    text-shadow:
+      0 0 28px rgba(255,215,0,0.32),
+      0 0 70px rgba(255,215,0,0.12),
+      0 3px 6px rgba(0,0,0,0.5);
+  }
+  .title-main .gold {
+    background: linear-gradient(180deg, #ffe566 20%, #f59e0b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 14px rgba(255,215,0,0.45));
+  }
+  .title-main .gold-dim {
+    background: linear-gradient(180deg, #e8cc60 20%, #c8900a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(255,215,0,0.30));
+  }
+  .title-sub {
+    font-size: 20px; color: rgba(255,255,255,0.48);
+    letter-spacing: 3px; margin-top: 14px; font-weight: 400;
+  }
+
+  /* ── Feature pills ── */
+  .pills {
+    position: absolute;
+    top: 54%; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 18px;
+    z-index: 6;
+    margin-top: 118px;
+  }
+  .pill {
+    padding: 7px 20px;
+    border-radius: 20px;
+    border: 0.8px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.035);
+    font-size: 14px; color: rgba(255,255,255,0.42);
+    letter-spacing: 1px; white-space: nowrap;
+  }
+
+  /* ============================================
+     BOTTOM BRANDING
+     ============================================ */
+  .brand {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 70px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 6;
+    background: linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 100%);
+  }
+  .brand__name {
+    font-size: 28px; font-weight: 800;
+    color: rgba(255,255,255,0.48);
+    letter-spacing: 6px;
+  }
+  .brand__name strong {
+    background: linear-gradient(135deg, #f59e0b, #ffd700);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 800;
+  }
+  .brand__tagline {
+    font-size: 14px; color: rgba(255,255,255,0.25);
+    letter-spacing: 2px; margin-top: 1px;
+  }
+
+  /* ============================================
+     DECORATIVE ELEMENTS
+     ============================================ */
+  .corners {
+    position: absolute; inset: 0; z-index: 7; pointer-events: none;
+  }
+  .corners::before {
+    content: ''; position: absolute; top: 16px; left: 16px;
+    width: 28px; height: 28px;
+    border-top: 1px solid rgba(255,215,0,0.12);
+    border-left: 1px solid rgba(255,215,0,0.12);
+  }
+  .corners::after {
+    content: ''; position: absolute; bottom: 78px; right: 16px;
+    width: 28px; height: 28px;
+    border-bottom: 1px solid rgba(255,215,0,0.12);
+    border-right: 1px solid rgba(255,215,0,0.12);
+  }
+
+  .dots-tr {
+    position: absolute; top: 20px; right: 24px;
+    display: flex; gap: 7px; z-index: 6;
+  }
+  .dots-tr span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,215,0,0.32);
+  }
+
+  /* ============================================
+     OVERLAYS (z-index high, no interaction)
+     ============================================ */
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.42) 100%);
+    z-index: 15; pointer-events: none;
+  }
+  .scanlines {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.005) 2px,
+      rgba(255,255,255,0.005) 4px
+    );
+    z-index: 20; pointer-events: none;
+  }
+
+  /* ============================================
+     DOWNLOAD BUTTON (outside card, for preview)
+     ============================================ */
+  .dl-btn-wrap {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 100;
+  }
+  .dl-btn {
+    padding: 12px 28px; border-radius: 24px; border: none;
+    font-size: 15px; font-weight: 600; cursor: pointer; letter-spacing: 1px;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: #fff;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .dl-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
+</style>
+</head>
+<body>
+
+<div class="card" id="shareCard">
+  <!-- Background -->
+  <div class="stars"></div>
+  <div class="glow-p"></div>
+  <div class="glow-a"></div>
+  <div class="glow-c"></div>
+  <div class="ring"></div>
+  <div class="meteor"></div>
+
+  <!-- Corner accents -->
+  <div class="corners"></div>
+  <div class="dots-tr"><span></span><span></span><span></span></div>
+
+  <!-- Tier evolution arc -->
+  <div class="tier-arc">
+    <div class="tier-badge tier-badge--0">
+      <span class="tier-badge__emoji">🐣</span><span class="tier-badge__name">萌 新</span>
+      <div class="tier-badge__dot"></div>
+    </div>
+    <div class="tier-badge tier-badge--1">
+      <span class="tier-badge__emoji">💬</span><span class="tier-badge__name">调戏师</span>
+      <div class="tier-badge__dot"></div>
+    </div>
+    <div class="tier-badge tier-badge--2">
+      <span class="tier-badge__emoji">🛠️</span><span class="tier-badge__name">工具人</span>
+      <div class="tier-badge__dot"></div>
+    </div>
+    <div class="tier-badge tier-badge--3">
+      <span class="tier-badge__emoji">🤝</span><span class="tier-badge__name">协作者</span>
+      <div class="tier-badge__dot"></div>
+    </div>
+    <div class="tier-badge tier-badge--4">
+      <span class="tier-badge__emoji">⚡</span><span class="tier-badge__name">驾驭者</span>
+      <div class="tier-badge__dot"></div>
+    </div>
+    <div class="tier-badge tier-badge--5">
+      <span class="tier-badge__emoji">🧪</span><span class="tier-badge__name">炼金术士</span>
+      <div class="tier-badge__dot"></div>
+    </div>
+    <div class="tier-badge tier-badge--6">
+      <span class="tier-badge__emoji">🧠</span><span class="tier-badge__name">觉醒者</span>
+      <div class="tier-badge__dot"></div>
+    </div>
+    <div class="tier-badge tier-badge--7">
+      <span class="tier-badge__emoji">🌊</span><span class="tier-badge__name">无 界</span>
+      <div class="tier-badge__dot"></div>
+    </div>
+  </div>
+
+  <!-- Arc curve -->
+  <svg class="arc-svg" viewBox="0 0 760 223" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="ag" x1="0%" y1="100%" x2="100%" y2="100%">
+        <stop offset="0%"   stop-color="rgba(255,215,0,0)" />
+        <stop offset="10%"  stop-color="rgba(255,215,0,0.10)" />
+        <stop offset="30%"  stop-color="rgba(255,215,0,0.22)" />
+        <stop offset="50%"  stop-color="rgba(255,215,0,0.32)" />
+        <stop offset="70%"  stop-color="rgba(255,215,0,0.22)" />
+        <stop offset="90%"  stop-color="rgba(255,215,0,0.10)" />
+        <stop offset="100%" stop-color="rgba(255,215,0,0.50)" />
+      </linearGradient>
+    </defs>
+    <!-- Two cubic beziers joined at peak, passing through dot centers:
+         0:(45,215) 1:(145,172) 2:(246,122) 3:(347,78) 4:(447,78) 5:(548,122) 6:(648,172) 7:(715,215) -->
+    <path d="M 45,215 C 155,20  310,78  380,78  C 450,78  605,20  715,215"
+          fill="none" stroke="url(#ag)" stroke-width="1.5"
+          stroke-dasharray="3 6" stroke-linecap="round" />
+  </svg>
+
+  <!-- Title -->
+  <div class="title-area">
+    <div class="title-main">你的<span class="gold">AI</span>段位<br>是<span class="gold-dim">什么</span>？</div>
+    <div class="title-sub">5 道情景题 · 2 分钟 · 测出真实 AI 水平</div>
+  </div>
+
+  <!-- Feature pills -->
+  <div class="pills">
+    <span class="pill">⚔️ 挑战好友</span>
+    <span class="pill">🏆 8级段位</span>
+    <span class="pill">📊 全国排行</span>
+  </div>
+
+  <!-- Brand -->
+  <div class="brand">
+    <div class="brand__name">进<strong>化</strong>湾</div>
+    <div class="brand__tagline">扫码测测 · 和好友一决高下</div>
+  </div>
+
+  <!-- Overlays -->
+  <div class="vignette"></div>
+  <div class="scanlines"></div>
+</div>
+
+<div class="dl-btn-wrap">
+  <button class="dl-btn" onclick="downloadCard()">📥 下载分享图 (PNG)</button>
+</div>
+
+<script>
+  async function downloadCard() {
+    const card = document.getElementById('shareCard');
+    try {
+      const { default: html2canvas } = await import(
+        'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.esm.js'
+      );
+      const canvas = await html2canvas(card, {
+        width: 800, height: 640, scale: 2, useCORS: true,
+        backgroundColor: null, logging: false,
+      });
+      const a = document.createElement('a');
+      a.download = 'default-share.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    } catch (e) {
+      alert('请截图保存卡片区域为 default-share.png，或右键卡片 → 存储图像');
+    }
+  }
+</script>
+
+</body>
+</html>

@@ -21,21 +21,16 @@ export async function callCloudFunction(name, data = {}, options = {}) {
   }
 
   let lastError = null;
+  let lastResult = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       const res = await wx.cloud.callFunction({ name, data });
-      const result = res.result || {};
-
-      if (result.code !== 0 && result.code !== 500) {
-        // 业务错误不重试，直接返回
-        if (showLoading) uni.hideLoading();
-        uni.showToast({ title: result.message || '请求失败', icon: 'none' });
-        return result;
-      }
+      const result = (res && res.result) ? res.result : { code: -1, message: '云函数返回异常', data: null };
 
       // 服务端 500 可能是瞬时错误，允许重试
       if (result.code === 500 && retry && attempt < MAX_RETRIES) {
+        lastResult = result;
         throw new Error(`Server 500: ${result.message}`);
       }
 
@@ -47,7 +42,10 @@ export async function callCloudFunction(name, data = {}, options = {}) {
 
       if (!retry || attempt >= MAX_RETRIES) {
         if (showLoading) uni.hideLoading();
-        uni.showToast({ title: '网络异常，请稍后重试', icon: 'none' });
+        // 如果是 500 且有 lastResult，返回它（让调用方根据 code 处理）
+        if (lastResult && lastResult.code === 500) {
+          return lastResult;
+        }
         return { code: 500, message: '网络异常', data: null };
       }
 
@@ -68,22 +66,14 @@ let questionCacheIndex = -1;
  * 首页预加载每日题目（后台静默调用，不阻塞 UI）
  */
 export async function preloadDailyQuestions() {
-  const freeCount = uni.getStorageSync('test_count') || 0;
-  const adCount = uni.getStorageSync('ad_test_count') || 0;
-  const totalCount = freeCount + adCount;
   const today = new Date().toISOString().slice(0, 10);
-  const storedDate = uni.getStorageSync('test_date');
-  if (storedDate === today && freeCount >= 3 && adCount >= 2) return;
 
   try {
-    // 预加载普通模式(5题)，setIdx 基于当前计数
-    const setIdx = Math.min(totalCount, 4);
-    const cacheDate = today;
-    questionCache = await callCloudFunction('getDailyQuestions', { setIndex: setIdx, count: 5 }, { retry: false });
+    questionCache = await callCloudFunction('getDailyQuestions', { setIndex: 0, count: 5 }, { retry: false });
     if (questionCache.code === 0) {
-      questionCache._cacheDate = cacheDate;
+      questionCache._cacheDate = today;
     }
-    questionCacheIndex = setIdx * 100 + 5;
+    questionCacheIndex = 5;
   } catch (e) {
     // 预加载失败不影响首页展示
   }
@@ -114,8 +104,8 @@ export function fetchDailyQuestions(date, setIndex = 0, count = 5) {
 /**
  * 提交分数
  */
-export function submitTestScore(questionSetId, answers, fromUid = '', challengeId = '', testType = 'free') {
-  return callCloudFunction('submitScore', { questionSetId, answers, fromUid, challengeId, testType }, { showLoading: true, loadingText: 'AI正在评估...' });
+export function submitTestScore(questionSetId, answers, fromUid = '', challengeId = '', bountyTier = '', targetName = '') {
+  return callCloudFunction('submitScore', { questionSetId, answers, fromUid, challengeId, bountyTier, targetName }, { showLoading: true, loadingText: 'AI正在评估...' });
 }
 
 /**
@@ -127,10 +117,10 @@ export function fetchTierDistribution() {
 
 /**
  * 获取好友段位排名
- * @param {string} action - 'rank'(默认) | 'updatePrivacy' | 'groupRank'
+ * @param {string} action - 'rank'(默认) | 'updatePrivacy' | 'groupRank' | 'collectRank'
  */
-export function fetchFriendRank(action = 'rank') {
-  return callCloudFunction('getFriendRank', { action });
+export function fetchFriendRank(action = 'rank', extra = {}) {
+  return callCloudFunction('getFriendRank', { action, ...extra });
 }
 
 /**
@@ -166,4 +156,102 @@ export function submitFeedback(testRecordId, isAccurate) {
  */
 export function updatePrivacy(privacyHidden) {
   return callCloudFunction('getFriendRank', { action: 'updatePrivacy', privacyHidden });
+}
+
+/**
+ * 标记悬赏结果为已查看
+ */
+export function markBountyViewed(bountyId) {
+  return callCloudFunction('getFriendRank', { action: 'markBountyViewed', bountyId });
+}
+
+// 当前用户 openid 缓存
+let cachedOpenid = null;
+
+/**
+ * 获取当前用户 openid（带缓存，供分享跟踪用）
+ */
+export async function getUserOpenid() {
+  if (cachedOpenid) return cachedOpenid;
+  try {
+    const res = await callCloudFunction('getWeeklyStats', { action: 'getOpenid' });
+    if (res.code === 0 && res.data && res.data.openid) {
+      cachedOpenid = res.data.openid;
+      getApp().globalData.userOpenid = cachedOpenid;
+      uni.setStorageSync('user_openid', cachedOpenid);
+      return cachedOpenid;
+    }
+  } catch (e) { /* 静默失败 */ }
+  return '';
+}
+
+/**
+ * 同步获取当前用户 openid（供分享回调使用，需提前通过 getUserOpenid 预加载）
+ */
+export function getUserOpenidSync() {
+  if (cachedOpenid) return cachedOpenid;
+  cachedOpenid = uni.getStorageSync('user_openid') || '';
+  return cachedOpenid;
+}
+
+// ── v1.0 订阅消息 ──
+
+/**
+ * 订阅消息模板 ID 配置（需在微信公众平台申请后替换）
+ * 模板在 mp-backend → 开发 → 订阅消息 中申请
+ */
+const SUBSCRIBE_TEMPLATE_IDS = {
+  testReminder:  '', // 测试提醒：3天未测提醒
+  challengeNotify: '', // 挑战通知：好友发起挑战
+  checkinReminder: '', // 签到提醒：当日未签到（晚20:00）
+  tierChange: '', // 段位变化：被好友超越 / 段位晋升
+};
+
+/**
+ * 请求订阅消息授权
+ * @param {'testReminder'|'challengeNotify'|'checkinReminder'|'tierChange'|string[]} templates - 要请求的模板 key 数组
+ * @returns {Promise<Object>} - 订阅结果 { templateId: 'accept'|'reject'|'ban' }
+ */
+export function requestSubscribeMessage(templates = ['challengeNotify', 'tierChange']) {
+  return new Promise((resolve) => {
+    const keys = Array.isArray(templates) ? templates : [templates];
+    const tmplIds = keys
+      .map(k => SUBSCRIBE_TEMPLATE_IDS[k])
+      .filter(Boolean);
+
+    // 未配置模板 ID 时静默跳过
+    if (tmplIds.length === 0) {
+      resolve({});
+      return;
+    }
+
+    if (typeof wx === 'undefined' || !wx.requestSubscribeMessage) {
+      resolve({});
+      return;
+    }
+
+    wx.requestSubscribeMessage({
+      tmplIds,
+      success(res) {
+        // 回写订阅状态到服务端
+        const results = {};
+        keys.forEach((k, i) => {
+          const tid = SUBSCRIBE_TEMPLATE_IDS[k];
+          if (tid) {
+            results[tid] = res[tid] || 'reject';
+          }
+        });
+        // 静默回写
+        callCloudFunction('submitScore', {
+          action: 'updateSubscribe',
+          subscriptions: results,
+        }, { retry: false }).catch(() => {});
+        resolve(res);
+      },
+      fail(err) {
+        console.warn('[api] requestSubscribeMessage 失败:', err.errMsg);
+        resolve({});
+      },
+    });
+  });
 }

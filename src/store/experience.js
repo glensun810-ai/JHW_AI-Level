@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import { callCloudFunction } from '@/utils/api.js';
 
 // 经验值规则 — v0.9 进化值双轨制
 const EXP_RULES = {
@@ -128,6 +129,9 @@ export const useExperienceStore = defineStore('experience', () => {
     const gain = EXP_RULES[action] || 0;
     if (gain === 0) return;
 
+    // 始终记录本次 gain 值（供结果页动画展示），即使达到每日上限也不跳过
+    lastGain = gain;
+
     const today = getToday();
     const limit = DAILY_LIMITS[action];
 
@@ -139,15 +143,14 @@ export const useExperienceStore = defineStore('experience', () => {
           todayCount++;
         }
       }
-      if (todayCount >= limit) return; // 已达上限，静默跳过
+      if (todayCount >= limit) return; // 已达上限，静默跳过（但 lastGain 已记录）
 
       // 记录本次获取
       dailyGains.value[`${action}_${todayCount}`] = today;
     }
-
-    lastGain = gain;
     exp.value += gain;
     uni.setStorageSync('evolution_exp', exp.value);
+    syncExpToServer(); // 静默同步到服务端
 
     // 升级提示
     const newLevel = level.value;
@@ -175,9 +178,49 @@ export const useExperienceStore = defineStore('experience', () => {
     return lastGain;
   }
 
+  // ── 服务端 XP 同步 ──
+  let syncTimer = null;
+
+  async function syncExpToServer() {
+    // 防抖：3 秒内的多次 addExp 合并为一次同步
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(async () => {
+      try {
+        await callCloudFunction('getWeeklyStats', {
+          action: 'syncExp',
+          exp: exp.value,
+          level: level.value,
+        }, { retry: false });
+      } catch (e) { /* 静默失败，本地 XP 不丢失 */ }
+    }, 3000);
+  }
+
+  async function loadExpFromServer() {
+    try {
+      const res = await callCloudFunction('getWeeklyStats', {
+        action: 'syncExp',
+        mode: 'get',
+      }, { retry: false });
+      if (res.code === 0 && res.data) {
+        // 取本地和远程的最大值
+        const remoteExp = res.data.exp || 0;
+        const remoteLevel = res.data.level || 1;
+        if (remoteExp > exp.value) {
+          exp.value = remoteExp;
+          uni.setStorageSync('evolution_exp', remoteExp);
+        }
+        // level 跟随 exp 自动计算，无需单独存储
+      }
+    } catch (e) { /* 静默失败 */ }
+  }
+
+  // 初始化时从服务端加载 XP
+  loadExpFromServer();
+
   return {
     exp, level, levelName, levelProgress, currentLevelExp, nextLevelExp, unlocks,
     addExp, getExpForAction, getLastGain,
+    syncExpToServer, loadExpFromServer,
     EXP_RULES,
   };
 });

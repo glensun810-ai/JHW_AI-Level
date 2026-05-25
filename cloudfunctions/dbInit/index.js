@@ -30,7 +30,10 @@ const SCHEMAS = {
       currentTier:   { type: 'string', required: false, default: '', description: '当前段位名称' },
       testCount:     { type: 'number', required: false, default: 0, description: '累计测试次数' },
       consecutiveDays: { type: 'number', required: false, default: 0, description: '连续签到天数' },
+      collectedCards: { type: 'array', required: false, default: [], description: '已收集的知识卡 ID 列表' },
       bonusTestsRemaining: { type: 'number', required: false, default: 0, description: '签到奖励剩余测试次数' },
+      inviteUnlocks: { type: 'number', required: false, default: 0, description: '邀请好友解锁的测试次数（v1.0）' },
+      subscribeTemplates: { type: 'array', required: false, default: [], description: '订阅消息模板 [{templateId, status, subscribedAt}]' },
       privacyHidden:   { type: 'boolean', required: false, default: false, description: '是否隐藏排名' },
       createdAt:    { type: 'date', required: false, description: '创建时间' },
       updatedAt:    { type: 'date', required: false, description: '更新时间' },
@@ -217,7 +220,68 @@ const SCHEMAS = {
     security: { read: false, write: true },
   },
 
-  // ── 表 10：monitor_results（监控结果快照，v0.6 新增） ──
+  // ── 表 10：friendships（双向好友关系，基于分享链） ──
+  friendships: {
+    description: '双向好友关系表，基于分享转化构建',
+    fields: {
+      _id:       { type: 'auto', description: '自动生成' },
+      pairId:    { type: 'string', required: true, description: 'userA_userB（字典序，唯一）' },
+      userA:     { type: 'string', required: true, description: 'OpenID（字母序较小）' },
+      userB:     { type: 'string', required: true, description: 'OpenID（字母序较大）' },
+      createdAt: { type: 'date', required: false },
+      updatedAt: { type: 'date', required: false },
+    },
+    indexes: [
+      { keys: { userA: 1, userB: 1 }, options: { unique: true } },
+      { keys: { pairId: 1 }, options: { unique: true } },
+      { keys: { userB: 1 } },
+    ],
+    security: { read: true, write: false },
+  },
+
+  // ── 表 11：bounty_results（段位悬赏结果） ──
+  bounty_results: {
+    description: '段位悬赏结果，记录猜测段位 vs 实际段位对比',
+    fields: {
+      _id:             { type: 'auto', description: '自动生成' },
+      predictorOpenid: { type: 'string', required: true, description: '悬赏者 OpenID' },
+      targetOpenid:    { type: 'string', required: true, description: '被测者 OpenID' },
+      targetName:      { type: 'string', required: false, description: '被测者昵称' },
+      guessedTier:     { type: 'string', required: true, description: '猜测的段位名称' },
+      actualTier:      { type: 'string', required: true, description: '实际段位名称' },
+      actualScore:     { type: 'number', required: true, description: '实际分数（5-50）' },
+      isCorrect:       { type: 'boolean', required: true, description: '是否猜中' },
+      viewed:          { type: 'boolean', required: false, default: false, description: '悬赏者是否已查看' },
+      createdAt:       { type: 'date', required: false },
+    },
+    indexes: [
+      { keys: { predictorOpenid: 1, viewed: 1, createdAt: -1 } },
+      { keys: { targetOpenid: 1, createdAt: -1 } },
+    ],
+    security: { read: true, write: false },
+  },
+
+  // ── 表 12：invites（邀请记录，v1.0 新增） ──
+  invites: {
+    description: '邀请记录表，追踪社交邀请的发起与完成',
+    fields: {
+      _id:            { type: 'auto', description: '自动生成' },
+      inviterOpenid:  { type: 'string', required: true, description: '邀请人 OpenID' },
+      inviteeOpenid:  { type: 'string', required: true, description: '被邀请人 OpenID' },
+      completed:      { type: 'boolean', required: false, default: false, description: '被邀请人是否完成测试' },
+      inviteeTier:    { type: 'string', required: false, description: '被邀请人完成测试时的段位' },
+      completedAt:    { type: 'date', required: false },
+      createdAt:      { type: 'date', required: false },
+    },
+    indexes: [
+      { keys: { inviterOpenid: 1, completed: 1 } },
+      { keys: { inviteeOpenid: 1 } },
+      { keys: { inviterOpenid: 1, inviteeOpenid: 1 }, options: { unique: true } },
+    ],
+    security: { read: true, write: false },
+  },
+
+  // ── 表 13：monitor_results（监控结果快照，v0.6 新增） ──
   monitor_results: {
     description: '每小时监控指标计算结果快照，用于 Dashboard 展示',
     fields: {
@@ -232,6 +296,22 @@ const SCHEMAS = {
     ],
     security: { read: false, write: false },
   },
+
+  // ── 表 14：group_sessions（群聊会话记录，v1.1 新增，用于群挑战榜） ──
+  group_sessions: {
+    description: '记录用户从群聊分享进入小程序的会话，用于群排行过滤',
+    fields: {
+      _id:       { type: 'auto', description: '自动生成' },
+      openGId:   { type: 'string', required: true, description: '群聊标识（解密后的 openGId 或 shareTicket hash）' },
+      openid:    { type: 'string', required: true, description: '用户 OpenID' },
+      enterTime: { type: 'date', required: false },
+    },
+    indexes: [
+      { keys: { openGId: 1 } },
+      { keys: { openid: 1 } },
+    ],
+    security: { read: true, write: false },
+  },
 };
 
 // ═══════════════════════════════════════
@@ -245,6 +325,47 @@ exports.main = async (event, context) => {
   if (action === 'schema') {
     // 仅返回 Schema 文档
     return { code: 0, message: 'ok', data: { schemas: SCHEMAS } };
+  }
+
+  if (action === 'migrateScores') {
+    // Bug #6 修复：归一化历史 deep mode 用户的 highestScore（>50 → 除以2）
+    const batchSize = 100;
+    let cursor = null;
+    let totalMigrated = 0;
+    const migratedUsers = [];
+
+    while (true) {
+      const query = { highestScore: _.gt(50) };
+      const { data: users } = cursor
+        ? await db.collection('users').where(query).skip(cursor).limit(batchSize).get()
+        : await db.collection('users').where(query).limit(batchSize).get();
+
+      if (!users || users.length === 0) break;
+
+      for (const user of users) {
+        const oldScore = user.highestScore;
+        const newScore = Math.round(oldScore / 2);
+        const clamped = Math.min(50, Math.max(5, newScore));
+        try {
+          await db.collection('users').doc(user._id).update({
+            data: { highestScore: clamped },
+          });
+          migratedUsers.push({ _openid: user._openid, oldScore, newScore: clamped });
+          totalMigrated++;
+        } catch (e) {
+          results.push({ user: user._openid, status: 'error', error: e.message });
+        }
+      }
+
+      if (users.length < batchSize) break;
+      cursor = (cursor || 0) + batchSize;
+    }
+
+    console.log(`[dbInit] migrateScores 完成，迁移 ${totalMigrated} 个用户`);
+    return {
+      code: 0, message: 'ok',
+      data: { totalMigrated, sample: migratedUsers.slice(0, 5) },
+    };
   }
 
   if (action === 'createIndexes') {

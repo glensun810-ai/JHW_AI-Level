@@ -38,7 +38,7 @@ function getCurrentPage() {
   try {
     const pages = getCurrentPages();
     return pages.length > 0 ? pages[pages.length - 1].route : 'unknown';
-  } catch {
+  } catch (e) {
     return 'unknown';
   }
 }
@@ -55,7 +55,7 @@ async function flush() {
       action: 'batch',
       events: batch,
     });
-  } catch {
+  } catch (e) {
     // 降级：写回队列（最多保留 50 条）
     const retry = (uni.getStorageSync(RETRY_KEY) || []).concat(batch).slice(-50);
     uni.setStorageSync(RETRY_KEY, retry);
@@ -87,7 +87,9 @@ function track(event, params = {}) {
     page: getCurrentPage(),
   };
 
+  // #ifdef DEV
   console.log(PREFIX, event, payload);
+  // #endif
 
   // 关键事件实时上报，其他事件批量上报
   const criticalEvents = [
@@ -140,7 +142,7 @@ export function trackHomeHesitate(duration) {
 
 /** 4. 点击开始测试 */
 export function trackTestStart(userType = 'new', ctaCopy = '') {
-  track('test_start', { user_type: userType, cta_copy: ctaCopy });
+  track('test_start', { user_type: userType, cta_copy: ctaCopy, cta_variant: getShareVariant() });
 }
 
 /** 5. 每题作答 */
@@ -202,6 +204,7 @@ export function trackShareClick(tierName, shareTarget) {
   track('share_click', {
     tier_level: tierName,
     share_target: shareTarget,
+    variant: getShareVariant(),
   });
 }
 
@@ -211,6 +214,7 @@ export function trackShareSuccess(tierName, shareChannel, shareCopyStyle = '') {
     tier_level: tierName,
     share_channel: shareChannel,
     share_copy_style: shareCopyStyle,
+    variant: getShareVariant(),
   });
 }
 
@@ -259,6 +263,41 @@ export function trackChallenge(targetUid) {
 }
 
 // ═══════════════════════════════════════
+// v1.0 新增：邀请漏斗 + A/B 分流
+// ═══════════════════════════════════════
+
+/** 19. 邀请发起（分享时触发） */
+export function trackInviteSent(shareChannel = 'private') {
+  track('invite_sent', { share_channel: shareChannel, variant: getShareVariant() });
+}
+
+/** 20. 邀请点击（被邀请人打开小程序） */
+export function trackInviteClick(inviterUid, shareChannel = 'private') {
+  track('invite_click', { inviter_uid: inviterUid, share_channel: shareChannel });
+}
+
+/** 21. 邀请转化（被邀请人完成测试） */
+export function trackInviteConversion(inviterUid, inviteeTier) {
+  track('invite_conversion', { inviter_uid: inviterUid, invitee_tier: inviteeTier });
+}
+
+// A/B 分流：根据用户 openid hash 确定性分流
+function getShareVariant() {
+  try {
+    const uid = uni.getStorageSync('analytics_sid') || '';
+    const hash = uid.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+    return hash % 2 === 0 ? 'A' : 'B';
+  } catch (e) {
+    return 'A';
+  }
+}
+
+/** 获取 A/B variant（供页面使用） */
+export function getABVariant() {
+  return getShareVariant();
+}
+
+// ═══════════════════════════════════════
 // 初始化：加载重试队列 + 监听页面卸载
 // ═══════════════════════════════════════
 export function initAnalytics() {
@@ -295,4 +334,8 @@ export default {
   trackInviteUnlock,
   trackPageView,
   trackChallenge,
+  trackInviteSent,
+  trackInviteClick,
+  trackInviteConversion,
+  getABVariant,
 };

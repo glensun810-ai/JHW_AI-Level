@@ -59,12 +59,8 @@ export const useQuizStore = defineStore('quiz', () => {
 
   // ── 动作 ──
   async function fetchQuestions() {
-    const freeCount = uni.getStorageSync('test_count') || 0;
-    const adCount = uni.getStorageSync('ad_test_count') || 0;
-    const totalCount = freeCount + adCount;
-    const setIdx = Math.min(totalCount, 4);
     const questionCount = deepMode.value ? 10 : 5;
-    const res = await fetchDailyQuestions(undefined, setIdx, questionCount);
+    const res = await fetchDailyQuestions(undefined, 0, questionCount);
 
     if (res.code === 0 && res.data) {
       questions.value = (res.data.questions || []).map(q => ({
@@ -137,10 +133,17 @@ export const useQuizStore = defineStore('quiz', () => {
     return false;
   }
 
-  async function submitTest(challengeId = '', testType = 'free') {
+  async function submitTest(challengeId = '') {
     const app = getApp();
     const fromUid = app.globalData.shareFromUid || '';
-    const res = await submitTestScore(questionSetId.value, answers.value, fromUid, challengeId, testType);
+    const bountyTier = app.globalData.bountyTier || '';
+    const targetName = app.globalData.bountyTargetName || '';
+    const res = await submitTestScore(questionSetId.value, answers.value, fromUid, challengeId, bountyTier, targetName);
+    // 消费后清除，避免下次测试误用
+    if (bountyTier) {
+      app.globalData.bountyTier = '';
+      app.globalData.bountyTargetName = '';
+    }
     if (res.code === 0 && res.data) {
       lastResult.value = res.data;
       lastAnswers.value = [...answers.value];
@@ -150,11 +153,13 @@ export const useQuizStore = defineStore('quiz', () => {
         emoji: q.emoji,
         _parsedOptions: q._parsedOptions,
       }));
-      // v0.9: 进化值
-      const expStore = useExperienceStore();
-      expStore.addExp('test');
-      if (res.data.isNewHighest) {
-        expStore.addExp('record');
+      // 进化值：非重复提交时发放
+      if (!res.data.isDuplicate) {
+        const expStore = useExperienceStore();
+        expStore.addExp('test');
+        if (res.data.isNewHighest) {
+          expStore.addExp('record');
+        }
       }
     }
     return res;

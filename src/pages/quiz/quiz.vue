@@ -23,6 +23,15 @@
       <text>正在加载题目…</text>
     </view>
 
+    <!-- 加载失败 -->
+    <view v-if="quizState === 'error'" class="page-quiz__error">
+      <text class="page-quiz__error-icon">😵</text>
+      <text class="page-quiz__error-title">题目加载失败</text>
+      <text class="page-quiz__error-hint">可能是网络波动，请重试</text>
+      <button class="page-quiz__error-retry" @click="loadFresh">重新加载</button>
+      <text class="page-quiz__error-back" @click="goBack">← 返回首页</text>
+    </view>
+
     <!-- 题目区 -->
     <view v-else class="page-quiz__body">
       <!-- 鼓励提示（绝对定位浮层，不挤占布局） -->
@@ -37,7 +46,7 @@
 
       <!-- 题干+选项核心区（位置稳定，仅做交叉淡入） -->
       <view class="page-quiz__question-area" :class="{ 'page-quiz__question-area--fading': questionFading }">
-        <view class="page-quiz__stem-wrap">
+        <view v-if="currentQuestion" class="page-quiz__stem-wrap">
           <text v-if="currentQuestion.emoji" class="page-quiz__q-emoji">{{ currentQuestion.emoji }}</text>
           <text class="page-quiz__stem">{{ currentQuestion.stem }}</text>
         </view>
@@ -98,9 +107,9 @@ import ProgressBar from '@/components/ProgressBar/ProgressBar.vue';
 import OptionCard from '@/components/OptionCard/OptionCard.vue';
 import { useQuizStore } from '@/store/quiz.js';
 import { useExperienceStore } from '@/store/experience.js';
-import { trackQuestionAnswer, trackTestAbandon, trackTestComplete, trackTestStart, trackInviteUnlock } from '@/utils/analytics.js';
-import { MAX_FREE_TESTS } from '@/utils/numeric-constants.js';
-import { canWatchAd, getAvailableUnlocks, showRewardedAd } from '@/utils/ad.js';
+import { trackQuestionAnswer, trackTestAbandon, trackTestComplete, trackTestStart, trackInviteConversion } from '@/utils/analytics.js';
+import { hasUsedFreeTestToday, markFreeTestUsed } from '@/utils/ad.js';
+import { getUserOpenidSync } from '@/utils/api.js';
 
 const store = useQuizStore();
 const expStore = useExperienceStore();
@@ -110,11 +119,9 @@ const progressRef = ref(null);
 const challengeId = ref('');
 // 换题交叉淡入控制
 const questionFading = ref(false);
-// 本次测试类型：free | ad
-const testType = ref('free');
 
 // ── UI 状态 ──
-const quizState = ref('loading'); // loading | ready | selected | commenting | submitting
+const quizState = ref('loading'); // loading | ready | selected | commenting | submitting | error
 const selectedIndex = ref(-1);
 const selectedComment = ref('');
 const showRarity = ref('');
@@ -166,33 +173,28 @@ onMounted(async () => {
   const page = pages[pages.length - 1];
   challengeId.value = (page.options && page.options.challengeId) || '';
 
-  // 重置每日计数
+  // 检查断点恢复（需验证日期，隔天过期）
   const today = new Date().toISOString().slice(0, 10);
-  if (uni.getStorageSync('test_date') !== today) {
-    uni.setStorageSync('test_date', today);
-    uni.setStorageSync('test_count', 0);
-  }
-  if (uni.getStorageSync('ad_test_date') !== today) {
-    uni.setStorageSync('ad_test_date', today);
-    uni.setStorageSync('ad_test_count', 0);
-  }
-
-  const freeCount = uni.getStorageSync('test_count') || 0;
-  const effectiveMax = expStore.unlocks.extraDailyTest ? MAX_FREE_TESTS + 1 : MAX_FREE_TESTS;
-  if (freeCount >= effectiveMax) {
-    const unlocked = await showUnlockModal('entry');
-    if (!unlocked) return;
-  }
-
-  // 检查断点恢复
   const bp = uni.getStorageSync('quiz_breakpoint');
-  if (bp && bp.questionSetId) {
+  if (bp && bp.questionSetId && bp.date === today) {
+    // 断点恢复超时保护：3秒内用户未响应则自动重新开始
+    let breakpointHandled = false;
+    const bpTimeout = setTimeout(() => {
+      if (!breakpointHandled) {
+        breakpointHandled = true;
+        uni.removeStorageSync('quiz_breakpoint');
+        loadFresh();
+      }
+    }, 3000);
     uni.showModal({
       title: '继续上次测试？',
       content: `你上次答到第 ${(bp.currentIndex || 0) + 1} 题`,
       confirmText: '继续',
       cancelText: '重新开始',
       success: (r) => {
+        clearTimeout(bpTimeout);
+        if (breakpointHandled) return;
+        breakpointHandled = true;
         if (r.confirm) {
           store.questions = bp.questions || [];
           store.questionSetId = bp.questionSetId;
@@ -211,6 +213,8 @@ onMounted(async () => {
       },
     });
   } else {
+    // 清除过期断点
+    if (bp) uni.removeStorageSync('quiz_breakpoint');
     loadFresh();
   }
 });
@@ -237,6 +241,7 @@ onBeforeUnmount(() => {
       questionSetId: store.questionSetId,
       currentIndex: store.currentIndex,
       answers: store.answers,
+      date: new Date().toISOString().slice(0, 10),
     });
   }
 });
@@ -296,21 +301,21 @@ async function loadFresh() {
     store.startQuestion();
     startNudgeTimers();
     trackTestStart('new');
-  } else {
-    // 超时或加载失败 → 自动重试一次
-    uni.showToast({ title: '加载超时，正在重试…', icon: 'loading', duration: 2000 });
-    setTimeout(async () => {
-      const retryRes = await store.fetchQuestions();
-      if (retryRes.code === 0 && store.totalQuestions > 0) {
-        quizState.value = 'ready';
-        store.startQuestion();
-        startNudgeTimers();
-        trackTestStart('new');
-      } else {
-        uni.showToast({ title: '题目加载失败，请退出重试', icon: 'none', duration: 3000 });
-      }
-    }, 2000);
+    return;
   }
+
+  // 自动重试一次
+  const retryRes = await store.fetchQuestions();
+  if (retryRes.code === 0 && store.totalQuestions > 0) {
+    quizState.value = 'ready';
+    store.startQuestion();
+    startNudgeTimers();
+    trackTestStart('new');
+    return;
+  }
+
+  // 两次都失败 → 显示错误页（提供手动重试按钮）
+  quizState.value = 'error';
 }
 
 // ── 选择选项 ──
@@ -321,7 +326,7 @@ function handleSelect(idx) {
   clearNudgeTimers();
 
   // 触觉反馈
-  wx.vibrateShort({ type: 'light' });
+  if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
 
   const result = store.selectAnswer(idx);
   if (!result) return;
@@ -340,6 +345,7 @@ function handleSelect(idx) {
     questionSetId: store.questionSetId,
     currentIndex: store.currentIndex,
     answers: store.answers,
+    date: new Date().toISOString().slice(0, 10),
   });
 
   // 显示短评（200ms 后）
@@ -378,7 +384,7 @@ function handleQuestionFeedback(feedback) {
   questionFeedback.value = feedback;
   store.setAnswerFeedback(currentIndex.value, feedback);
   // 触觉反馈
-  wx.vibrateShort({ type: 'light' });
+  if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
 }
 
 // ── 前进到下一题 ──
@@ -452,100 +458,67 @@ function goBack() {
     questionSetId: store.questionSetId,
     currentIndex: store.currentIndex,
     answers: store.answers,
-  });
-}
-
-// ── 多渠道解锁弹窗（入口用 / 答题完成被拒用）
-async function showUnlockModal(context = 'entry') {
-  const { ad } = getAvailableUnlocks();
-  const hasAd = ad > 0;
-
-  return new Promise((resolve) => {
-    let settled = false;
-    const done = (val) => { if (!settled) { settled = true; clearTimeout(timeout); resolve(val); } };
-    const timeout = setTimeout(() => { done(false); }, 30000);
-
-    uni.showActionSheet({
-      itemList: [
-        ...(hasAd ? ['📺 看广告解锁'] : []),
-        '📤 邀请好友解锁',
-      ],
-      success: async (r) => {
-        const itemList = hasAd ? ['📺 看广告解锁', '📤 邀请好友解锁'] : ['📤 邀请好友解锁'];
-        const choice = itemList[r.tapIndex];
-        if (choice.includes('看广告')) {
-          trackInviteUnlock(0);
-          uni.showToast({ title: '广告加载中…', icon: 'loading', duration: 5000 });
-          const adResult = await showRewardedAd();
-          uni.hideToast();
-          if (adResult === 'completed') {
-            testType.value = 'ad';
-            uni.showToast({ title: '解锁成功！', icon: 'success' });
-            done(true);
-          } else {
-            uni.showToast({ title: '广告未完成，请重试', icon: 'none' });
-            done(false);
-          }
-        } else if (choice.includes('邀请好友')) {
-          trackInviteUnlock(context === 'blocked' ? 1 : 0);
-          wx.shareAppMessage({
-            title: '测测你的AI段位！我在进化湾等你',
-            path: '/pages/index/index',
-          });
-          uni.showToast({ title: '请分享后等待好友进入', icon: 'none', duration: 2000 });
-          done(false);
-        }
-      },
-      fail: () => {
-        done(false);
-      },
-    });
+    date: new Date().toISOString().slice(0, 10),
   });
 }
 
 // ── 提交答案 ──
 async function submitAndGo() {
-  trackTestComplete(
-    store.testStartTime ? Date.now() - store.testStartTime : 0,
-    store.answers,
-  );
+  try {
+    trackTestComplete(
+      store.testStartTime ? Date.now() - store.testStartTime : 0,
+      store.answers,
+    );
 
-  let res = await store.submitTest(challengeId.value, testType.value);
-  if (res.code === 0 && res.data) {
-    const today = new Date().toISOString().slice(0, 10);
-    if (testType.value === 'free') {
-      const count = (uni.getStorageSync('test_count') || 0) + 1;
-      uni.setStorageSync('test_count', count);
-      uni.setStorageSync('test_date', today);
-    }
-    // 经验值由 store.submitTest 统一发放（含 isNewHighest 判断），此处不重复发放
-    uni.removeStorageSync('quiz_breakpoint');
-    uni.redirectTo({ url: '/pages/result/result' });
-  } else if (res.code === 403) {
-    const unlocked = await showUnlockModal('blocked');
-    if (unlocked) {
-      res = await store.submitTest(challengeId.value, testType.value);
-      if (res.code === 0 && res.data) {
-        uni.removeStorageSync('quiz_breakpoint');
-        uni.redirectTo({ url: '/pages/result/result' });
-      } else {
-        uni.showToast({ title: '提交失败，请重试', icon: 'none' });
-        quizState.value = 'ready';
+    const wasFree = !hasUsedFreeTestToday();
+    const res = await store.submitTest(challengeId.value);
+
+    if (res.code === 0 && res.data) {
+      if (wasFree) markFreeTestUsed();
+      // 邀请转化追踪
+      const inviterUid = getApp().globalData.shareFromUid || '';
+      if (inviterUid) {
+        trackInviteConversion(inviterUid, res.data.tier || '');
       }
-    } else {
       uni.removeStorageSync('quiz_breakpoint');
-      uni.navigateBack();
+      uni.redirectTo({ url: '/pages/result/result' });
+      return;
     }
-  } else {
-    uni.showToast({ title: '提交失败，请重试', icon: 'none' });
+
+    // code=0 但 data 为空 → 重复提交被幂等拦截，仍尝试跳转结果页
+    if (res.code === 0 && store.lastResult) {
+      uni.removeStorageSync('quiz_breakpoint');
+      uni.redirectTo({ url: '/pages/result/result' });
+      return;
+    }
+
+    // 403：旧云函数限制响应，放行到结果页（结果页有兜底）
+    // 用户已完成答题，绝不因后台限制拦截展示
+    if (res.code === 403) {
+      if (wasFree) markFreeTestUsed();
+      uni.removeStorageSync('quiz_breakpoint');
+      uni.redirectTo({ url: '/pages/result/result' });
+      return;
+    }
+
+    // 其他错误：显示服务端消息
+    const errMsg = res.message || '提交失败，请重试';
+    uni.showToast({ title: errMsg, icon: 'none', duration: 2500 });
+    console.error('[submitAndGo] 提交失败:', res.code, res.message);
+    quizState.value = 'ready';
+  } catch (err) {
+    console.error('[submitAndGo] 异常:', err);
+    uni.showToast({ title: '网络异常，请重试', icon: 'none', duration: 2500 });
     quizState.value = 'ready';
   }
 }
 
 onShareAppMessage(() => {
+  const uid = getUserOpenidSync();
   return {
     title: '测测你的AI段位！5道题揭晓你的AI真实水平 🧬',
-    path: '/pages/index/index',
+    path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
+    imageUrl: '/static/images/default-share.png',
   };
 });
 
@@ -613,6 +586,52 @@ onShareTimeline(() => {
     border: 3rpx solid rgba(124, 58, 237, 0.2);
     border-top-color: $color-accent;
     animation: spin 0.8s linear infinite;
+  }
+
+  // 加载失败状态
+  &__error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 260rpx;
+    gap: 16rpx;
+  }
+
+  &__error-icon {
+    font-size: 80rpx;
+    margin-bottom: 8rpx;
+  }
+
+  &__error-title {
+    font-size: 32rpx;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  &__error-hint {
+    font-size: 24rpx;
+    color: $color-text-secondary;
+    margin-bottom: 24rpx;
+  }
+
+  &__error-retry {
+    width: 360rpx;
+    height: 88rpx;
+    line-height: 88rpx;
+    background: linear-gradient(135deg, #7c3aed, #f59e0b);
+    border-radius: 44rpx;
+    font-size: 30rpx;
+    font-weight: 600;
+    color: #fff;
+    border: none;
+    text-align: center;
+  }
+
+  &__error-back {
+    margin-top: 20rpx;
+    font-size: 26rpx;
+    color: $color-gold;
+    opacity: 0.7;
   }
 
   &__body {

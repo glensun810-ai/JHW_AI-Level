@@ -1,52 +1,41 @@
 /**
  * 激励视频广告管理
- * 统一广告加载、展示、回调处理，按日跟踪广告解锁次数
+ * v1.0 — 广告前置模型：每日首次免费，后续需看广告再进答题
  */
-import { MAX_AD_TESTS } from './numeric-constants.js';
-
-// 广告位 ID（需在微信公众平台 → 流量主 → 广告管理 → 新建广告位获取）
 const AD_UNIT_ID = ''; // TODO: 替换为实际广告位 ID
 
 let rewardedVideoAd = null;
 let pendingCallback = null;
 
-function getAdTestCount() {
+// ── 免费测试状态（storage key: free_test_date / free_test_used）──
+
+export function hasUsedFreeTestToday() {
   const today = new Date().toISOString().slice(0, 10);
-  if (uni.getStorageSync('ad_test_date') !== today) {
-    uni.setStorageSync('ad_test_date', today);
-    uni.setStorageSync('ad_test_count', 0);
-    return 0;
-  }
-  return uni.getStorageSync('ad_test_count') || 0;
+  return uni.getStorageSync('free_test_date') === today
+    && uni.getStorageSync('free_test_used') === true;
 }
 
-function incrementAdTestCount() {
-  const count = getAdTestCount() + 1;
-  uni.setStorageSync('ad_test_count', count);
-  return count;
+export function markFreeTestUsed() {
+  const today = new Date().toISOString().slice(0, 10);
+  uni.setStorageSync('free_test_date', today);
+  uni.setStorageSync('free_test_used', true);
 }
 
-function remainingAdTests() {
-  return Math.max(0, MAX_AD_TESTS - getAdTestCount());
+// ── 广告观看状态（storage key: ad_watched_date / ad_watched_today）──
+
+export function hasWatchedAdToday() {
+  const today = new Date().toISOString().slice(0, 10);
+  return uni.getStorageSync('ad_watched_date') === today
+    && uni.getStorageSync('ad_watched_today') === true;
 }
 
-/**
- * 检查广告是否可用
- */
-export function canWatchAd() {
-  return remainingAdTests() > 0;
+export function markAdWatchedToday() {
+  const today = new Date().toISOString().slice(0, 10);
+  uni.setStorageSync('ad_watched_date', today);
+  uni.setStorageSync('ad_watched_today', true);
 }
 
-/**
- * 获取当前可用解锁渠道
- * @returns {{ ad: number, invite: boolean }}
- */
-export function getAvailableUnlocks() {
-  return {
-    ad: remainingAdTests(),
-    invite: true, // 邀请始终可用
-  };
-}
+// ── 广告展示 ──
 
 /**
  * 展示激励视频广告
@@ -54,13 +43,9 @@ export function getAvailableUnlocks() {
  */
 export function showRewardedAd() {
   return new Promise((resolve) => {
-    if (!canWatchAd()) {
-      resolve('error');
-      return;
-    }
-
+    // 发布前 AD_UNIT_ID 为空时，跳过广告直接放行
     if (!AD_UNIT_ID) {
-      console.warn('[ad] 广告位 ID 未配置，跳过广告，不消耗次数');
+      console.warn('[ad] 广告位 ID 未配置，跳过广告');
       resolve('completed');
       return;
     }
@@ -78,7 +63,7 @@ export function showRewardedAd() {
         rewardedVideoAd.onClose((res) => {
           if (pendingCallback) {
             if (res && res.isEnded) {
-              incrementAdTestCount();
+              markAdWatchedToday();
               pendingCallback('completed');
             } else {
               pendingCallback('interrupted');
@@ -90,7 +75,6 @@ export function showRewardedAd() {
 
       pendingCallback = resolve;
       rewardedVideoAd.show().catch(() => {
-        // 广告未加载完成，先 load 再 show
         rewardedVideoAd.load().then(() => rewardedVideoAd.show()).catch((err) => {
           console.error('[ad] 广告展示失败:', err);
           pendingCallback = null;
@@ -103,5 +87,3 @@ export function showRewardedAd() {
     }
   });
 }
-
-export { getAdTestCount, remainingAdTests };

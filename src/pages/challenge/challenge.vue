@@ -1,5 +1,11 @@
 <template>
   <view class="page-challenge">
+    <!-- 加载中 -->
+    <view v-if="loading" class="page-challenge__loading">
+      <text>加载中…</text>
+    </view>
+
+    <template v-else>
     <!-- 挑战说明 -->
     <view class="page-challenge__header">
       <text class="page-challenge__title">⚔️ 挑战好友</text>
@@ -47,19 +53,21 @@
     <view v-else class="page-challenge__no-pending">
       <text>暂无待处理挑战</text>
     </view>
+    </template>
   </view>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
-import { fetchFriendRank } from '@/utils/api.js';
+import { fetchFriendRank, getUserOpenidSync } from '@/utils/api.js';
 import { trackPageView } from '@/utils/analytics.js';
 
 const winCount = ref(0);
 const loseCount = ref(0);
 const drawCount = ref(0);
 const pendingChallenges = ref([]);
+const loading = ref(true);
 
 onMounted(async () => {
   trackPageView('challenge');
@@ -73,6 +81,8 @@ onMounted(async () => {
     }
   } catch (e) {
     // 静默失败
+  } finally {
+    loading.value = false;
   }
 });
 
@@ -81,16 +91,21 @@ function acceptChallenge(challenge) {
 }
 
 onShareAppMessage(() => {
+  const uid = getUserOpenidSync();
   return {
     title: '测测你的AI段位！我在进化湾等你来战 ⚔️',
-    path: '/pages/index/index',
+    path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
+    imageUrl: '/static/images/default-share.png',
   };
 });
 
-onShareTimeline(() => ({
-  title: '挑战好友AI段位！来进化湾一决高下 ⚔️',
-  query: '',
-}));
+onShareTimeline(() => {
+  const uid = getUserOpenidSync();
+  return {
+    title: '挑战好友AI段位！来进化湾一决高下 ⚔️',
+    query: uid ? `from_uid=${uid}` : '',
+  };
+});
 </script>
 
 <style scoped lang="scss">
@@ -98,6 +113,15 @@ onShareTimeline(() => ({
   min-height: 100vh;
   background: $color-bg-primary;
   padding: 32rpx;
+
+  &__loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 60vh;
+    font-size: 28rpx;
+    color: $color-text-muted;
+  }
 
   &__header {
     display: flex;

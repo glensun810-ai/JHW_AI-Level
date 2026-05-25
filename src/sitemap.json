@@ -23,6 +23,10 @@
     {
       "action": "disallow",
       "page": "pages/challenge/challenge"
+    },
+    {
+      "action": "allow",
+      "page": "pages/handbook/handbook"
     }
   ]
 }

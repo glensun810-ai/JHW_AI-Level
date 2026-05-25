@@ -37,15 +37,41 @@
         "navigationBarTextStyle": "white"
       }
     },
+  ],
+  "subPackages": [
     {
-      "path": "pages/challenge/challenge",
-      "style": {
-        "navigationBarTitleText": "挑战好友",
-        "navigationBarBackgroundColor": "#0d1b2a",
-        "navigationBarTextStyle": "white"
-      }
+      "root": "pages/challenge",
+      "pages": [
+        {
+          "path": "challenge",
+          "style": {
+            "navigationBarTitleText": "挑战好友",
+            "navigationBarBackgroundColor": "#0d1b2a",
+            "navigationBarTextStyle": "white"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages/handbook",
+      "pages": [
+        {
+          "path": "handbook",
+          "style": {
+            "navigationBarTitleText": "进化手册",
+            "navigationBarBackgroundColor": "#0d1b2a",
+            "navigationBarTextStyle": "white"
+          }
+        }
+      ]
     }
   ],
+  "preloadRule": {
+    "pages/result/result": {
+      "network": "wifi",
+      "packages": ["pages/handbook", "pages/challenge"]
+    }
+  },
   "tabBar": {
     "color": "#8899aa",
     "selectedColor": "#f59e0b",
@@ -71,11 +97,7 @@
     "navigationBarBackgroundColor": "#0d1b2a",
     "backgroundColor": "#0d1b2a",
     "backgroundColorTop": "#0d1b2a",
-    "backgroundColorBottom": "#0d1b2a",
-    "mp-weixin": {
-      "enableShareAppMessage": true,
-      "enableShareTimeline": true
-    }
+    "backgroundColorBottom": "#0d1b2a"
   },
   "easycom": {
     "autoscan": true,
@@ -86,8 +108,7 @@
       "^OptionCard": "@/components/OptionCard/OptionCard.vue",
       "^TierCard": "@/components/TierCard/TierCard.vue",
       "^ChallengeModal": "@/components/ChallengeModal/ChallengeModal.vue",
-      "^CheckInCalendar": "@/components/CheckInCalendar/CheckInCalendar.vue",
-      "^HelpFriendModal": "@/components/HelpFriendModal/HelpFriendModal.vue"
+      "^CheckInCalendar": "@/components/CheckInCalendar/CheckInCalendar.vue"
     }
   }
 }

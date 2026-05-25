@@ -1,4 +1,3 @@
-// 生产环境：免费 3 次/天，广告 2 次/天
-export const MAX_FREE_TESTS = 3;
-export const MAX_AD_TESTS = 2;
-export const INVITE_UNLOCK_TESTS = 1;
+// 发布前：无限制测试
+// 发布后：DAILY_FREE_TESTS = 1（每日首次免费，后续需看广告）
+export const DAILY_FREE_TESTS = Infinity;

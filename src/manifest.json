@@ -12,9 +12,13 @@
       "es6": true,
       "postcss": true
     },
+    "lazyCodeLoading": "requiredComponents",
     "usePrivacyCheck": true,
-    "cloudfunctionRoot": "../../cloudfunctions/",
+    "enableShareAppMessage": true,
+    "enableShareTimeline": true,
+    "cloudfunctionRoot": "cloudfunctions/",
     "requiredBackgroundModes": [],
+    "requiredPrivateInfos": [],
     "plugins": {}
   }
 }

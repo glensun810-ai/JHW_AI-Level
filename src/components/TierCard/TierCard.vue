@@ -1,11 +1,13 @@
 <template>
-  <!-- Loading：Canvas 在此渲染（可见但被遮罩覆盖） -->
+  <!-- Canvas 始终渲染（屏幕外，微信需要可见元素才能 toTempFilePath） -->
+  <canvas
+    type="2d"
+    id="tier-card-canvas"
+    :style="{ width: '375px', height: '500px', position: 'fixed', left: '-9999px', top: '0' }"
+  />
+
+  <!-- Loading 遮罩层 -->
   <view v-if="loading" class="tier-card__loading" @click.stop>
-    <canvas
-      type="2d"
-      id="tier-card-canvas"
-      :style="{ width: '375px', height: '500px', opacity: 0, position: 'fixed', left: 0, top: 0, pointerEvents: 'none' }"
-    />
     <view class="tier-card__loading-spinner" />
     <text class="tier-card__loading-text">正在生成段位卡…</text>
   </view>

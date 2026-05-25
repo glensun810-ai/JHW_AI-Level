@@ -1,6 +1,5 @@
 /**
  * 全局常量 — v0.6 进化叙事流 8 段位
- * 注意：MAX_FREE_TESTS / MAX_AD_TESTS / INVITE_UNLOCK_TESTS 统一定义在 numeric-constants.js
  */
 
 // 缓存时间

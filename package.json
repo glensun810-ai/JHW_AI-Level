@@ -4,7 +4,7 @@
   "description": "进化湾 - AI时代段位测试小程序",
   "scripts": {
     "dev:mp-weixin": "uni -p mp-weixin",
-    "build:mp-weixin": "uni build -p mp-weixin"
+    "build:mp-weixin": "uni build -p mp-weixin && cp -r cloudfunctions dist/build/mp-weixin/cloudfunctions"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-alpha-5010120260522001",
