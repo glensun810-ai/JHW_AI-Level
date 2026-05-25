@@ -1,0 +1,93 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationStyle": "custom",
+        "disableScroll": true
+      }
+    },
+    {
+      "path": "pages/quiz/quiz",
+      "style": {
+        "navigationStyle": "custom",
+        "disableScroll": true
+      }
+    },
+    {
+      "path": "pages/result/result",
+      "style": {
+        "navigationStyle": "custom",
+        "disableScroll": false
+      }
+    },
+    {
+      "path": "pages/rank/rank",
+      "style": {
+        "navigationBarTitleText": "段位排行",
+        "navigationBarBackgroundColor": "#0d1b2a",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/checkin/checkin",
+      "style": {
+        "navigationBarTitleText": "签到打卡",
+        "navigationBarBackgroundColor": "#0d1b2a",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/challenge/challenge",
+      "style": {
+        "navigationBarTitleText": "挑战好友",
+        "navigationBarBackgroundColor": "#0d1b2a",
+        "navigationBarTextStyle": "white"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#8899aa",
+    "selectedColor": "#f59e0b",
+    "backgroundColor": "#0d1b2a",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/rank/rank",
+        "text": "排行榜",
+        "iconPath": "static/icons/rank.png",
+        "selectedIconPath": "static/icons/rank-active.png"
+      },
+      {
+        "pagePath": "pages/checkin/checkin",
+        "text": "签到打卡",
+        "iconPath": "static/icons/checkin.png",
+        "selectedIconPath": "static/icons/checkin-active.png"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarBackgroundColor": "#0d1b2a",
+    "backgroundColor": "#0d1b2a",
+    "backgroundColorTop": "#0d1b2a",
+    "backgroundColorBottom": "#0d1b2a",
+    "mp-weixin": {
+      "enableShareAppMessage": true,
+      "enableShareTimeline": true
+    }
+  },
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^TierBadge": "@/components/TierBadge/TierBadge.vue",
+      "^RadarChart": "@/components/RadarChart/RadarChart.vue",
+      "^ProgressBar": "@/components/ProgressBar/ProgressBar.vue",
+      "^OptionCard": "@/components/OptionCard/OptionCard.vue",
+      "^TierCard": "@/components/TierCard/TierCard.vue",
+      "^ChallengeModal": "@/components/ChallengeModal/ChallengeModal.vue",
+      "^CheckInCalendar": "@/components/CheckInCalendar/CheckInCalendar.vue",
+      "^HelpFriendModal": "@/components/HelpFriendModal/HelpFriendModal.vue"
+    }
+  }
+}

@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="无界段位徽章">
+  <defs>
+    <!-- 纯金+钻石材质渐变 -->
+    <radialGradient id="bl-glow-outer" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#ffd700" stop-opacity="0.30"/>
+      <stop offset="40%" stop-color="#f59e0b" stop-opacity="0.10"/>
+      <stop offset="70%" stop-color="#ff8f00" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#0d1b2a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bl-face" cx="40%" cy="35%" r="65%">
+      <stop offset="0%"   stop-color="#2a1f00" />
+      <stop offset="50%" stop-color="#1a1200" />
+      <stop offset="100%" stop-color="#0d0800" />
+    </radialGradient>
+    <linearGradient id="bl-bezel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#ffe082" />
+      <stop offset="20%"  stop-color="#ffd700" />
+      <stop offset="40%"  stop-color="#ffffff" />
+      <stop offset="55%"  stop-color="#ffd700" />
+      <stop offset="75%"  stop-color="#b8860b" />
+      <stop offset="100%" stop-color="#ffc107" />
+    </linearGradient>
+    <radialGradient id="bl-core" cx="45%" cy="40%" r="45%">
+      <stop offset="0%"   stop-color="#ffffff" />
+      <stop offset="20%"  stop-color="#fff9c4" />
+      <stop offset="50%"  stop-color="#ffd700" />
+      <stop offset="100%" stop-color="#e65100" />
+    </radialGradient>
+    <linearGradient id="bl-shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- 芒尖光芒滤镜 -->
+    <filter id="bl-bloom">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- L5: 外光晕（双层） -->
+  <circle cx="100" cy="100" r="96" fill="url(#bl-glow-outer)"/>
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#ffd700" stroke-width="2" stroke-opacity="0.08"/>
+
+  <!-- L4: 双层装饰环 -->
+  <!-- 外铭文环：齿轮/芒点交替 -->
+  <g opacity="0.35">
+    <circle cx="100" cy="100" r="90" fill="none" stroke="#ffd700" stroke-width="0.8" stroke-dasharray="1.5 6"/>
+    <circle cx="100" cy="100" r="90" fill="none" stroke="#fff"    stroke-width="0.5" stroke-dasharray="1.5 6" stroke-dashoffset="3"/>
+  </g>
+  <!-- 芒尖（8个方向，L8专属） -->
+  <g fill="#ffd700" opacity="0.18" filter="url(#bl-bloom)">
+    <polygon points="100,4 96,14 100,20 104,14" />
+    <polygon points="100,196 96,186 100,180 104,186" />
+    <polygon points="4,100 14,96 20,100 14,104" />
+    <polygon points="196,100 186,96 180,100 186,104" />
+    <polygon points="32,32 38,38 42,36 42,44 36,48 30,44" />
+    <polygon points="168,32 162,38 158,36 158,44 164,48 170,44" />
+    <polygon points="32,168 38,162 42,158 44,164 48,170 44,174" />
+    <polygon points="168,168 162,162 158,158 158,164 164,170 170,174" />
+  </g>
+
+  <!-- L3: 金属边框环（L8=8px，最粗） -->
+  <circle cx="100" cy="100" r="77" fill="none" stroke="url(#bl-bezel)" stroke-width="8"/>
+
+  <!-- 边框内沿高光线 -->
+  <circle cx="100" cy="100" r="72" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.15"/>
+  <circle cx="100" cy="100" r="82" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.1"/>
+
+  <!-- L2: 徽章底盘 -->
+  <circle cx="100" cy="100" r="71" fill="url(#bl-face)"/>
+
+  <!-- L1: 核心符号 — 星芒∞（无穷符号融入星形曼陀罗） -->
+  <g transform="translate(0, 0)">
+    <!-- 中心星芒底衬 -->
+    <polygon points="100,52 105,80 130,72 112,94 140,106 112,110 105,138 100,114 95,138 88,110 60,106 88,94 70,72 95,80"
+             fill="url(#bl-core)" opacity="0.35" filter="url(#bl-bloom)"/>
+    <!-- 星芒骨线 -->
+    <g stroke="#ffd700" stroke-width="1.2" opacity="0.3">
+      <line x1="100" y1="52" x2="100" y2="148"/>
+      <line x1="48" y1="100" x2="152" y2="100"/>
+      <line x1="63" y1="63" x2="137" y2="137"/>
+      <line x1="137" y1="63" x2="63" y2="137"/>
+    </g>
+    <!-- ∞ 符号主体（加粗、加光晕） -->
+    <path d="M62 82 C62 56 42 48 34 64 C22 88 52 120 100 120 C148 120 178 88 166 64
+             C158 48 138 56 138 82 C138 110 156 118 166 98 C178 72 148 48 100 48
+             C52 48 22 72 34 98"
+          fill="none" stroke="url(#bl-core)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"
+          filter="url(#bl-bloom)"/>
+    <!-- ∞ 内沿金色高光 -->
+    <path d="M62 82 C62 56 42 48 34 64 C22 88 52 120 100 120 C148 120 178 88 166 64
+             C158 48 138 56 138 82 C138 110 156 118 166 98 C178 72 148 48 100 48
+             C52 48 22 72 34 98"
+          fill="none" stroke="#ffffff" stroke-width="1" opacity="0.4"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- 中心钻石 -->
+    <polygon points="100,76 106,86 112,84 108,94 112,104 100,100 88,104 92,94 88,84 94,86"
+             fill="#ffffff" opacity="0.9" filter="url(#bl-bloom)"/>
+    <circle cx="100" cy="90" r="3" fill="#ffffff" />
+  </g>
+
+  <!-- L0: 表面高光 -->
+  <ellipse cx="85" cy="46" rx="36" ry="18" fill="url(#bl-shine)" transform="rotate(-15 85 46)"/>
+
+  <!-- 粒子: L8 = 16颗 -->
+  <g fill="#ffd700">
+    <circle cx="28"  cy="70"  r="2.5" opacity="0.55"/>
+    <circle cx="174" cy="42"  r="3"   opacity="0.6"/>
+    <circle cx="32"  cy="130" r="2"   opacity="0.4"/>
+    <circle cx="170" cy="130" r="2.5" opacity="0.45"/>
+    <circle cx="24"  cy="100" r="1.5" opacity="0.3"/>
+    <circle cx="178" cy="90"  r="2"   opacity="0.35"/>
+    <circle cx="40"  cy="165" r="1.8" opacity="0.3"/>
+    <circle cx="160" cy="168" r="2"   opacity="0.35"/>
+    <circle cx="50"  cy="38"  r="1.5" opacity="0.35"/>
+    <circle cx="148" cy="32"  r="1.8" opacity="0.4"/>
+    <circle cx="18"  cy="52"  r="1.2" opacity="0.25"/>
+    <circle cx="184" cy="60"  r="1.5" opacity="0.25"/>
+    <circle cx="46"  cy="150" r="1.2" opacity="0.2"/>
+    <circle cx="155" cy="150" r="1.5" opacity="0.25"/>
+    <circle cx="12"  cy="80"  r="1"   opacity="0.2"/>
+    <circle cx="190" cy="110" r="1.2" opacity="0.2"/>
+  </g>
+  <!-- 金色粒子外还有白金星点 -->
+  <g fill="#ffffff">
+    <circle cx="170" cy="58"  r="1.2" opacity="0.7"/>
+    <circle cx="30"  cy="52"  r="1"   opacity="0.6"/>
+    <circle cx="110" cy="28"  r="1.5" opacity="0.5"/>
+    <circle cx="90"  cy="172" r="1.2" opacity="0.4"/>
+  </g>
+</svg>

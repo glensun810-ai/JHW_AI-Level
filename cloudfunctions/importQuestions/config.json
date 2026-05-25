@@ -1,0 +1,6 @@
+{
+  "timeout": 60,
+  "env": {
+    "WECOM_WEBHOOK_URL": ""
+  }
+}

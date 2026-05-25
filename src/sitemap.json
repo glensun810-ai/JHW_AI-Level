@@ -1,0 +1,28 @@
+{
+  "rules": [
+    {
+      "action": "allow",
+      "page": "pages/index/index"
+    },
+    {
+      "action": "allow",
+      "page": "pages/rank/rank"
+    },
+    {
+      "action": "allow",
+      "page": "pages/checkin/checkin"
+    },
+    {
+      "action": "disallow",
+      "page": "pages/quiz/quiz"
+    },
+    {
+      "action": "disallow",
+      "page": "pages/result/result"
+    },
+    {
+      "action": "disallow",
+      "page": "pages/challenge/challenge"
+    }
+  ]
+}

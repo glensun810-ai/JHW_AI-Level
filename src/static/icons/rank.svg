@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 81 81">
+  <!-- 排行榜图标：领奖台 -->
+  <rect x="14" y="38" width="14" height="28" rx="2" fill="#8899aa"/>
+  <rect x="34" y="22" width="14" height="44" rx="2" fill="#8899aa"/>
+  <rect x="54" y="44" width="14" height="22" rx="2" fill="#8899aa"/>
+  <circle cx="41" cy="16" r="4" fill="#8899aa"/>
+</svg>

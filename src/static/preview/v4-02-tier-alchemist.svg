@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="炼金术士段位徽章">
+  <defs>
+    <radialGradient id="g6" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#ab47bc" stop-opacity="0.18"/>
+      <stop offset="50%" stop-color="#6a1b9a" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#0d1b2a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="f6" cx="45%" cy="38%" r="62%">
+      <stop offset="0%"  stop-color="#201835"/>
+      <stop offset="55%" stop-color="#140d22"/>
+      <stop offset="100%" stop-color="#0a0612"/>
+    </radialGradient>
+    <linearGradient id="b6" x1="5%" y1="5%" x2="95%" y2="95%">
+      <stop offset="0%"   stop-color="#ce93d8"/><stop offset="25%" stop-color="#7b1fa2"/>
+      <stop offset="50%"  stop-color="#e1bee7"/><stop offset="75%" stop-color="#4a148c"/>
+      <stop offset="100%" stop-color="#ab47bc"/>
+    </linearGradient>
+    <radialGradient id="core6" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#fff" stop-opacity="0.9"/>
+      <stop offset="35%"  stop-color="#e1bee7" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#7b1fa2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sh6" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 外光晕 -->
+  <circle cx="100" cy="100" r="96" fill="url(#g6)"/>
+
+  <!-- 装饰环 L6=星点阵 -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#ab47bc" stroke-width="1.2" stroke-opacity="0.25" stroke-dasharray="2.5 14"/>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#e1bee7" stroke-width="0.8" stroke-opacity="0.15" stroke-dasharray="2.5 14" stroke-dashoffset="6"/>
+
+  <!-- 金属边框 7px -->
+  <circle cx="100" cy="100" r="80" fill="none" stroke="url(#b6)" stroke-width="7"/>
+
+  <!-- 底盘 -->
+  <circle cx="100" cy="100" r="74" fill="url(#f6)"/>
+
+  <!-- ═══ 核心：人体剪影 + L6内核（六方晶格网络） ═══ -->
+  <g transform="translate(100, 82)">
+    <!-- 人体头部剪影（开始出现几何棱角） -->
+    <path d="M0,-42 C20,-42 36,-28 42,-8 C44,8 40,20 30,28
+             L28,30 L24,34 L16,38 L0,42 L-16,38 L-24,34 L-28,30
+             L-30,28 C-40,20 -44,8 -42,-8 C-36,-28 -20,-42 0,-42 Z"
+          fill="#0a0612" fill-opacity="0.55" stroke="#7b1fa2" stroke-width="1.2" stroke-opacity="0.3"/>
+
+    <!-- 肩线 -->
+    <path d="M-30,42 Q-44,50 -54,58 M30,42 Q44,50 54,58"
+          fill="none" stroke="#7b1fa2" stroke-width="1" stroke-opacity="0.25" stroke-linecap="round"/>
+
+    <!-- L6 内核：六方晶格网络（9个节点，六边形连接） -->
+    <!-- 中心晶核 -->
+    <circle cx="0" cy="0" r="10" fill="url(#core6)" opacity="0.3"/>
+    <circle cx="0" cy="0" r="4" fill="#e1bee7" opacity="0.8"/>
+    <circle cx="0" cy="0" r="2" fill="#fff" opacity="0.9"/>
+
+    <!-- 六方晶格节点 -->
+    <g fill="#ce93d8" opacity="0.6">
+      <circle cx="0" cy="-18" r="2.5"/>
+      <circle cx="16" cy="-9" r="2.5"/>
+      <circle cx="16" cy="9" r="2.5"/>
+      <circle cx="0" cy="18" r="2.5"/>
+      <circle cx="-16" cy="9" r="2.5"/>
+      <circle cx="-16" cy="-9" r="2.5"/>
+    </g>
+
+    <!-- 晶格连线（六边形+星形对角线） -->
+    <g fill="none" stroke="#ab47bc" stroke-width="0.8" opacity="0.35">
+      <!-- 六边形环 -->
+      <polygon points="0,-18 16,-9 16,9 0,18 -16,9 -16,-9"/>
+      <!-- 内部连线（部分，不完全连接=非全觉醒） -->
+      <line x1="0" y1="0" x2="0" y2="-18"/>
+      <line x1="0" y1="0" x2="16" y2="-9"/>
+      <line x1="0" y1="0" x2="16" y2="9"/>
+      <line x1="0" y1="0" x2="-16" y2="-9"/>
+    </g>
+
+    <!-- 第二层外环节点（3个，尚未全连接） -->
+    <g fill="#ab47bc" opacity="0.35">
+      <circle cx="0" cy="-30" r="2"/>
+      <circle cx="26" cy="-15" r="2"/>
+      <circle cx="-26" cy="-15" r="2"/>
+    </g>
+    <g fill="none" stroke="#6a1b9a" stroke-width="0.6" opacity="0.2">
+      <line x1="0" y1="-18" x2="0" y2="-30"/>
+      <line x1="16" y1="-9" x2="26" y2="-15"/>
+      <line x1="-16" y1="-9" x2="-26" y2="-15"/>
+    </g>
+  </g>
+
+  <!-- 表面高光 -->
+  <ellipse cx="86" cy="46" rx="36" ry="18" fill="url(#sh6)" transform="rotate(-15 86 46)"/>
+
+  <!-- 粒子 L6=9 -->
+  <g fill="#e1bee7">
+    <circle cx="28" cy="88" r="1.8" opacity="0.4"/>
+    <circle cx="35" cy="132" r="1.5" opacity="0.3"/>
+    <circle cx="168" cy="52" r="2.2" opacity="0.45"/>
+    <circle cx="172" cy="105" r="1.5" opacity="0.3"/>
+    <circle cx="155" cy="145" r="1.8" opacity="0.28"/>
+    <circle cx="42" cy="42" r="1.8" opacity="0.35"/>
+    <circle cx="26" cy="58" r="1.2" opacity="0.22"/>
+    <circle cx="162" cy="28" r="1.5" opacity="0.28"/>
+    <circle cx="148" cy="170" r="1.6" opacity="0.22"/>
+  </g>
+</svg>

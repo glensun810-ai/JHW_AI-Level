@@ -1,0 +1,20 @@
+{
+  "name": "进化湾-AI段位测试",
+  "appid": "wxfd3b695920a78e1b",
+  "description": "AI时代你处在哪个段位？5道情景题测出你的AI段位，支持好友挑战PK、段位排行、每日签到",
+  "versionName": "0.6.0",
+  "versionCode": 1,
+  "mp-weixin": {
+    "appid": "wxfd3b695920a78e1b",
+    "setting": {
+      "urlCheck": true,
+      "minified": true,
+      "es6": true,
+      "postcss": true
+    },
+    "usePrivacyCheck": true,
+    "cloudfunctionRoot": "../../cloudfunctions/",
+    "requiredBackgroundModes": [],
+    "plugins": {}
+  }
+}

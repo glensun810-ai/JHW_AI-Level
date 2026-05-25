@@ -1,0 +1,21 @@
+# 依赖
+node_modules/
+
+# 构建产物
+unpackage/
+dist/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# 日志
+*.log
+
+# 环境变量
+.env
+.env.local

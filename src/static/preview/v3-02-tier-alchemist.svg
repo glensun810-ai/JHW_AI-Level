@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="炼金术士段位徽章">
+  <defs>
+    <radialGradient id="al3-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#ab47bc" stop-opacity="0.18"/>
+      <stop offset="50%" stop-color="#6a1b9a" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#0d1b2a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="al3-face" cx="45%" cy="38%" r="62%">
+      <stop offset="0%"  stop-color="#201835" />
+      <stop offset="55%" stop-color="#140d22" />
+      <stop offset="100%" stop-color="#0a0612" />
+    </radialGradient>
+    <linearGradient id="al3-bezel" x1="5%" y1="5%" x2="95%" y2="95%">
+      <stop offset="0%"   stop-color="#ce93d8" />
+      <stop offset="25%"  stop-color="#7b1fa2" />
+      <stop offset="50%"  stop-color="#e1bee7" />
+      <stop offset="75%"  stop-color="#4a148c" />
+      <stop offset="100%" stop-color="#ab47bc" />
+    </linearGradient>
+    <radialGradient id="al3-core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="30%"  stop-color="#e1bee7" stop-opacity="0.6"/>
+      <stop offset="70%"  stop-color="#9c27b0" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#4a148c" stop-opacity="0.8"/>
+    </radialGradient>
+    <linearGradient id="al3-shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- 晶体面渐变 -->
+    <linearGradient id="al3-cry1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e1bee7" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#7b1fa2" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="al3-cry2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ce93d8" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#6a1b9a" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- L5 外光晕 -->
+  <circle cx="100" cy="100" r="96" fill="url(#al3-glow)"/>
+
+  <!-- L4 星点阵装饰环 (L6专属) -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#ab47bc" stroke-width="1.2" stroke-opacity="0.25" stroke-dasharray="2.5 14"/>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#e1bee7" stroke-width="0.8" stroke-opacity="0.15" stroke-dasharray="2.5 14" stroke-dashoffset="6"/>
+
+  <!-- L3 金属边框 (L6=7px) -->
+  <circle cx="100" cy="100" r="80" fill="none" stroke="url(#al3-bezel)" stroke-width="7"/>
+
+  <!-- L2 底盘 -->
+  <circle cx="100" cy="100" r="74" fill="url(#al3-face)"/>
+
+  <!-- L1 核心符号: 晶化嬗变 — 六方晶格+嬗变光核+电子云 -->
+  <g transform="translate(100, 94)">
+    <!-- 外层电子云轨道环（3条，不同倾斜角） -->
+    <ellipse cx="0" cy="0" rx="48" ry="16" fill="none" stroke="#ab47bc" stroke-width="1" stroke-opacity="0.2" transform="rotate(0)"/>
+    <ellipse cx="0" cy="0" rx="48" ry="16" fill="none" stroke="#7b1fa2" stroke-width="1" stroke-opacity="0.2" transform="rotate(60)"/>
+    <ellipse cx="0" cy="0" rx="48" ry="16" fill="none" stroke="#ce93d8" stroke-width="1" stroke-opacity="0.15" transform="rotate(-60)"/>
+
+    <!-- 轨道上的电子节点 -->
+    <g fill="#e1bee7" opacity="0.6">
+      <circle cx="48" cy="0" r="2.5"/>
+      <circle cx="-48" cy="0" r="2"/>
+      <circle cx="-24" cy="14" r="2.5"/>
+      <circle cx="24" cy="-14" r="2"/>
+      <circle cx="-24" cy="-14" r="1.8"/>
+      <circle cx="24" cy="14" r="2.2"/>
+    </g>
+
+    <!-- 六方晶格主体（苯环式六边形+内部晶格线） -->
+    <polygon points="0,-38 33,-19 33,19 0,38 -33,19 -33,-19"
+             fill="url(#al3-core)" stroke="#e1bee7" stroke-width="1.8" stroke-opacity="0.5"/>
+
+    <!-- 晶格内部对角线（分子键） -->
+    <line x1="0" y1="-38" x2="0" y2="38" stroke="#e1bee7" stroke-width="0.8" opacity="0.2"/>
+    <line x1="-33" y1="-19" x2="33" y2="19" stroke="#e1bee7" stroke-width="0.8" opacity="0.2"/>
+    <line x1="33" y1="-19" x2="-33" y2="19" stroke="#e1bee7" stroke-width="0.8" opacity="0.2"/>
+
+    <!-- 嬗变光核（中心） -->
+    <circle cx="0" cy="0" r="10" fill="url(#al3-core)" opacity="0.4"/>
+    <circle cx="0" cy="0" r="5" fill="#ffffff" opacity="0.7"/>
+    <circle cx="0" cy="0" r="2.5" fill="#ffffff" opacity="0.95"/>
+
+    <!-- 晶格外围顶点装饰 -->
+    <g fill="none" stroke="#e1bee7" stroke-width="1" opacity="0.35">
+      <circle cx="0" cy="-38" r="3"/>
+      <circle cx="33" cy="-19" r="3"/>
+      <circle cx="33" cy="19" r="3"/>
+      <circle cx="0" cy="38" r="3"/>
+      <circle cx="-33" cy="19" r="3"/>
+      <circle cx="-33" cy="-19" r="3"/>
+    </g>
+  </g>
+
+  <!-- L0 表面高光 -->
+  <ellipse cx="86" cy="46" rx="36" ry="18" fill="url(#al3-shine)" transform="rotate(-15 86 46)"/>
+
+  <!-- 粒子 L6=9颗 -->
+  <g fill="#e1bee7">
+    <circle cx="28" cy="88" r="1.8" opacity="0.4"/>
+    <circle cx="35" cy="132" r="1.5" opacity="0.3"/>
+    <circle cx="168" cy="52" r="2.2" opacity="0.45"/>
+    <circle cx="172" cy="105" r="1.5" opacity="0.3"/>
+    <circle cx="155" cy="145" r="1.8" opacity="0.28"/>
+    <circle cx="42" cy="42" r="1.8" opacity="0.35"/>
+    <circle cx="26" cy="58" r="1.2" opacity="0.22"/>
+    <circle cx="162" cy="28" r="1.5" opacity="0.28"/>
+    <circle cx="148" cy="170" r="1.6" opacity="0.22"/>
+  </g>
+</svg>

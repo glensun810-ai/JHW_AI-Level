@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/>
+      <stop offset="40%" stop-color="#f5d78c"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 外光晕环 -->
+  <circle cx="200" cy="200" r="176" fill="none" stroke="#7c3aed" stroke-width="0.8" opacity="0.15"/>
+  <circle cx="200" cy="200" r="168" fill="none" stroke="#7c3aed" stroke-width="0.5" opacity="0.1"/>
+
+  <!-- 主环 -->
+  <circle cx="200" cy="200" r="152" fill="none" stroke="#f59e0b" stroke-width="3" opacity="0.8"/>
+  <circle cx="200" cy="200" r="148" fill="none" stroke="#7c3aed" stroke-width="0.8" opacity="0.3"/>
+
+  <!-- 进化螺旋 -->
+  <path d="M200,200
+    C200,194 212,188 218,182
+    C228,170 220,150 208,148
+    C192,146 180,160 178,176
+    C174,204 196,228 216,236
+    C244,248 276,236 288,216
+    C304,188 296,156 276,138
+    C248,112 208,108 176,124
+    C144,142 132,180 138,216
+    C144,256 172,288 208,300"
+    fill="none" stroke="#f59e0b" stroke-width="2.5"
+    stroke-linecap="round" opacity="0.7"/>
+
+  <!-- 螺旋末端光点 -->
+  <circle cx="208" cy="300" r="4" fill="#fff" opacity="0.9"/>
+  <circle cx="208" cy="300" r="10" fill="url(#core)" opacity="0.4"/>
+
+  <!-- 中心光核 -->
+  <circle cx="200" cy="200" r="22" fill="url(#core)" opacity="0.3"/>
+  <circle cx="200" cy="200" r="8" fill="#fff" opacity="0.8"/>
+  <circle cx="200" cy="200" r="3" fill="#fff"/>
+
+  <!-- 四向星点 -->
+  <circle cx="200" cy="32" r="3" fill="#f59e0b" opacity="0.6"/>
+  <circle cx="200" cy="368" r="3" fill="#f59e0b" opacity="0.6"/>
+  <circle cx="32" cy="200" r="3" fill="#f59e0b" opacity="0.6"/>
+  <circle cx="368" cy="200" r="3" fill="#f59e0b" opacity="0.6"/>
+
+  <!-- 对角微光 -->
+  <circle cx="80" cy="80" r="1.5" fill="#7c3aed" opacity="0.4"/>
+  <circle cx="320" cy="80" r="1.5" fill="#7c3aed" opacity="0.4"/>
+  <circle cx="80" cy="320" r="1.5" fill="#7c3aed" opacity="0.4"/>
+  <circle cx="320" cy="320" r="1.5" fill="#7c3aed" opacity="0.4"/>
+</svg>

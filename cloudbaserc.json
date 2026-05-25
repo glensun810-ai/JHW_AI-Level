@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "envId": "cloudbase-7gp7l6qu464a196a",
+  "functionRoot": "cloudfunctions",
+  "functions": [
+    { "name": "analyticsLog", "timeout": 10, "runtime": "Nodejs18.15" },
+    { "name": "dbInit", "timeout": 30, "runtime": "Nodejs18.15" },
+    { "name": "getDailyQuestions", "timeout": 10, "runtime": "Nodejs18.15" },
+    { "name": "getFriendRank", "timeout": 10, "runtime": "Nodejs18.15" },
+    { "name": "getTierDistribution", "timeout": 10, "runtime": "Nodejs18.15" },
+    { "name": "getWeeklyStats", "timeout": 10, "runtime": "Nodejs18.15" },
+    { "name": "importQuestions", "timeout": 60, "runtime": "Nodejs18.15" },
+    { "name": "monitorMetrics", "timeout": 60, "runtime": "Nodejs18.15",
+      "envVariables": { "WECOM_WEBHOOK_URL": "" } },
+    { "name": "sendChallenge", "timeout": 10, "runtime": "Nodejs18.15" },
+    { "name": "submitScore", "timeout": 20, "runtime": "Nodejs18.15" }
+  ]
+}

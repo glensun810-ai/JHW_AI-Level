@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="萌新段位徽章">
+  <defs>
+    <!-- 铜绿材质渐变 -->
+    <radialGradient id="nw-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#4caf50" stop-opacity="0.15"/>
+      <stop offset="60%" stop-color="#2e7d32" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0d1b2a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nw-face" cx="40%" cy="35%" r="65%">
+      <stop offset="0%"  stop-color="#2e4a2a" />
+      <stop offset="50%" stop-color="#1a3020" />
+      <stop offset="100%" stop-color="#0f1f14" />
+    </radialGradient>
+    <linearGradient id="nw-bezel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#6d9b6a" />
+      <stop offset="25%"  stop-color="#3e6b3a" />
+      <stop offset="50%"  stop-color="#8fbf8a" />
+      <stop offset="75%"  stop-color="#2a4a26" />
+      <stop offset="100%" stop-color="#5a8552" />
+    </linearGradient>
+    <linearGradient id="nw-shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- L5: 外光晕 -->
+  <circle cx="100" cy="100" r="96" fill="url(#nw-glow)"/>
+
+  <!-- L4: 金属边框环（L1=5px） -->
+  <circle cx="100" cy="100" r="82" fill="none" stroke="url(#nw-bezel)" stroke-width="5"/>
+
+  <!-- L3: L1无装饰环，直接进入底盘 -->
+  <!-- L2: 徽章底盘 -->
+  <circle cx="100" cy="100" r="78" fill="url(#nw-face)"/>
+
+  <!-- L1: 核心符号 — 嫩芽（单元素，极简） -->
+  <g transform="translate(0, -3)">
+    <!-- 茎 -->
+    <path d="M100 158 Q103 125 100 62" fill="none" stroke="#8fbf8a" stroke-width="5" stroke-linecap="round"/>
+    <!-- 左叶 -->
+    <path d="M100 108 Q70 100 58 72 Q60 60 100 84" fill="#4caf50" />
+    <path d="M100 108 Q70 100 58 72 Q60 60 100 84" fill="none" stroke="#2e4a2a" stroke-width="2" stroke-opacity="0.4"/>
+    <!-- 右叶（稍小，生长中） -->
+    <path d="M100 88 Q132 80 140 54 Q136 44 100 70" fill="#81c784" />
+    <path d="M100 88 Q132 80 140 54 Q136 44 100 70" fill="none" stroke="#2e4a2a" stroke-width="2" stroke-opacity="0.3"/>
+    <!-- 嫩芽尖 -->
+    <circle cx="100" cy="62" r="4" fill="#a5d6a7" opacity="0.9"/>
+  </g>
+
+  <!-- L0: 表面高光 -->
+  <ellipse cx="90" cy="50" rx="40" ry="22" fill="url(#nw-shine)" transform="rotate(-15 90 50)"/>
+
+  <!-- 粒子: L1 = 3颗 -->
+  <circle cx="156" cy="40" r="2.5" fill="#8fbf8a" opacity="0.4"/>
+  <circle cx="42"  cy="128" r="1.8" fill="#a5d6a7" opacity="0.3"/>
+  <circle cx="150" cy="146" r="1.5" fill="#8fbf8a" opacity="0.25"/>
+</svg>

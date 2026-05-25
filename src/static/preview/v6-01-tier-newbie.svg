@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="萌新段位徽章">
+  <defs>
+    <radialGradient id="g1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#4caf50" stop-opacity="0.12"/>
+      <stop offset="60%" stop-color="#2e7d32" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#0d1b2a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="f1" cx="45%" cy="38%" r="62%">
+      <stop offset="0%"  stop-color="#263a28"/><stop offset="55%" stop-color="#18261a"/>
+      <stop offset="100%" stop-color="#0d140f"/>
+    </radialGradient>
+    <linearGradient id="b1" x1="5%" y1="5%" x2="95%" y2="95%">
+      <stop offset="0%" stop-color="#7aaa7a"/><stop offset="30%" stop-color="#3d6b3d"/>
+      <stop offset="55%" stop-color="#8fc08f"/><stop offset="80%" stop-color="#2a4d2a"/>
+      <stop offset="100%" stop-color="#5c8a5c"/>
+    </linearGradient>
+    <linearGradient id="sh1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 外光晕 -->
+  <circle cx="100" cy="100" r="96" fill="url(#g1)"/>
+
+  <!-- 金属边框 5px -->
+  <circle cx="100" cy="100" r="84" fill="none" stroke="url(#b1)" stroke-width="5"/>
+
+  <!-- 底盘 -->
+  <circle cx="100" cy="100" r="79" fill="url(#f1)"/>
+
+  <!-- ═══ L1 纯生物神经网络 · 极简 ═══ -->
+  <g transform="translate(100, 85)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- 中央胼胝体桥接（一条优雅的弧线连接左右半球） -->
+    <path d="M-5,-1 C-2,-6 2,-6 5,-1" stroke="#a5d6a7" stroke-width="1.5" opacity="0.6"/>
+
+    <!-- 左半球：两条主弧线，围合成大脑半球的轮廓 -->
+    <path d="M-3,0 C-18,-4 -32,-16 -28,-28" stroke="#81c784" stroke-width="2.2" opacity="0.75"/>
+    <path d="M-3,2 C-18,6 -30,18 -24,28" stroke="#81c784" stroke-width="2.2" opacity="0.75"/>
+
+    <!-- 右半球：镜像 -->
+    <path d="M3,0 C18,-4 32,-16 28,-28" stroke="#81c784" stroke-width="2.2" opacity="0.75"/>
+    <path d="M3,2 C18,6 30,18 24,28" stroke="#81c784" stroke-width="2.2" opacity="0.75"/>
+
+    <!-- 内层短分支（增加"神经网络"的深度感） -->
+    <path d="M-5,-1 C-14,-5 -20,-14 -18,-22" stroke="#66bb6a" stroke-width="1.5" opacity="0.55"/>
+    <path d="M5,-1 C14,-5 20,-14 18,-22" stroke="#66bb6a" stroke-width="1.5" opacity="0.55"/>
+
+    <!-- 正中裂隙（两半球之间的负空间暗示） -->
+    <line x1="0" y1="-6" x2="0" y2="7" stroke="#66bb6a" stroke-width="0.5" opacity="0.3"/>
+
+    <!-- 突触节点 -->
+    <g fill="#a5d6a7">
+      <!-- 外层端点 -->
+      <circle cx="-28" cy="-28" r="2.2" opacity="0.75"/>
+      <circle cx="-24" cy="28" r="2.2" opacity="0.75"/>
+      <circle cx="28" cy="-28" r="2.2" opacity="0.75"/>
+      <circle cx="24" cy="28" r="2.2" opacity="0.75"/>
+      <!-- 内层端点 -->
+      <circle cx="-18" cy="-22" r="1.8" opacity="0.6"/>
+      <circle cx="18" cy="-22" r="1.8" opacity="0.6"/>
+      <!-- 桥接端点 -->
+      <circle cx="-5" cy="-1" r="1.5" opacity="0.55"/>
+      <circle cx="5" cy="-1" r="1.5" opacity="0.55"/>
+    </g>
+
+    <!-- 中心微光 -->
+    <circle cx="0" cy="0" r="5" fill="#c8e6c9" opacity="0.5"/>
+    <circle cx="0" cy="0" r="2.5" fill="#fff" opacity="0.65"/>
+  </g>
+
+  <!-- 表面高光 -->
+  <ellipse cx="88" cy="48" rx="38" ry="19" fill="url(#sh1)" transform="rotate(-15 88 48)"/>
+
+  <!-- 粒子 L1=3 -->
+  <circle cx="155" cy="40" r="1.8" fill="#a5d6a7" opacity="0.35"/>
+  <circle cx="42" cy="130" r="1.5" fill="#81c784" opacity="0.25"/>
+  <circle cx="148" cy="148" r="1.2" fill="#a5d6a7" opacity="0.2"/>
+</svg>

@@ -1,0 +1,60 @@
+/* 全局样式变量 — v0.6 进化叙事流 */
+
+/* 背景色 */
+$color-bg-primary: #0d1b2a;
+$color-bg-card: rgba(255, 255, 255, 0.05);
+$color-bg-card-hover: rgba(255, 255, 255, 0.08);
+
+/* 强调色（紫金渐变） */
+$color-accent: #7c3aed;
+$color-accent-glow: rgba(124, 58, 237, 0.3);
+$color-gold: #f59e0b;
+
+/* 文字色 */
+$color-text-primary: #ffffff;
+$color-text-secondary: #8899aa;
+$color-text-muted: #556677;
+
+/* 段位色（v0.6 进化叙事流） */
+$tier-newbie: #2e7d32;
+$tier-teaser: #f9a825;
+$tier-toolman: #37474f;
+$tier-collaborator: #1a237e;
+$tier-rider: #e65100;
+$tier-alchemist: #4a148c;
+$tier-awakened: #b71c1c;
+$tier-boundless-start: #ffd700;
+$tier-boundless-end: #f59e0b;
+
+/* 语义色 */
+$color-success: #00d4aa;
+$color-warning: #f59e0b;
+$color-error: #ff4444;
+$color-info: #7c3aed;
+
+/* 字体大小 */
+$font-size-xs: 24rpx;
+$font-size-sm: 28rpx;
+$font-size-md: 32rpx;
+$font-size-lg: 40rpx;
+$font-size-xl: 56rpx;
+$font-size-xxl: 72rpx;
+$font-size-hero: 96rpx;
+
+/* 间距 */
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 40rpx;
+$spacing-xl: 64rpx;
+$spacing-xxl: 96rpx;
+
+/* 圆角 */
+$radius-sm: 8rpx;
+$radius-md: 16rpx;
+$radius-lg: 24rpx;
+$radius-round: 50%;
+
+/* 阴影 */
+$shadow-card: 0 4rpx 20rpx rgba(0, 0, 0, 0.3);
+$shadow-glow: 0 0 20rpx rgba(124, 58, 237, 0.3);
