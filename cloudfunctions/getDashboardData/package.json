@@ -1,0 +1,9 @@
+{
+  "name": "getDashboardData",
+  "version": "1.0.0",
+  "description": "管理面板数据聚合",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

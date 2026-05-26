@@ -2,13 +2,12 @@
   <view class="page-rank">
     <!-- 今日结算倒计时 -->
     <view class="page-rank__countdown-bar">
-      <text class="page-rank__countdown-icon">⏳</text>
       <text class="page-rank__countdown-text">距离今日段位榜结算还剩 {{ countdownText }}</text>
     </view>
 
     <!-- F12: 截图引导 -->
     <view v-if="showScreenshotHint" class="page-rank__screenshot-hint">
-      <text>📸 截个图发给好友，让他们看看你的排名</text>
+      <text>截个图发给好友，让他们看看你的排名</text>
     </view>
 
     <!-- 隐私开关 -->
@@ -42,23 +41,8 @@
     <scroll-view v-if="activeTab === 'friend'" scroll-y class="page-rank__list">
       <view v-if="friendLoading" class="page-rank__loading">加载中…</view>
       <template v-else>
-        <!-- 段位悬赏结果通知 -->
-        <view v-if="bountyResults.length > 0" class="page-rank__bounty-section">
-          <view v-for="b in bountyResults" :key="b._id" class="page-rank__bounty-card" @click="dismissBounty(b._id)">
-            <view class="page-rank__bounty-header">
-              <text class="page-rank__bounty-icon">{{ b.isCorrect ? '🎯' : '❌' }}</text>
-              <text class="page-rank__bounty-title">
-                {{ b.isCorrect ? '猜对了！' : '猜错了…' }}
-              </text>
-            </view>
-            <text class="page-rank__bounty-detail">
-              你猜 {{ b.targetName }} 是「{{ b.guessedTier }}」→ 实际是「{{ b.actualTier }}」（{{ b.actualScore }}分）
-            </text>
-            <text class="page-rank__bounty-hint">点击关闭</text>
-          </view>
-        </view>
-        <view v-if="isGlobalFallback && friendList.length > 0" class="page-rank__fallback-notice">
-          <text>ℹ️ 暂未添加好友，展示全服高手榜。分享给好友即可查看好友排名</text>
+<view v-if="isGlobalFallback && friendList.length > 0" class="page-rank__fallback-notice">
+          <text>暂未添加好友，展示全服高手榜。分享给好友即可查看好友排名</text>
         </view>
         <view v-if="friendList.length > 0" class="page-rank__items">
           <view
@@ -79,10 +63,9 @@
           </view>
         </view>
         <view v-else class="page-rank__empty">
-          <text class="page-rank__empty-icon">👋</text>
           <text class="page-rank__empty-text">暂无好友数据</text>
           <text class="page-rank__empty-hint">分享给好友，看看他们的段位吧</text>
-          <button class="page-rank__empty-btn" open-type="share">📤 邀请好友来测</button>
+          <button class="page-rank__empty-btn" open-type="share">邀请好友来测</button>
         </view>
       </template>
     </scroll-view>
@@ -92,7 +75,6 @@
       <view v-if="starLoading" class="page-rank__loading">加载中…</view>
       <template v-else>
         <view v-if="myCollectRank" class="page-rank__star-my">
-          <text class="page-rank__star-my-icon">🌟</text>
           <text class="page-rank__star-my-text">你收集了 {{ myCollectCount }} 颗星，排名第 {{ myCollectRank }} 位</text>
         </view>
         <view v-if="starList.length > 0" class="page-rank__items">
@@ -103,11 +85,10 @@
             <view class="page-rank__info">
               <text class="page-rank__name">{{ s.nickname || '匿名用户' }}</text>
             </view>
-            <text class="page-rank__score">🌟 {{ s.collectCount || 0 }}颗</text>
+            <text class="page-rank__score">{{ s.collectCount || 0 }}颗</text>
           </view>
         </view>
         <view v-else class="page-rank__empty">
-          <text class="page-rank__empty-icon">🌌</text>
           <text class="page-rank__empty-text">暂无好友收集数据</text>
           <text class="page-rank__empty-hint">分享给好友，比比谁的知识星更多</text>
         </view>
@@ -160,13 +141,12 @@
                 <text class="page-rank__rise-from">{{ r.prevTier }}</text>
                 <text class="page-rank__rise-arrow">→</text>
                 <text class="page-rank__rise-to">{{ r.currentTier }}</text>
-                <text class="page-rank__rise-badge">⬆️ 晋升</text>
+                <text class="page-rank__rise-badge">晋升</text>
               </view>
             </view>
           </view>
         </view>
         <view v-else class="page-rank__empty">
-          <text class="page-rank__empty-icon">📭</text>
           <text class="page-rank__empty-text">本周尚无晋升记录</text>
           <text class="page-rank__empty-hint">加油测试，争取本周上榜！</text>
         </view>
@@ -189,21 +169,25 @@
           </view>
         </view>
         <view v-else class="page-rank__empty">
-          <text class="page-rank__empty-icon">👥</text>
           <text class="page-rank__empty-text">群段位挑战榜</text>
           <text class="page-rank__empty-hint">将小程序分享到微信群，即可查看群内好友段位排名</text>
-          <button class="page-rank__empty-btn" open-type="share">📤 分享到群聊</button>
+          <button class="page-rank__empty-btn" open-type="share">分享到群聊</button>
         </view>
       </template>
     </scroll-view>
     <PrivacyModal :forceShow="showPrivacyModal" @close="showPrivacyModal = false" />
+
+    <!-- K-factor 角标（仅管理员可见） -->
+    <view v-if="isAdmin && kfData" class="page-rank__kf-badge">
+      <text>K: {{ kfData.current.toFixed(2) }} {{ trendArrow(kfData.trend7d.direction) }} {{ formatDelta(kfData.trend7d.delta) }} · 近 7 天</text>
+    </view>
   </view>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
-import { fetchFriendRank, fetchTierDistribution, fetchWeeklyStats, updatePrivacy, markBountyViewed, getUserOpenidSync } from '@/utils/api.js';
+import { fetchFriendRank, fetchTierDistribution, fetchWeeklyStats, updatePrivacy, getUserOpenidSync, fetchKFactorBadge } from '@/utils/api.js';
 import { TIERS } from '@/utils/tier.js';
 import { trackPageView, trackRankingView } from '@/utils/analytics.js';
 import PrivacyModal from '@/components/PrivacyModal/PrivacyModal.vue';
@@ -249,9 +233,6 @@ const myCollectCount = ref(0);
 // 好友榜降级标记
 const isGlobalFallback = ref(false);
 
-// 段位悬赏结果
-const bountyResults = ref([]);
-
 const defaultAvatar = '/static/icons/default-avatar.png';
 
 const loadedTabs = ref({});
@@ -259,14 +240,27 @@ const countdownText = ref('');
 const showScreenshotHint = ref(true);
 let countdownTimer = null;
 
+// K-factor admin badge
+const isAdmin = ref(false);
+const kfData = ref(null);
+
 onMounted(() => {
+  // 检测管理员模式
+  const pages = getCurrentPages();
+  const page = pages[pages.length - 1];
+  const options = page.$page ? page.$page.options : page.options || {};
+  isAdmin.value = options.admin === '1';
+
   privacyHidden.value = !!uni.getStorageSync('privacy_hidden');
   loadFriendRank();
   trackRankingView('friend');
   updateCountdown();
   countdownTimer = setInterval(updateCountdown, 1000);
-  // F12: 截图引导 3 秒后自动消失
   setTimeout(() => { showScreenshotHint.value = false; }, 3000);
+
+  if (isAdmin.value) {
+    loadKFactor();
+  }
 });
 
 onBeforeUnmount(() => {
@@ -305,7 +299,6 @@ async function loadFriendRank() {
       friendList.value = res.data.friendRankings || [];
       myOpenid.value = res.data.userOpenid || '';
       isGlobalFallback.value = res.data.isGlobalFallback || false;
-      bountyResults.value = res.data.bountyResults || [];
       tabs.value[0].label = isGlobalFallback.value ? '全服高手榜' : '好友段位榜';
     }
   } catch (e) {
@@ -395,10 +388,24 @@ async function onPrivacyToggle(e) {
   await loadFriendRank();
 }
 
-// ── 段位悬赏：关闭通知 ──
-async function dismissBounty(bountyId) {
-  await markBountyViewed(bountyId);
-  bountyResults.value = bountyResults.value.filter(b => b._id !== bountyId);
+// ── K-factor admin ──
+async function loadKFactor() {
+  try {
+    const res = await fetchKFactorBadge();
+    if (res.code === 0 && res.data) {
+      kfData.value = res.data.kFactor || null;
+    }
+  } catch (e) { /* 静默 */ }
+}
+
+function trendArrow(dir) {
+  if (dir === 'up') return '↑';
+  if (dir === 'down') return '↓';
+  return '→';
+}
+
+function formatDelta(delta) {
+  return delta >= 0 ? `+${delta.toFixed(2)}` : delta.toFixed(2);
 }
 
 // ── 辅助函数 ──
@@ -415,7 +422,7 @@ function getTierBarColor(tierName) {
 onShareAppMessage(() => {
   const uid = getUserOpenidSync();
   return {
-    title: '测测你的AI段位！看看你在好友中排第几 🏆',
+    title: '测测你的AI段位！看看你在好友中排第几',
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
     imageUrl: '/static/images/default-share.png',
   };
@@ -774,5 +781,18 @@ onShareTimeline(() => {
 @keyframes slide-in {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
+}
+
+// K-factor admin badge
+.page-rank__kf-badge {
+  display: flex;
+  justify-content: center;
+  padding: 14rpx 28rpx;
+  margin: 8rpx 28rpx 40rpx;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1rpx solid rgba(124, 58, 237, 0.15);
+  border-radius: 10rpx;
+  font-size: 22rpx;
+  color: $color-accent;
 }
 </style>

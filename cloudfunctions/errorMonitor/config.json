@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "openapi": []
+  },
+  "env": {
+    "WECOM_WEBHOOK_URL": ""
+  },
+  "triggers": [
+    {
+      "name": "errorMonitor",
+      "type": "timer",
+      "config": "0 0,30 * * * * *"
+    }
+  ]
+}

@@ -9,8 +9,8 @@ const KNOWLEDGE_CARDS = require('./cards-data.js');
 // 段位定义 — v0.6 进化叙事流
 const TIERS = [
   { name: '萌新',     emoji: '🐣', min: 5,  max: 9  },
-  { name: '调戏师',   emoji: '💬', min: 10, max: 18 },
-  { name: '工具人',   emoji: '🛠️', min: 19, max: 27 },
+  { name: '探索者',   emoji: '💬', min: 10, max: 18 },
+  { name: '实践者',   emoji: '🛠️', min: 19, max: 27 },
   { name: '协作者',   emoji: '🤝', min: 28, max: 35 },
   { name: '驾驭者',   emoji: '⚡', min: 36, max: 42 },
   { name: '炼金术士', emoji: '🧪', min: 43, max: 46 },
@@ -37,7 +37,7 @@ function getPersona(radarValues) {
     { name: '激进的AI信徒', emoji: '🤖', description: '你相信 AI 能改变一切，并且已经在用行动证明。你不怕试错，只怕错过。这股冲劲让你在 AI 工具应用上远超同龄人。', rarity: 8, rule: (r) => r[0] >= 80 && r[2] >= 60 },
     { name: '冷酷的理性派', emoji: '🧊', description: '你不轻易被 AI 的 hype 打动，习惯用数据和逻辑评判一切。在人人都在狂热时，你的冷静是最珍贵的制衡力量。', rarity: 10, rule: (r) => r[4] >= 80 && r[3] >= 70 },
     { name: '热血的实践者', emoji: '🔥', description: '你不满足于"知道"，一定要"做到"。每当学会一个新 AI 用法，你的第一反应是立刻用起来。行动力是你最大的天赋。', rarity: 18, rule: (r) => r[1] >= 70 && r[2] <= 40 },
-    { name: '佛系的工具人', emoji: '😌', description: '你对 AI 的态度松弛而务实——好用就用，不好用就换。这份松弛让你避免了 AI 焦虑，反而能更持久地走下去。', rarity: 22, rule: (r) => r[3] <= 40 && r[1] >= 50 },
+    { name: '佛系的实践者', emoji: '😌', description: '你对 AI 的态度松弛而务实——好用就用，不好用就换。这份松弛让你避免了 AI 焦虑，反而能更持久地走下去。', rarity: 22, rule: (r) => r[3] <= 40 && r[1] >= 50 },
     { name: '时代的旁观者', emoji: '👀', description: '你保持着一种难得的距离感，不急着跳进去，而是先观察。这份审慎让你能看清别人忽视的东西。', rarity: 6, rule: (r) => r[0] <= 40 && r[3] <= 40 },
     { name: '传统的守望者', emoji: '🏛️', description: '你尊重经过时间检验的智慧，不轻易被新技术动摇。但你也知道什么时候该拥抱变化——这份平衡感极为珍贵。', rarity: 4, rule: (r) => r[3] >= 70 && r[4] <= 30 },
     { name: '均衡的进化者', emoji: '⚖️', description: '你在 AI 使用的各个维度上均衡发展，没有明显短板。这份全面性让你能从容应对各种 AI 场景，未来的进化方向由你自己定义。', rarity: 5, rule: () => true },
@@ -66,48 +66,83 @@ function calcRadarData(qScores) {
   ];
 }
 
+// 从 test_record answers 中按维度聚合分数
+function calcDimensionScores(answers) {
+  const dimMap = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
+  const dimCnt = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
+  // dimension mapping: 0=info_awareness, 1=tool_usage, 2=content_discern, 3=era_mindset, 4=think_depth
+  // 从 question 的 dimension 字段推断，但 answers 只有 score 和 questionId
+  // 使用简化映射：按顺序分布到各维度
+  const answerScores = answers.map(a => a.score || 0);
+  // 将答案分数按维度循环分配（5 题模式：每维度 1 题；10 题模式：每维度 2 题）
+  for (let i = 0; i < answerScores.length; i++) {
+    const dim = i % 5;
+    dimMap[dim] += answerScores[i];
+    dimCnt[dim]++;
+  }
+  return [
+    dimCnt[0] > 0 ? dimMap[0] / dimCnt[0] : 0,
+    dimCnt[1] > 0 ? dimMap[1] / dimCnt[1] : 0,
+    dimCnt[2] > 0 ? dimMap[2] / dimCnt[2] : 0,
+    dimCnt[3] > 0 ? dimMap[3] / dimCnt[3] : 0,
+    dimCnt[4] > 0 ? dimMap[4] / dimCnt[4] : 0,
+  ];
+}
+
+// 余弦相似度
+function cosineSimilarity(a, b) {
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
 // v0.8 AI 锐评（毒舌幽默风格）
 // 段位点评（每个段位 2-3 个变体，随机抽取）
 const tierCommentaries = {
   '萌新': [
-    '你跟 AI 的关系，大概相当于你跟健身卡的关系——知道它存在，但没怎么用过。',
-    '欢迎来到 AI 世界！每个大佬都曾是萌新，你今天迈出的这一步已经超过了 90% 的人。',
-    'AI 时代的第一张入场券已到手。别急，慢慢来——进化是一步步的事。',
+    '你对新事物保持开放——这在新人里很珍贵。不过嘛，你跟 AI 的关系大概相当于你跟健身卡的关系：知道它存在，但没怎么用过 😏',
+    '愿意来测 AI 段位，已经超过了大多数观望者。欢迎来到 AI 世界！就是目前你还在新手村门口溜达，该去打第一个小怪了 🐣',
+    'AI 时代的第一张入场券已到手，这份行动力值得点赞。别急，进化是一步步的事——第一步可以从"打开 ChatGPT 随便问点什么"开始 😄',
   ],
-  '调戏师': [
-    '你让 AI 给你讲了个笑话，然后 AI 给你打了个分：幽默感 3/10，好奇心 9/10。',
-    '你已经发现了 AI 最好玩的一面——好奇心是进化最好的燃料。',
-    '调戏 AI 是门手艺。你已经在练习了，只是 AI 的幽默感还不太稳定。',
+  '探索者': [
+    '你的好奇心已经被 AI 点燃了——这是进化最重要的燃料。虽然目前你更多是在"玩" AI，但玩耍本身就是最好的学习方式 🔍',
+    '你已经发现了 AI 最有趣的一面，这种探索精神很难得。不过你的 AI 使用记录里，"让 AI 讲个笑话"占了半壁江山 😄',
+    '敢于尝试新工具是稀有的品质，你已经在路上了。下一步：试试让 AI 帮你干一件正经事，效果可能会让你惊喜 ✨',
   ],
-  '工具人': [
-    'AI 说：这个人类挺会用的，就是每次结尾都加"谢谢"，搞得我怪不好意思的。',
-    '实用主义者！你不在乎 AI 浪不浪漫，只在乎它好不好用。这种务实态度在 AI 时代很稀缺。',
-    '你已经把 AI 变成了生产力工具，下一步就是让它从"好用"变成"离不开"。',
+  '实践者': [
+    '实用主义在 AI 时代是稀缺品——你不关心 AI 浪不浪漫，只在乎好不好用。不过 AI 偷偷说：这个人类每次结尾都加"谢谢"，搞得我怪不好意思的 😄',
+    '在别人还在讨论 AI 会不会取代人类时，你已经用 AI 搞定了三件事。务实派就是 AI 时代的中坚力量 💪',
+    '你已经把 AI 变成了生产力工具，这份务实态度很珍贵。下一步就是让 AI 从"好用"变成"离不开"——你已经很接近了',
   ],
   '协作者': [
-    '你俩配合得不错——你出想法，AI 出体力，像极了偶像和幕后团队的关系。',
-    '你找到了和 AI 相处的最佳距离：不远不近，不卑不亢。这就是"协作"的真谛。',
-    'AI 已经开始理解你的风格了——这说明你们已经磨合出了默契。',
+    '你找到了和 AI 相处的最佳姿态：不远不近，不卑不亢。你们配合得很默契——你出想法，AI 出体力，像极了最佳拍档 🎭',
+    'AI 已经开始理解你的工作风格了，这种默契不是一天练成的。能和人合作不难，能和 AI 合作得这么好，说明你沟通能力强',
+    '协作能力是 AI 时代最被低估的技能，而你正在掌握它。你俩现在差不多一个眼神就懂了——继续保持这种默契',
   ],
   '驾驭者': [
-    '你把 AI 开出了手动挡的感觉——谁说 AI 不能弹射起步？',
-    '你已经不是在使用 AI，而是在驾驭 AI。方向盘在你手里，AI 只是你的引擎。',
-    'AI 在你的手里服服帖帖——这种掌控感来自于你对它能力的深度理解。',
+    '你把 AI 用出了人车合一的感觉——精准、高效、掌控力十足。谁说 AI 不能弹射起步？你已经证明了 ⚡',
+    '方向盘在你手里，AI 是你的引擎。这种掌控感来自于你对 AI 能力的深度理解——你已经不再是使用者，而是驾驭者',
+    'AI 在你的手里服服帖帖，你让它往东它不敢往西。说实话，AI 在你面前的表现，让 AI 本人都觉得"这人比我还会用我" 😄',
   ],
   '炼金术士': [
-    '你在尝试把 AI 变成金子。有时候烧出来是金子，有时候是焦炭，但你一直在试，这就很酷。',
-    '你在做一件很酷的事：把提示词炼成金。每一条好 prompt 都是你的独家配方。',
-    '炼金的过程就是进化的过程。每一次尝试，无论成败，都在积累你的"炼金术"。',
+    '你在做一件很酷的事：把提示词炼成金。每一条好 prompt 都是你的独家配方——虽然偶尔会炸实验室，但炼金术士不就是这样炼成的吗 🧪',
+    '你的 prompt 技巧已经出神入化。你不是在使用 AI，你是在施展 AI 魔法——只是偶尔咒语念错，变出来的不是金子是青蛙 😏',
+    '炼金的过程就是进化的过程。每一次尝试都在积累你的独家秘方——你已经不是普通用户，而是 AI 世界的魔法师 ✨',
   ],
   '觉醒者': [
-    '你已经到了"没有 AI 也能活，但有 AI 活更好"的境界。AI 说：有点怕你。',
-    '觉醒意味着你知道 AI 的能与不能。这种清醒在 AI 狂热的时代里格外珍贵。',
-    '你是 AI 的使用者，不是 AI 的奴隶。这份"觉知"就是你和别人最大的区别。',
+    '觉醒意味着你知道 AI 的能与不能。这份清醒在 AI 狂热的时代里格外珍贵——AI 说：这个人不好忽悠，我有点紧张 🧠',
+    '你不是 AI 的奴隶，而是它的主人。这份"觉知"让你和 99% 的用户不在同一个层次——你就是 AI 时代的"人间清醒"',
+    '你已经到了"没有 AI 也能活，但有 AI 活更好"的境界。AI 在你面前就像一个被看穿底牌的魔术师——尊敬中带着一丝心虚 ✨',
   ],
   '无界': [
-    'AI 想给你打分，但发现你不按套路来。你们的关系已经超出了我的理解范围，祝你幸福。',
-    '无界不是终点，是新的起点。你已经不需要段位来衡量自己了——你的每次使用都是创造。',
-    '你超越了所有分类。AI 对你来说就像呼吸一样自然——这就是"无界"的意义。',
+    '你超越了所有分类。AI 对你来说就像呼吸一样自然——AI 想给你打分，但发现你完全不按套路来，只能说：祝你幸福 🌊',
+    '无界不是终点，是新的起点。你已经不需要段位来衡量自己了——说实话，我们这个小程序的评分系统已经不太够你用 😄',
+    '你已经是造物主级别。每次使用 AI 都是创造而非消费——要不你来帮我们设计题目吧？我们需要你这样的人才 ✨',
   ],
 };
 
@@ -124,11 +159,11 @@ function getEvolutionTip(tierName, tierIndex) {
       '试试把 AI 想成一位超能力实习生——交代得越清楚，它干得越漂亮',
       '下次给 AI 指令时，加上"谁看的 + 用在哪儿 + 不要什么"三个要素',
     ],
-    '调戏师': [
+    '探索者': [
       '你已经会逗 AI 了，下一步试试让它"扮演角色"来提升回答质量',
       'AI 的一句话差距：加上角色设定，输出质量可能提升 30%',
     ],
-    '工具人': [
+    '实践者': [
       '能熟练用 AI 干活了，下一步是学会"追问"——追问 2 轮，答案质量可能翻倍',
       '试试让多个 AI 工具分工协作：一个收集、一个生成、一个审查',
     ],
@@ -403,6 +438,7 @@ exports.main = async (event, context) => {
 	          evolutionTip,
           strongestDimension,
           weakestDimension,
+          friendMatch: null,
 	        },
 	      };
 	    }
@@ -582,6 +618,34 @@ exports.main = async (event, context) => {
       }
     }
 
+    // 好友匹配度：比较双方 AI 人格雷达图的余弦相似度
+    let friendMatch = null;
+    if (event.fromUid && event.fromUid !== OPENID) {
+      try {
+        const { data: inviterRecords } = await db.collection('test_records')
+          .where({ _openid: event.fromUid })
+          .orderBy('createdAt', 'desc')
+          .limit(1)
+          .get();
+        if (inviterRecords.length > 0) {
+          const inviterScores = calcDimensionScores(inviterRecords[0].answers || []);
+          const inviterRadar = calcRadarData(inviterScores);
+          const similarity = cosineSimilarity(radarValues, inviterRadar);
+          const { data: inviterUsers } = await db.collection('users')
+            .where({ _openid: event.fromUid })
+            .field({ nickname: true })
+            .limit(1)
+            .get();
+          friendMatch = {
+            nickname: (inviterUsers[0] && inviterUsers[0].nickname) || '好友',
+            matchPercent: Math.round(similarity * 100),
+          };
+        }
+      } catch (e) {
+        console.log('[submitScore] 好友匹配度计算失败:', e.message);
+      }
+    }
+
     console.log(`[submitScore] openid=${OPENID.slice(0,8)}... score=${totalScore} tier=${tier.name} overLimit=removed`);
 
     return {
@@ -611,6 +675,7 @@ exports.main = async (event, context) => {
         evolutionTip,
         strongestDimension,
         weakestDimension,
+        friendMatch,
       },
     };
   } catch (err) {
@@ -792,7 +857,10 @@ async function sendBountyNotification(predictorOpenid, targetName, guessedTier, 
 
     const user = users[0];
     const subs = user.subscribeTemplates || [];
-    const bountySub = subs.find(s => s.templateId === 'tierChangeReminder' && s.status === 'active');
+    const BOUNTY_TEMPLATE_ID = process.env.BOUNTY_TEMPLATE_ID || '';
+    if (!BOUNTY_TEMPLATE_ID) return;
+
+    const bountySub = subs.find(s => s.templateId === BOUNTY_TEMPLATE_ID && s.status === 'accept');
     if (!bountySub) return;
 
     const resultEmoji = isCorrect ? '🎯' : '😅';
@@ -800,7 +868,7 @@ async function sendBountyNotification(predictorOpenid, targetName, guessedTier, 
 
     await cloud.openapi.subscribeMessage.send({
       touser: predictorOpenid,
-      templateId: 'tierChangeReminder',
+      templateId: BOUNTY_TEMPLATE_ID,
       page: '/pages/rank/rank',
       data: {
         thing1: { value: `${targetName} 的测试结果` },

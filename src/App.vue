@@ -1,6 +1,6 @@
 <script>
 import { initAnalytics, trackShareCardClick, trackInviteClick } from '@/utils/analytics.js';
-import { callCloudFunction, getUserOpenidSync } from '@/utils/api.js';
+import { callCloudFunction, getUserOpenidSync, preloadDailyQuestions } from '@/utils/api.js';
 
 export default {
   globalData: {
@@ -11,6 +11,14 @@ export default {
   },
   onLaunch(options) {
     this.globalData.appLaunchTime = Date.now();
+
+    // 启用带 shareTicket 的分享（群排行/群挑战需要）
+    if (typeof wx !== 'undefined' && wx.showShareMenu) {
+      wx.showShareMenu({ withShareTicket: true });
+    }
+
+    // 冷启动优化：后台预加载今日题目（不阻塞渲染）
+    preloadDailyQuestions().catch(() => {});
     // 群聊 shareTicket 解析 → 提取群 ID 用于群排行
     if (options && options.shareTicket) {
       this.globalData.shareTicket = options.shareTicket;

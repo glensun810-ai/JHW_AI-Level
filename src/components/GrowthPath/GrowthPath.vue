@@ -55,7 +55,7 @@ const tools = [
 ];
 
 const reminderText = computed(() => {
-  const nextTiers = ['调戏师', '工具人', '协作者'];
+  const nextTiers = ['探索者', '实践者', '协作者'];
   const target = nextTiers[props.tierIndex] || '协作者';
   return `30 天后回来再测，看看你能不能升到「${target}」🔼`;
 });

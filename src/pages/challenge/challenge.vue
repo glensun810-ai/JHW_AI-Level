@@ -8,7 +8,7 @@
     <template v-else>
     <!-- 挑战说明 -->
     <view class="page-challenge__header">
-      <text class="page-challenge__title">⚔️ 挑战好友</text>
+      <text class="page-challenge__title">挑战好友</text>
       <text class="page-challenge__desc">选择一位微信好友，发起AI段位挑战。不论输赢，都是话题。</text>
     </view>
 
@@ -34,9 +34,17 @@
     <!-- 邀请方式 -->
     <view class="page-challenge__actions">
       <button class="page-challenge__btn" open-type="share">
-        📤 分享到群聊 / 好友
+        分享到群聊 / 好友
       </button>
       <text class="page-challenge__hint">好友点击你的分享卡片进入测试，完成后自动比较段位</text>
+
+      <!-- 订阅通知 -->
+      <view v-if="!showSubscribePrompt" class="page-challenge__subscribe-trigger" @click="showSubscribePrompt = true">
+        <text class="page-challenge__subscribe-trigger-text">好友应战后通知我</text>
+      </view>
+      <view v-else class="page-challenge__subscribe-prompt" @click="requestSubscribe">
+        <text class="page-challenge__subscribe-text">点击开启挑战通知，好友应战后第一时间收到提醒</text>
+      </view>
     </view>
 
     <!-- 待处理挑战 -->
@@ -60,7 +68,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
-import { fetchFriendRank, getUserOpenidSync } from '@/utils/api.js';
+import { fetchFriendRank, getUserOpenidSync, requestSubscribeMessage } from '@/utils/api.js';
 import { trackPageView } from '@/utils/analytics.js';
 
 const winCount = ref(0);
@@ -68,6 +76,7 @@ const loseCount = ref(0);
 const drawCount = ref(0);
 const pendingChallenges = ref([]);
 const loading = ref(true);
+const showSubscribePrompt = ref(false);
 
 onMounted(async () => {
   trackPageView('challenge');
@@ -90,10 +99,16 @@ function acceptChallenge(challenge) {
   uni.navigateTo({ url: '/pages/quiz/quiz?challengeId=' + challenge._id });
 }
 
+async function requestSubscribe() {
+  await requestSubscribeMessage(['challengeNotify']);
+  uni.showToast({ title: '设置成功！', icon: 'success' });
+  showSubscribePrompt.value = false;
+}
+
 onShareAppMessage(() => {
   const uid = getUserOpenidSync();
   return {
-    title: '测测你的AI段位！我在进化湾等你来战 ⚔️',
+    title: '测测你的AI段位！我在进化湾等你来战',
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
     imageUrl: '/static/images/default-share.png',
   };
@@ -102,7 +117,7 @@ onShareAppMessage(() => {
 onShareTimeline(() => {
   const uid = getUserOpenidSync();
   return {
-    title: '挑战好友AI段位！来进化湾一决高下 ⚔️',
+    title: '挑战好友AI段位！来进化湾一决高下',
     query: uid ? `from_uid=${uid}` : '',
   };
 });
@@ -208,6 +223,45 @@ onShareTimeline(() => {
     color: $color-text-muted;
     margin-top: 12rpx;
     text-align: center;
+  }
+
+  &__subscribe-trigger {
+    margin-top: 20rpx;
+    padding: 16rpx 28rpx;
+    background: rgba(0, 200, 255, 0.06);
+    border: 1rpx solid rgba(0, 200, 255, 0.12);
+    border-radius: 12rpx;
+    text-align: center;
+
+    &-text {
+      font-size: 24rpx;
+      color: $color-accent;
+    }
+  }
+
+  &__subscribe-prompt {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    margin-top: 20rpx;
+    padding: 18rpx 24rpx;
+    background: rgba(0, 200, 255, 0.1);
+    border: 1rpx solid rgba(0, 200, 255, 0.25);
+    border-radius: 14rpx;
+
+    &:active { background: rgba(0, 200, 255, 0.15); }
+  }
+
+  &__subscribe-icon {
+    font-size: 32rpx;
+    flex-shrink: 0;
+  }
+
+  &__subscribe-text {
+    font-size: 24rpx;
+    color: $color-accent;
+    line-height: 1.4;
+    flex: 1;
   }
 
   &__pending {

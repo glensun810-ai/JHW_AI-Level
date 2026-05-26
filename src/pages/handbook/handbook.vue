@@ -7,6 +7,27 @@
       <text class="page-handbook__hint">继续测试，解锁全部星空</text>
     </view>
 
+    <!-- P2-G: 进化之路时间线 -->
+    <view v-if="evolutionHistory.length >= 2" class="page-handbook__evo-road">
+      <text class="page-handbook__evo-road-title">🌱 进化之路</text>
+      <text class="page-handbook__evo-road-sub">你的 AI 段位进化轨迹</text>
+      <view class="page-handbook__evo-timeline">
+        <view v-for="(h, i) in evolutionHistory" :key="i" class="page-handbook__evo-node">
+          <view class="page-handbook__evo-node-line">
+            <view class="page-handbook__evo-node-dot" :class="{ 'page-handbook__evo-node-dot--latest': i === 0 }" />
+            <view v-if="i < evolutionHistory.length - 1" class="page-handbook__evo-node-connector" />
+          </view>
+          <view class="page-handbook__evo-node-body">
+            <view class="page-handbook__evo-node-header">
+              <text class="page-handbook__evo-node-tier">{{ h.emoji }} {{ h.tier }}</text>
+              <text class="page-handbook__evo-node-score">{{ h.score }}分</text>
+            </view>
+            <text class="page-handbook__evo-node-date">{{ h.date }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 筛选栏 -->
     <scroll-view scroll-x class="page-handbook__filters">
       <view
@@ -89,15 +110,16 @@ import { callCloudFunction, fetchWeeklyStats } from '@/utils/api.js';
 const collectedCards = ref([]);
 const selectedCard = ref(null);
 const activeFilter = ref('all');
+const evolutionHistory = ref([]);
 
 const filters = [
   { key: 'all', label: '全部' },
-  { key: 'collected', label: '已收集' },
   { key: 'uncollected', label: '未解锁' },
-  { key: 'common', label: '⭐ 普通' },
-  { key: 'rare', label: '✨ 稀有' },
   { key: 'legend', label: '🔮 传说' },
   { key: 'limited', label: '⏳ 限时' },
+  { key: 'rare', label: '✨ 稀有' },
+  { key: 'common', label: '⭐ 普通' },
+  { key: 'collected', label: '已收集' },
 ];
 
 // 卡片元数据（轻量版，仅用于展示）
@@ -198,6 +220,14 @@ onMounted(async () => {
       collectedCards.value = res.data.collectedCards;
     }
   } catch (e) { /* 使用本地缓存 */ }
+
+  // P2-G: 加载进化之路历史
+  try {
+    const historyRes = await callCloudFunction('getWeeklyStats', { action: 'getTestHistory' });
+    if (historyRes.code === 0 && historyRes.data && historyRes.data.history) {
+      evolutionHistory.value = historyRes.data.history;
+    }
+  } catch (e) { /* 静默失败 */ }
 });
 </script>
 
@@ -230,7 +260,99 @@ onMounted(async () => {
 .page-handbook__hint {
   display: block;
   font-size: 22rpx;
-  color: #607d8b;
+  color: #8899aa;
+}
+
+// P2-G: 进化之路时间线
+.page-handbook__evo-road {
+  padding: 24rpx 32rpx 8rpx;
+  margin-bottom: 8rpx;
+}
+
+.page-handbook__evo-road-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 4rpx;
+}
+
+.page-handbook__evo-road-sub {
+  display: block;
+  font-size: 22rpx;
+  color: #8899aa;
+  margin-bottom: 20rpx;
+}
+
+.page-handbook__evo-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.page-handbook__evo-node {
+  display: flex;
+  gap: 12rpx;
+}
+
+.page-handbook__evo-node-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 32rpx;
+}
+
+.page-handbook__evo-node-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: rgba(255, 215, 0, 0.4);
+  flex-shrink: 0;
+  margin-top: 8rpx;
+
+  &--latest {
+    width: 20rpx;
+    height: 20rpx;
+    background: #ffd700;
+    box-shadow: 0 0 10rpx rgba(255, 215, 0, 0.5);
+  }
+}
+
+.page-handbook__evo-node-connector {
+  width: 2rpx;
+  flex: 1;
+  min-height: 24rpx;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.page-handbook__evo-node-body {
+  flex: 1;
+  padding: 4rpx 0 20rpx;
+}
+
+.page-handbook__evo-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4rpx;
+}
+
+.page-handbook__evo-node-tier {
+  font-size: 26rpx;
+  color: #e0e0e0;
+  font-weight: 500;
+}
+
+.page-handbook__evo-node-score {
+  font-size: 22rpx;
+  color: #8899aa;
+}
+
+.page-handbook__evo-node-date {
+  font-size: 20rpx;
+  color: #8899aa;
+  opacity: 0.7;
 }
 
 .page-handbook__filters {
@@ -241,7 +363,7 @@ onMounted(async () => {
 .page-handbook__filter {
   display: inline-block;
   font-size: 24rpx;
-  color: #607d8b;
+  color: #8899aa;
   padding: 10rpx 22rpx;
   margin-right: 16rpx;
   border-radius: 20rpx;
@@ -318,13 +440,13 @@ onMounted(async () => {
 
 .page-handbook__card-mystery {
   font-size: 36rpx;
-  color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.3);
   margin-bottom: 8rpx;
 }
 
 .page-handbook__card-clue {
   font-size: 20rpx;
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.4);
   line-height: 1.4;
 }
 
@@ -402,7 +524,7 @@ onMounted(async () => {
 .page-handbook__detail-fact-label {
   display: block;
   font-size: 22rpx;
-  color: #78909c;
+  color: #8899aa;
   margin-bottom: 8rpx;
 }
 
@@ -430,7 +552,6 @@ onMounted(async () => {
   color: #c4b5fd;
   border-radius: 16rpx;
   font-size: 28rpx;
-  border: none;
 }
 
 .page-handbook__detail-close {
@@ -439,7 +560,7 @@ onMounted(async () => {
   line-height: 72rpx;
   text-align: center;
   background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.6);
   border-radius: 16rpx;
   font-size: 26rpx;
   border: none;

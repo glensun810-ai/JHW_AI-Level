@@ -8,13 +8,14 @@
         @click="goBack"
       >← 返回</view>
       <ProgressBar
+        v-if="!store.dailyMode"
         ref="progressRef"
         :answered="answers.length"
         :total="store.totalQuestions"
         @complete="onProgressComplete"
       />
-      <!-- v0.9: 深度定段模式标记 -->
-      <text v-if="store.deepMode" class="page-quiz__deep-badge">🧬 深度定段</text>
+      <text v-if="store.deepMode" class="page-quiz__deep-badge">深度定段</text>
+      <text v-if="store.dailyMode" class="page-quiz__deep-badge">每日一题</text>
     </view>
 
     <!-- 加载中 -->
@@ -75,14 +76,19 @@
         <view v-if="showRarity" class="page-quiz__rarity">
           <text>{{ showRarity }}</text>
         </view>
-        <!-- 题目反馈 -->
-        <view v-if="selectedComment && !questionFeedback" class="page-quiz__q-feedback">
-          <text class="page-quiz__q-feedback-label">这道题有意思吗？</text>
-          <text class="page-quiz__q-feedback-btn" @click="handleQuestionFeedback('like')">👍</text>
-          <text class="page-quiz__q-feedback-btn" @click="handleQuestionFeedback('dislike')">👎</text>
+        <!-- 逐题反馈 -->
+        <view v-if="quizState === 'commenting' && !answerFeedbackGiven" class="page-quiz__feedback">
+          <text class="page-quiz__feedback-label">这题怎么样？</text>
+          <view class="page-quiz__feedback-btns">
+            <text class="page-quiz__feedback-btn" @click="giveAnswerFeedback('up')">👍</text>
+            <text class="page-quiz__feedback-btn" @click="giveAnswerFeedback('down')">👎</text>
+          </view>
         </view>
-        <view v-if="questionFeedback" class="page-quiz__q-feedback-done">
-          <text>{{ questionFeedback === 'like' ? '👍 感谢反馈' : '👎 感谢反馈' }}</text>
+        <!-- 手动推进按钮 -->
+        <view v-if="quizState === 'commenting'" class="page-quiz__next-wrap">
+          <text class="page-quiz__next-btn" @click="goNext">
+            {{ store.isLastQuestion ? '查看结果 →' : '下一题 →' }}
+          </text>
         </view>
       </view>
 
@@ -92,8 +98,18 @@
         <text class="page-quiz__running-tier-value">{{ store.runningTier.emoji }} {{ store.runningTier.name }}</text>
       </view>
 
+      <!-- P2-H: 中间惊喜卡片（答完第3题弹出） -->
+      <view v-if="showMidSurprise" class="page-quiz__mid-surprise" @click="showMidSurprise = false">
+        <view class="page-quiz__mid-surprise-card">
+          <text class="page-quiz__mid-surprise-emoji">{{ midSurpriseTier.emoji }}</text>
+          <text class="page-quiz__mid-surprise-name">趋势预测：{{ midSurpriseTier.name }}</text>
+          <text class="page-quiz__mid-surprise-suspense">还差 2 题揭晓…</text>
+          <text class="page-quiz__mid-surprise-hint">继续答题，验证这个预测 →</text>
+        </view>
+      </view>
+
       <!-- 进度 -->
-      <view class="page-quiz__footer">
+      <view v-if="!store.dailyMode" class="page-quiz__footer">
         <text>{{ currentIndex + 1 }} / {{ store.totalQuestions }}</text>
       </view>
     </view>
@@ -111,6 +127,10 @@ import { trackQuestionAnswer, trackTestAbandon, trackTestComplete, trackTestStar
 import { hasUsedFreeTestToday, markFreeTestUsed } from '@/utils/ad.js';
 import { getUserOpenidSync } from '@/utils/api.js';
 
+// P2-H: 中间惊喜卡片状态
+const showMidSurprise = ref(false);
+const midSurpriseTier = ref({ emoji: '', name: '' });
+
 const store = useQuizStore();
 const expStore = useExperienceStore();
 const progressRef = ref(null);
@@ -125,9 +145,9 @@ const quizState = ref('loading'); // loading | ready | selected | commenting | s
 const selectedIndex = ref(-1);
 const selectedComment = ref('');
 const showRarity = ref('');
-const questionFeedback = ref(null); // null | 'like' | 'dislike'
 const showEncouragement = ref(false);
 const encouragementText = ref('');
+const answerFeedbackGiven = ref(false);
 let encTimer = null;
 let transitionTimer = null;
 let commentTimer = null;
@@ -168,10 +188,16 @@ function getEncouragement(answered) {
 }
 
 onMounted(async () => {
-  // 读取挑战ID（从订阅消息跳转）
+  // 读取页面参数
   const pages = getCurrentPages();
   const page = pages[pages.length - 1];
   challengeId.value = (page.options && page.options.challengeId) || '';
+  const pageMode = (page.options && page.options.mode) || '';
+
+  // 每日一题模式
+  if (pageMode === 'daily') {
+    store.setDailyMode(true);
+  }
 
   // 检查断点恢复（需验证日期，隔天过期）
   const today = new Date().toISOString().slice(0, 10);
@@ -254,7 +280,6 @@ watch(currentIndex, () => {
 function restoreSavedSelection() {
   const saved = store.currentSavedAnswer;
   selectedIndex.value = saved ? saved.selectedIndex : -1;
-  questionFeedback.value = (saved && saved.feedback) || null;
 }
 
 
@@ -358,9 +383,9 @@ function handleSelect(idx) {
     if (dist && dist.length === 4) {
       const pct = dist[idx];
       if (pct > 50) {
-        showRarity.value = `${pct}% 的人和你一样 🤝`;
+        showRarity.value = `${pct}% 的人和你一样`;
       } else if (pct < 20) {
-        showRarity.value = `只有 ${pct}% 的人选了这个！你挺特别 👀`;
+        showRarity.value = `只有 ${pct}% 的人选了这个！你挺特别`;
       }
     }
 
@@ -372,22 +397,27 @@ function handleSelect(idx) {
       encTimer = setTimeout(() => { showEncouragement.value = false; }, 2000);
     }
 
-    // 过渡到下一题（600ms 后）
-    transitionTimer = setTimeout(() => {
-      goNext();
-    }, 600);
+    // P2-H: 中间惊喜 — 答完第3题弹出趋势预测卡片
+    if (!store.deepMode && !store.dailyMode && answered === 3 && store.runningTier) {
+      setTimeout(() => {
+        midSurpriseTier.value = {
+          emoji: store.runningTier.emoji,
+          name: store.runningTier.name,
+        };
+        showMidSurprise.value = true;
+        setTimeout(() => { showMidSurprise.value = false; }, 2000);
+      }, 400);
+    }
   }, 200);
 }
 
-function handleQuestionFeedback(feedback) {
-  if (questionFeedback.value) return; // 已评价
-  questionFeedback.value = feedback;
-  store.setAnswerFeedback(currentIndex.value, feedback);
-  // 触觉反馈
-  if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+// ── 前进到下一题 ──
+function giveAnswerFeedback(fb) {
+  if (answerFeedbackGiven.value) return;
+  answerFeedbackGiven.value = true;
+  store.setAnswerFeedback(currentIndex.value, fb);
 }
 
-// ── 前进到下一题 ──
 function goNext() {
   if (store.isLastQuestion) {
     quizState.value = 'submitting';
@@ -401,7 +431,7 @@ function goNext() {
       store.advanceQuestion();
       selectedIndex.value = -1;
       selectedComment.value = '';
-      questionFeedback.value = null;
+      answerFeedbackGiven.value = false;
       quizState.value = 'ready';
       store.startQuestion();
       startNudgeTimers();
@@ -445,7 +475,6 @@ function goBack() {
   store.currentIndex--;
   selectedIndex.value = -1;
   selectedComment.value = '';
-  questionFeedback.value = null;
   quizState.value = 'ready';
   store.startQuestion();
   startNudgeTimers();
@@ -516,7 +545,7 @@ async function submitAndGo() {
 onShareAppMessage(() => {
   const uid = getUserOpenidSync();
   return {
-    title: '测测你的AI段位！5道题揭晓你的AI真实水平 🧬',
+    title: '测测你的AI段位！5道题揭晓你的AI真实水平',
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
     imageUrl: '/static/images/default-share.png',
   };
@@ -731,39 +760,58 @@ onShareTimeline(() => {
     animation: comment-fade-in 0.25s ease-out;
   }
 
-  // 题目反馈
-  &__q-feedback {
+  // 手动推进按钮
+  &__next-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 48rpx;
+    animation: comment-fade-in 0.3s ease-out;
+  }
+
+  &__next-btn {
+    font-size: 28rpx;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    padding: 24rpx 48rpx;
+    border-radius: 36rpx;
+    font-weight: 500;
+    letter-spacing: 2rpx;
+    transition: all 0.2s;
+
+    &:active {
+      transform: scale(0.96);
+      opacity: 0.85;
+    }
+  }
+
+  // 逐题反馈
+  &__feedback {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 16rpx;
-    margin-top: 16rpx;
-    animation: comment-fade-in 0.25s ease-out;
-
-    &-label {
-      font-size: 22rpx;
-      color: $color-text-muted;
-    }
-
-    &-btn {
-      font-size: 36rpx;
-      padding: 4rpx;
-      opacity: 0.6;
-      transition: opacity 0.15s;
-
-      &:active {
-        opacity: 1;
-        transform: scale(1.2);
-      }
-    }
+    margin-top: 14rpx;
+    animation: comment-fade-in 0.3s ease-out;
   }
 
-  &__q-feedback-done {
-    margin-top: 12rpx;
-    text-align: center;
+  &__feedback-label {
     font-size: 22rpx;
     color: $color-text-muted;
-    animation: comment-fade-in 0.25s ease-out;
+  }
+
+  &__feedback-btns {
+    display: flex;
+    gap: 20rpx;
+  }
+
+  &__feedback-btn {
+    font-size: 36rpx;
+    padding: 4rpx 12rpx;
+    border-radius: 12rpx;
+    background: rgba(255, 255, 255, 0.04);
+    transition: transform 0.15s;
+
+    &:active { transform: scale(1.2); }
   }
 
   // F5: 即时段位预览
@@ -819,5 +867,66 @@ onShareTimeline(() => {
   0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
   50% { box-shadow: 0 0 24rpx 4rpx rgba(124, 58, 237, 0.15); }
   100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+}
+
+// P2-H: 中间惊喜卡片
+.page-quiz__mid-surprise {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fade-in 0.25s ease-out;
+}
+
+.page-quiz__mid-surprise-card {
+  background: linear-gradient(135deg, #1a1040 0%, #0d1b3e 100%);
+  border: 2rpx solid rgba(124, 58, 237, 0.4);
+  border-radius: 24rpx;
+  padding: 48rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+  box-shadow: 0 16rpx 48rpx rgba(124, 58, 237, 0.3);
+  animation: mid-surprise-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  max-width: 500rpx;
+  width: 80%;
+}
+
+.page-quiz__mid-surprise-emoji {
+  font-size: 72rpx;
+  margin-bottom: 4rpx;
+}
+
+.page-quiz__mid-surprise-name {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #ffd700;
+  text-align: center;
+}
+
+.page-quiz__mid-surprise-suspense {
+  font-size: 26rpx;
+  color: #b0bec5;
+  text-align: center;
+  margin-top: 4rpx;
+}
+
+.page-quiz__mid-surprise-hint {
+  font-size: 22rpx;
+  color: $color-text-secondary;
+  margin-top: 12rpx;
+  opacity: 0.7;
+}
+
+@keyframes mid-surprise-pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 </style>

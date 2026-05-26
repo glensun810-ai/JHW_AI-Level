@@ -184,6 +184,40 @@ exports.main = async (event, context) => {
       }
     }
 
+    // 更新用户头像昵称（非阻断式授权，供段位卡个性化）
+    if (action === 'updateProfile') {
+      const { nickname, avatar } = event;
+      const updateData = { updatedAt: new Date() };
+      if (nickname !== undefined) updateData.nickname = nickname;
+      if (avatar !== undefined) updateData.avatar = avatar;
+      await db.collection('users').where({ _openid: OPENID }).update({ data: updateData });
+      return { code: 0, data: { nickname, avatar } };
+    }
+
+    // P2-G: 获取测试历史（进化之路时间线）
+    if (action === 'getTestHistory') {
+      const { data: records } = await db.collection('test_records')
+        .where({ _openid: OPENID })
+        .orderBy('createdAt', 'desc')
+        .limit(10)
+        .get();
+
+      const tierEmoji = {
+        '萌新': '🐣', '探索者': '💬', '实践者': '🛠️',
+        '协作者': '🤝', '驾驭者': '⚡', '炼金术士': '🧪',
+        '觉醒者': '🧠', '无界': '🌊',
+      };
+
+      const history = records.map(r => ({
+        date: formatRelativeDate(r.createdAt),
+        tier: r.tier,
+        emoji: tierEmoji[r.tier] || '❓',
+        score: r.totalScore,
+      }));
+
+      return { code: 0, data: { history, totalTests: records.length } };
+    }
+
     // 默认：获取每周统计
     // 本周晋升最快
     const weekStart = getWeekStart();
@@ -220,7 +254,7 @@ exports.main = async (event, context) => {
 
     const { data: userData } = await db.collection('users')
       .where({ _openid: OPENID })
-      .field({ consecutiveDays: true, collectedCards: true })
+      .field({ consecutiveDays: true, collectedCards: true, nickname: true, avatar: true })
       .get();
     const consecutiveDays = userData[0]?.consecutiveDays || 0;
     const collectedCards = userData[0]?.collectedCards || [];
@@ -233,6 +267,35 @@ exports.main = async (event, context) => {
       .limit(62)
       .get();
     const checkedDates = allCheckIns.map(c => c.date);
+
+    // 计算连续测试天数
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+    const { data: recentTestRecords } = await db.collection('test_records')
+      .where({ _openid: OPENID, createdAt: _.gte(thirtyDaysAgo) })
+      .field({ createdAt: true })
+      .orderBy('createdAt', 'desc')
+      .limit(60)
+      .get();
+    const testDates = new Set();
+    for (const rec of (recentTestRecords || [])) {
+      testDates.add(new Date(rec.createdAt).toISOString().slice(0, 10));
+    }
+    let testConsecutiveDays = 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const checkDate = new Date();
+    // 从今天往回数连续天数
+    for (let i = 0; i < 30; i++) {
+      const d = checkDate.toISOString().slice(0, 10);
+      if (testDates.has(d)) {
+        testConsecutiveDays++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else if (d !== today) {
+        break; // 不是今天没测，而是前些天就断了
+      } else {
+        // 今天没测，继续往前看昨天
+        checkDate.setDate(checkDate.getDate() - 1);
+      }
+    }
 
     // 回顾数据 — 最近5次测试记录
     const { data: pastRecords } = await db.collection('test_records')
@@ -249,7 +312,7 @@ exports.main = async (event, context) => {
       const prevIdx = TIER_ORDER(previous.tier);
       const diff = latestIdx - prevIdx;
       const change = diff > 0 ? 'up' : diff < 0 ? 'down' : 'same';
-      const tierNames = ['萌新', '调戏师', '工具人', '协作者', '驾驭者', '炼金术士', '觉醒者', '无界'];
+      const tierNames = ['萌新', '探索者', '实践者', '协作者', '驾驭者', '炼金术士', '觉醒者', '无界'];
       const changeDetail = change === 'up'
         ? `⬆️ 晋升 ${diff} 段！继续加油！`
         : change === 'down'
@@ -275,8 +338,11 @@ exports.main = async (event, context) => {
       data: {
         checkedToday: todayCheck.length > 0,
         consecutiveDays,
+        testConsecutiveDays,
         checkedDates,
         collectedCards,
+        nickname: userData[0]?.nickname || '',
+        avatar: userData[0]?.avatar || '',
         weeklyRising: weeklyRising.map(r => ({
           nickname: nicknameMap[r._openid] || '匿名用户',
           prevTier: r.prevTier,
@@ -299,7 +365,7 @@ function getWeekStart() {
 }
 
 function TIER_ORDER(name) {
-  const order = ['萌新', '调戏师', '工具人', '协作者', '驾驭者', '炼金术士', '觉醒者', '无界'];
+  const order = ['萌新', '探索者', '实践者', '协作者', '驾驭者', '炼金术士', '觉醒者', '无界'];
   return order.indexOf(name);
 }
 
@@ -333,7 +399,7 @@ function formatRelativeDate(dateStr) {
 
 function getTierEmoji(tierName) {
   const map = {
-    '萌新': '🐣', '调戏师': '💬', '工具人': '🛠️', '协作者': '🤝',
+    '萌新': '🐣', '探索者': '💬', '实践者': '🛠️', '协作者': '🤝',
     '驾驭者': '⚡', '炼金术士': '🧪', '觉醒者': '🧠', '无界': '🌊',
   };
   return map[tierName] || '';

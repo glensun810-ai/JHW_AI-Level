@@ -312,6 +312,46 @@ const SCHEMAS = {
     ],
     security: { read: true, write: false },
   },
+
+  // ── 表 15：special_events（季节性活动，v1.1 新增） ──
+  special_events: {
+    description: '季节性/节日活动配置，用于动态混入活动题目',
+    fields: {
+      _id:          { type: 'auto', description: '自动生成' },
+      eventId:      { type: 'string', required: true, description: '活动唯一标识，如 "dragon_boat_2025"' },
+      name:         { type: 'string', required: true, description: '活动名称，如 "端午 AI 挑战"' },
+      theme:        { type: 'string', required: false, description: '活动主题色/风格' },
+      startDate:    { type: 'date', required: true, description: '活动开始日期' },
+      endDate:      { type: 'date', required: true, description: '活动结束日期' },
+      questionIds:  { type: 'array', required: true, description: '活动专属题目 ID 列表' },
+      badgeReward:  { type: 'string', required: false, description: '完成活动测试的徽章奖励 ID' },
+      createdAt:    { type: 'date', required: false },
+    },
+    indexes: [
+      { keys: { startDate: 1, endDate: 1 } },
+      { keys: { eventId: 1 }, options: { unique: true } },
+    ],
+    security: { read: true, write: false },
+  },
+
+  // ── 表 16：error_reports（错误报告，v1.1 新增） ──
+  error_reports: {
+    description: '错误监控报告，errorMonitor 云函数写入',
+    fields: {
+      _id:          { type: 'auto', description: '自动生成' },
+      type:         { type: 'string', required: true, description: '错误类型：test_abandon | cloud_5xx | crash' },
+      summary:      { type: 'string', required: true, description: '错误摘要' },
+      detail:       { type: 'object', required: false, description: '详细数据（计数、样本等）' },
+      severity:     { type: 'string', required: false, default: 'warning', description: 'info | warning | critical' },
+      acknowledged: { type: 'boolean', required: false, default: false, description: '是否已确认处理' },
+      createdAt:    { type: 'date', required: false },
+    },
+    indexes: [
+      { keys: { type: 1, createdAt: -1 } },
+      { keys: { severity: 1, acknowledged: 1 } },
+    ],
+    security: { read: false, write: false },
+  },
 };
 
 // ═══════════════════════════════════════

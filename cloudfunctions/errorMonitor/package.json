@@ -1,0 +1,9 @@
+{
+  "name": "errorMonitor",
+  "version": "1.0.0",
+  "description": "错误监控 + 企微告警",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

@@ -4,46 +4,76 @@
     <PrivacyModal ref="privacyRef" />
     <view v-if="showOverlay" class="page-index__overlay" />
 
-    <!-- 段位悬赏结果通知 -->
-    <view v-if="bountyNotifications.length > 0" class="page-index__bounty-toast">
-      <view v-for="b in bountyNotifications" :key="b._id" class="page-index__bounty-toast-card" @click="dismissBountyNotify(b._id)">
-        <text class="page-index__bounty-toast-icon">{{ b.isCorrect ? '🎯' : '😅' }}</text>
-        <view class="page-index__bounty-toast-body">
-          <text class="page-index__bounty-toast-title">{{ b.isCorrect ? '猜对了！' : '猜错了…' }}</text>
-          <text class="page-index__bounty-toast-detail">你猜 {{ b.targetName }} 是「{{ b.guessedTier }}」→ 实际「{{ b.actualTier }}」</text>
-        </view>
-        <text class="page-index__bounty-toast-close">✕</text>
-      </view>
-    </view>
 
     <!-- 帮朋友测 Banner（个性化：显示好友段位） -->
-    <view v-if="friendName" class="page-index__friend-banner">
+    <view v-if="friendName && !showReversalBanner" class="page-index__friend-banner">
       <text class="page-index__friend-banner-text">
         <template v-if="friendTier">
           <text class="page-index__friend-banner-tier">{{ friendTierEmoji }} {{ friendTier }}</text>
           <text class="page-index__friend-banner-name">@{{ friendName }}</text> 邀你来测AI段位
         </template>
         <template v-else>
-          🔍 <text class="page-index__friend-banner-name">@{{ friendName }}</text> 帮 TA 测测AI段位
+          <text class="page-index__friend-banner-name">@{{ friendName }}</text> 帮 TA 测测AI段位
         </template>
       </text>
     </view>
 
-    <view class="page-index__body" :class="{ 'page-index__body--shrink': btnShrink }">
+    <!-- 反转 Banner：好友的AI段位被AI耍了 -->
+    <view v-if="showReversalBanner" class="page-index__reversal-banner">
+      <text class="page-index__reversal-banner-text">
+        你的好友测出了一个AI段位，但<text class="page-index__reversal-banner-highlight">先被AI骗了</text>… 反转后才知道真相。你敢来测吗？
+      </text>
+    </view>
+
+    <!-- ====== 首屏可见区 ====== -->
+    <view class="page-index__hero" :class="{ 'page-index__hero--shrink': btnShrink }">
       <text class="page-index__title">你的AI段位</text>
       <text class="page-index__subtitle">AI时代，你处在哪个段位？</text>
+
       <!-- A3: AI实时评价 -->
       <view class="page-index__ai-eval">
         <text class="page-index__ai-eval-dot" />
         <text class="page-index__ai-eval-text">{{ aiEvalText }}</text>
       </view>
+
       <!-- C2: 首次AI身份预判 -->
       <view v-if="isFirstVisit" class="page-index__prejudge">
-        <text class="page-index__prejudge-emoji">🔮</text>
         <text class="page-index__prejudge-text">{{ prejudgeText }}</text>
-        <text class="page-index__prejudge-hint">测完就知道准不准 →</text>
       </view>
-      <text class="page-index__guide">5道情景题 · 2分钟 · 测出你的AI真实段位</text>
+
+      <!-- 新用户简化引导：一行文字 -->
+      <text v-if="isFirstVisit" class="page-index__quick-guide">① 答5题 → ② AI分析段位 → ③ 分享比一比 · ⏱ 2分钟</text>
+
+      <!-- 连续测试天数徽章 -->
+      <view v-if="streakDays >= 2" class="page-index__streak">
+        <text>{{ streakDays >= 7 ? '⚡' : '🔥' }} 已连续测试 {{ streakDays }} 天</text>
+      </view>
+
+      <!-- CTA 按钮 -->
+      <button
+        class="page-index__cta"
+        :class="{ 'page-index__cta--urgent': isUrgent }"
+        :disabled="transitioning"
+        @click="handleStart"
+      >{{ ctaText }}</button>
+
+      <!-- CTA下方轻量社交证明 -->
+      <view class="page-index__proof">
+        <text class="page-index__proof-num">{{ displayUsers.toLocaleString() }}</text>
+        <text class="page-index__proof-label">人已完成定段 · 5题2分钟</text>
+      </view>
+
+      <text v-if="showHint" class="page-index__hint">3秒测出你的AI段位</text>
+    </view>
+
+    <!-- ====== 滚动探索区 ====== -->
+    <view class="page-index__scroll">
+      <!-- 每日一题快速入口 -->
+      <view class="page-index__daily-entry" @click="handleDailyStart">
+        <text class="page-index__daily-entry-icon">⚡</text>
+        <text class="page-index__daily-entry-text">每日一题 · 30秒</text>
+        <text class="page-index__daily-entry-arrow">→</text>
+      </view>
 
       <!-- 每日主题预告 -->
       <view class="page-index__theme-badge">
@@ -53,8 +83,8 @@
 
       <!-- 今日状态条 -->
       <view class="page-index__status-bar">
-        <text v-if="!freeTestUsed">🎁 今日首次测评 · 免费</text>
-        <text v-else>📺 看 15 秒广告继续测 · 结果计入段位</text>
+        <text v-if="!freeTestUsed">今日首次测评 · 免费</text>
+        <text v-else>看 15 秒广告继续测 · 结果计入段位</text>
       </view>
 
       <!-- 实时：X 人正在测试 -->
@@ -63,12 +93,7 @@
         <text class="page-index__testing-now-text">{{ testingNow }} 人正在测试</text>
       </view>
 
-      <!-- 社交证明：总用户数 + 好友段位气泡（CTA 上方，最大化决策影响力） -->
-      <view class="page-index__proof">
-        <text class="page-index__proof-num">{{ displayUsers.toLocaleString() }}</text>
-        <text class="page-index__proof-label">人已完成定段</text>
-      </view>
-
+      <!-- 好友段位气泡 -->
       <view v-if="friendBubble" class="page-index__friend-bubble" @click="handleStart">
         <text class="page-index__friend-bubble-text">
           <template v-if="friendBubble.isGlobalFallback">
@@ -78,22 +103,6 @@
             你的 {{ friendBubble.count }} 位好友已是 {{ friendBubble.topTier }} {{ friendBubble.topTierEmoji }}，你呢？
           </template>
         </text>
-      </view>
-
-      <button
-        class="page-index__cta"
-        :class="{ 'page-index__cta--urgent': isUrgent }"
-        :disabled="transitioning"
-        @click="handleStart"
-      >{{ ctaText }}</button>
-      <text v-if="showHint" class="page-index__hint">3秒测出你的AI段位</text>
-
-      <!-- F14: 进化值展示 -->
-      <view class="page-index__exp-bar">
-        <text class="page-index__exp-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
-        <view class="page-index__exp-track">
-          <view class="page-index__exp-fill" :style="{ width: expStore.levelProgress + '%' }" />
-        </view>
       </view>
 
       <!-- 段位晋升进度条（回访用户） -->
@@ -107,9 +116,16 @@
         <text class="page-index__tier-teaser-cta">再测一次很可能就升段 →</text>
       </view>
 
+      <!-- F14: 进化值展示 -->
+      <view class="page-index__exp-bar">
+        <text class="page-index__exp-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
+        <view class="page-index__exp-track">
+          <view class="page-index__exp-fill" :style="{ width: expStore.levelProgress + '%' }" />
+        </view>
+      </view>
+
       <!-- v0.9: 深度定段入口 (Lv.5+ 解锁) -->
       <view v-if="expStore.unlocks.deepMode" class="page-index__deep-entry" @click="handleDeepStart">
-        <text class="page-index__deep-entry-icon">🧬</text>
         <text class="page-index__deep-entry-text">深度定段 · 10题版</text>
         <text class="page-index__deep-entry-hint">满分100 · 仅自己可见</text>
       </view>
@@ -122,7 +138,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { onShareAppMessage, onShareTimeline, onShow } from '@dcloudio/uni-app';
 import ParticleBg from '@/components/ParticleBg/ParticleBg.vue';
 import PrivacyModal from '@/components/PrivacyModal/PrivacyModal.vue';
-import { fetchTierDistribution, fetchFriendRank, preloadDailyQuestions, fetchWeeklyStats, getUserOpenid, getUserOpenidSync, markBountyViewed, callCloudFunction } from '@/utils/api.js';
+import { fetchTierDistribution, fetchFriendRank, preloadDailyQuestions, fetchWeeklyStats, getUserOpenid, getUserOpenidSync, callCloudFunction } from '@/utils/api.js';
 import { trackPageViewHome, trackHomeHesitate, trackInviteUnlock, trackTestStart, trackShareClick } from '@/utils/analytics.js';
 import { hasUsedFreeTestToday, markFreeTestUsed, showRewardedAd } from '@/utils/ad.js';
 import { useExperienceStore } from '@/store/experience.js';
@@ -141,24 +157,23 @@ const showOverlay = ref(false);
 const friendName = ref('');
 const friendTier = ref('');
 const friendTierEmoji = ref('');
+const showReversalBanner = ref(false);
+const inviteUnlockCached = ref(null); // null=未加载, true=可用, false=不可用
 let t5 = null, t10 = null, ctaTimer = null;
 
 // F1: CTA 按钮文案轮换
 const CTA_COPIES = [
-  '开始定段 ⚡',
-  '我赌你是工具人 🛠️',
+  '开始定段',
+  '我赌你是实践者',
   '3秒揭穿你的AI水平',
-  '你敢让AI给你打分吗？',
-  '测完别哭 😂',
+  '你敢让AI给你打分吗',
+  '测完别哭',
   '看看你是不是AI小白',
 ];
 const ctaText = ref(CTA_COPIES[0]);
 
 // F2: 好友段位气泡
 const friendBubble = ref(null); // { count, topTier, topTierEmoji }
-
-// 段位悬赏通知
-const bountyNotifications = ref([]);
 
 // F14: 进化值
 const expStore = useExperienceStore();
@@ -172,7 +187,7 @@ const AI_EVAL_TEXTS = [
   '你的AI熟练度可能超乎想象…',
   '系统怀疑你是个隐藏的高手…',
   '正在比对全国用户数据…',
-  'AI说：这个人有点意思 👀',
+  'AI说：这个人有点意思',
   '你的段位可能比你想的高…',
   '数据加载中… 咦，有点特别',
   'AI正在猜测你的段位…',
@@ -183,14 +198,40 @@ let animateTimer = null;
 
 // C2: 首次AI身份预判
 const PREJUDGE_TEXTS = [
-  '我们赌你是个「工具人」🛠️… 不服来测！',
-  'AI说你可能是「调戏师」💬… 测测看？',
-  '系统预判：你有「驾驭者」潜质 ⚡',
-  '初步扫描：像是个「协作者」🤝',
-  'AI猜测：萌新 🐣… 但也有可能是隐藏大佬',
+  '我们赌你是个「实践者」… 不服来测',
+  'AI说你可能是「探索者」… 测测看',
+  '系统预判：你有「驾驭者」潜质',
+  '初步扫描：像是个「协作者」',
+  'AI猜测：萌新… 但也有可能是隐藏大佬',
 ];
 const isFirstVisit = ref(!uni.getStorageSync('has_tested'));
 const prejudgeText = ref(PREJUDGE_TEXTS[Math.floor(Math.random() * PREJUDGE_TEXTS.length)]);
+
+// 连续测试天数
+const streakDays = ref(0);
+
+// 每日一题
+function handleDailyStart() {
+  if (transitioning.value) return;
+  quizStore.reset();
+  quizStore.setDeepMode(false);
+  uni.removeStorageSync('quiz_breakpoint');
+  trackTestStart('daily', ctaText.value);
+  transitioning.value = true;
+  if (particleRef.value) particleRef.value.accelerate();
+  btnShrink.value = true;
+  setTimeout(() => { showOverlay.value = true; }, 300);
+  setTimeout(() => {
+    uni.navigateTo({
+      url: '/pages/quiz/quiz?mode=daily',
+      fail: () => {
+        transitioning.value = false;
+        btnShrink.value = false;
+        showOverlay.value = false;
+      },
+    });
+  }, 500);
+}
 
 // ── 每日主题 ──
 const THEME_MAP = {
@@ -214,8 +255,12 @@ const nextTierInfo = ref(null);
 async function loadTierProgress() {
   try {
     const res = await fetchWeeklyStats();
-    if (res.code === 0 && res.data && res.data.consecutiveDays !== undefined) {
+    if (res.code === 0 && res.data) {
+      // 连续测试天数
+      streakDays.value = res.data.testConsecutiveDays || 0;
+
       // 用户已完成过测试，有签到/测试记录
+      if (res.data.consecutiveDays === undefined) return;
       const lastScore = res.data.lastScore; // 可能来自 userData
       if (!lastScore) {
         // 尝试从 test_records 推断
@@ -259,19 +304,12 @@ onMounted(async () => {
     uni.setStorageSync('friend_name', friendName.value);
   }
 
-  // 段位悬赏：接收分享链接中的悬赏参数
-  if (options.bounty_tier && options.target_name) {
-    app.globalData.bountyTier = decodeURIComponent(options.bounty_tier);
-    app.globalData.bountyTargetName = decodeURIComponent(options.target_name);
-    // 同时用于个性化 banner：显示好友的段位
-    if (!friendName.value) {
-      friendName.value = decodeURIComponent(options.target_name);
-    }
-    friendTier.value = decodeURIComponent(options.bounty_tier);
-    friendTierEmoji.value = getTierEmojiForName(friendTier.value);
-  }
   if (options.from_uid) {
     app.globalData.shareFromUid = options.from_uid;
+  }
+
+  if (options.reversal === '1') {
+    showReversalBanner.value = true;
   }
 
   // F1: CTA 按钮文案轮换（随机起始 + 8s 轮换）
@@ -302,6 +340,7 @@ onMounted(async () => {
   // F2: 静默加载好友段位数据
   loadFriendBubble();
   loadTierProgress(); // 回访用户段位进度（静默）
+  preloadInviteStatus(); // 预加载邀请解锁状态
 
   // 埋点：首页浏览
   trackPageViewHome({
@@ -334,10 +373,6 @@ async function loadFriendBubble() {
     if (res.code === 0 && res.data && res.data.friendRankings) {
       const friends = res.data.friendRankings;
       const isGlobalFallback = res.data.isGlobalFallback;
-      // 段位悬赏结果
-      if (res.data.bountyResults && res.data.bountyResults.length > 0) {
-        bountyNotifications.value = res.data.bountyResults;
-      }
       if (friends.length > 0) {
         // 取最高频段位
         const tierCount = {};
@@ -362,11 +397,6 @@ async function loadFriendBubble() {
   } catch (e) { /* 静默 */ }
 }
 
-async function dismissBountyNotify(bountyId) {
-  await markBountyViewed(bountyId);
-  bountyNotifications.value = bountyNotifications.value.filter(b => b._id !== bountyId);
-}
-
 function getTierEmojiForName(name) {
   const tier = TIERS.find(t => t.name === name);
   return tier ? tier.emoji : '';
@@ -383,6 +413,20 @@ function animateNumber(target) {
   }, 40);
 }
 
+// 预加载邀请解锁状态，减少 handleStart 中的云函数等待
+async function preloadInviteStatus() {
+  if (!hasUsedFreeTestToday()) {
+    inviteUnlockCached.value = false; // 免费次数可用，无需邀请解锁
+    return;
+  }
+  try {
+    const res = await callCloudFunction('submitScore', { action: 'claimInviteUnlock' }, { retry: false });
+    inviteUnlockCached.value = !!(res.code === 0 && res.data && res.data.available);
+  } catch (e) {
+    inviteUnlockCached.value = false;
+  }
+}
+
 async function handleStart() {
   if (transitioning.value) return;
 
@@ -393,19 +437,29 @@ async function handleStart() {
   }
 
   // ② 邀请解锁（优先 — 社交裂变）
-  try {
-    // 3s 超时保护：云函数冷启动或网络波动时自动降级
-    const claimPromise = callCloudFunction('submitScore', { action: 'claimInviteUnlock' }, { retry: false });
-    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ code: -1, data: null }), 3000));
-    const claimRes = await Promise.race([claimPromise, timeoutPromise]);
-    if (claimRes.code === 0 && claimRes.data && claimRes.data.available) {
-      trackInviteUnlock(1);
-      uni.showToast({ title: '已使用邀请解锁次数！', icon: 'success' });
-      startQuiz();
-      return;
+  // 预加载缓存命中 → 即时解锁，免云函数等待
+  if (inviteUnlockCached.value === true) {
+    trackInviteUnlock(1);
+    uni.showToast({ title: '已使用邀请解锁次数！', icon: 'success' });
+    inviteUnlockCached.value = false;
+    startQuiz();
+    return;
+  }
+  // 缓存未命中 → 实时查询（含 3s 超时保护）
+  if (inviteUnlockCached.value === null) {
+    try {
+      const claimPromise = callCloudFunction('submitScore', { action: 'claimInviteUnlock' }, { retry: false });
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ code: -1, data: null }), 3000));
+      const claimRes = await Promise.race([claimPromise, timeoutPromise]);
+      if (claimRes.code === 0 && claimRes.data && claimRes.data.available) {
+        trackInviteUnlock(1);
+        uni.showToast({ title: '已使用邀请解锁次数！', icon: 'success' });
+        startQuiz();
+        return;
+      }
+    } catch (e) {
+      console.warn('[handleStart] claimInviteUnlock 失败，降级:', e);
     }
-  } catch (e) {
-    console.warn('[handleStart] claimInviteUnlock 失败，降级:', e);
   }
 
   // ③ 连续签到奖励（>=5 天）
@@ -499,7 +553,7 @@ onShareAppMessage(() => {
   trackShareClick('home', 'share');
   const uid = getUserOpenidSync();
   return {
-    title: '测测你的AI段位！我在进化湾等你 🧬',
+    title: '测测你的AI段位！我在进化湾等你',
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
     imageUrl: '/static/images/default-share.png',
   };
@@ -526,7 +580,7 @@ onShareTimeline(() => {
   &__friend-banner {
     position: relative;
     z-index: 10;
-    margin: 120rpx 32rpx 0;
+    margin: 80rpx 32rpx 0;
     padding: 20rpx 28rpx;
     background: rgba(245, 158, 11, 0.12);
     border: 1rpx solid rgba(245, 158, 11, 0.25);
@@ -550,10 +604,42 @@ onShareTimeline(() => {
     }
   }
 
-  &__body {
+  &__reversal-banner {
+    position: relative;
+    z-index: 10;
+    margin: 80rpx 32rpx 0;
+    padding: 20rpx 28rpx;
+    background: rgba(124, 58, 237, 0.12);
+    border: 1rpx solid rgba(124, 58, 237, 0.3);
+    border-radius: 16rpx;
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    animation: reversal-glow 2s ease-in-out infinite;
+
+    &-emoji {
+      font-size: 40rpx;
+      flex-shrink: 0;
+    }
+
+    &-text {
+      font-size: 26rpx;
+      color: #fff;
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    &-highlight {
+      color: #f59e0b;
+      font-weight: bold;
+    }
+  }
+
+  // ====== 首屏英雄区 ======
+  &__hero {
     position: relative; z-index: 10;
     display: flex; flex-direction: column; align-items: center;
-    padding-top: 35vh; transition: transform 0.3s ease-out;
+    padding-top: 20vh; transition: transform 0.3s ease-out;
     &--shrink { transform: scale(0.92); opacity: 0.7; }
   }
 
@@ -564,6 +650,26 @@ onShareTimeline(() => {
 
   &__subtitle {
     font-size: 28rpx; color: rgba(255, 255, 255, 0.45); margin-top: 16rpx;
+  }
+
+  // 新用户简化引导
+  &__quick-guide {
+    font-size: 22rpx;
+    color: rgba(124, 58, 237, 0.6);
+    margin-top: 18rpx;
+    animation: fade-in 0.5s ease-out both;
+  }
+
+  // 连续测试天数
+  &__streak {
+    margin-top: 16rpx;
+    padding: 6rpx 20rpx;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1rpx solid rgba(245, 158, 11, 0.2);
+    border-radius: 16rpx;
+    font-size: 22rpx;
+    color: $color-gold;
+    animation: fade-in 0.4s ease-out both;
   }
 
   // A3: AI实时评价
@@ -624,10 +730,29 @@ onShareTimeline(() => {
     margin-top: 2rpx;
   }
 
-  &__guide {
-    font-size: 24rpx;
-    color: rgba(124, 58, 237, 0.7);
-    margin-top: 12rpx;
+  // ====== 滚动探索区 ======
+  &__scroll {
+    position: relative; z-index: 10;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 32rpx 0 60rpx;
+  }
+
+  // 每日一题快速入口
+  &__daily-entry {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+    padding: 14rpx 24rpx;
+    background: rgba(0, 200, 255, 0.08);
+    border: 1rpx solid rgba(0, 200, 255, 0.15);
+    border-radius: 20rpx;
+    margin-bottom: 20rpx;
+    transition: all 0.15s;
+    &:active { background: rgba(0, 200, 255, 0.15); transform: scale(0.97); }
+
+    &-icon { font-size: 22rpx; }
+    &-text { font-size: 24rpx; color: rgba(0, 200, 255, 0.85); font-weight: 500; }
+    &-arrow { font-size: 22rpx; color: rgba(0, 200, 255, 0.5); }
   }
 
   // 每日主题预告
@@ -690,7 +815,7 @@ onShareTimeline(() => {
   }
 
   &__cta {
-    width: 400rpx; height: 112rpx; margin-top: 44rpx;
+    width: 400rpx; height: 112rpx; margin-top: 32rpx;
     background: linear-gradient(135deg, #7c3aed, #f59e0b);
     border-radius: 56rpx; font-size: 36rpx; font-weight: 700;
     color: #fff; border: none;
@@ -701,14 +826,14 @@ onShareTimeline(() => {
   }
 
   &__hint {
-    font-size: 26rpx; color: #f59e0b; margin-top: 24rpx;
+    font-size: 26rpx; color: #f59e0b; margin-top: 16rpx;
     animation: fade-in 0.4s ease-out;
   }
 
   &__proof {
-    display: flex; align-items: baseline; gap: 8rpx; margin-top: 28rpx;
-    &-num { font-size: 32rpx; font-weight: 700; color: rgba(255,255,255,0.55); }
-    &-label { font-size: 24rpx; color: rgba(255,255,255,0.3); }
+    display: flex; align-items: baseline; gap: 6rpx; margin-top: 20rpx;
+    &-num { font-size: 28rpx; font-weight: 700; color: rgba(255,255,255,0.5); }
+    &-label { font-size: 22rpx; color: rgba(255,255,255,0.3); }
   }
 
   // F2: 好友段位气泡
@@ -854,5 +979,10 @@ onShareTimeline(() => {
 @keyframes eval-dot-pulse {
   0%, 100% { opacity: 0.4; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes reversal-glow {
+  0%, 100% { box-shadow: 0 0 0 rgba(124, 58, 237, 0); }
+  50% { box-shadow: 0 0 24rpx rgba(124, 58, 237, 0.25); }
 }
 </style>

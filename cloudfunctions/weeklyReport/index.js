@@ -12,7 +12,7 @@ const db = cloud.database();
 const _ = db.command;
 
 const TIERS = [
-  { name: '萌新' }, { name: '调戏师' }, { name: '工具人' }, { name: '协作者' },
+  { name: '萌新' }, { name: '探索者' }, { name: '实践者' }, { name: '协作者' },
   { name: '驾驭者' }, { name: '炼金术士' }, { name: '觉醒者' }, { name: '无界' },
 ];
 
@@ -71,9 +71,16 @@ exports.main = async (event, context) => {
         }
       } catch (e) { /* 静默 */ }
 
-      // 稀有/传说卡统计
-      const rareCount = 0; // cards-data 不在云端，留待后续优化
-      const legendCount = 0;
+      // 稀有/传说/限时卡统计（从 collectedCards 按 ID 前缀动态计算）
+      const cards = user.collectedCards || [];
+      let rareCount = 0;
+      let legendCount = 0;
+      let limitedCount = 0;
+      for (const cardId of cards) {
+        if (cardId.startsWith('kc_rare_')) rareCount++;
+        else if (cardId.startsWith('kc_legend_')) legendCount++;
+        else if (cardId.startsWith('kc_limited_')) limitedCount++;
+      }
 
       try {
         await cloud.openapi.subscribeMessage.send({
@@ -82,7 +89,7 @@ exports.main = async (event, context) => {
           data: {
             thing1: { value: `进化湾 AI 周报` },
             number2: { value: String(weeklyTests) },
-            thing3: { value: `${(user.collectedCards || []).length} 颗（稀有${rareCount} 传说${legendCount}）` },
+            thing3: { value: `${(user.collectedCards || []).length} 颗（稀有${rareCount} 传说${legendCount}${limitedCount > 0 ? ' 限时' + limitedCount : ''}）` },
             thing4: { value: friendRankText },
             thing5: { value: user.currentTier || '未知' },
           },

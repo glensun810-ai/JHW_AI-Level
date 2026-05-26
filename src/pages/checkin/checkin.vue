@@ -24,13 +24,12 @@
 
     <!-- 奖励提示 -->
     <view v-if="showReward" class="page-checkin__reward-pop">
-      <text class="page-checkin__reward-pop-icon">{{ rewardIcon }}</text>
       <text class="page-checkin__reward-pop-text">{{ rewardText }}</text>
     </view>
 
     <!-- 签到后分享引导（损失厌恶：断签会重置） -->
     <view v-if="showSharePrompt" class="page-checkin__share-prompt">
-      <text class="page-checkin__share-prompt-icon">📤</text>
+      <view class="page-checkin__share-prompt-dot" />
       <view class="page-checkin__share-prompt-body">
         <text class="page-checkin__share-prompt-title">{{ sharePromptTitle }}</text>
         <text class="page-checkin__share-prompt-desc">{{ sharePromptDesc }}</text>
@@ -53,7 +52,7 @@
 
     <!-- 奖励列表 -->
     <view class="page-checkin__rewards">
-      <text class="page-checkin__section-title">🎁 签到奖励</text>
+      <text class="page-checkin__section-title">签到奖励</text>
       <view class="page-checkin__reward-list">
         <view
           v-for="r in rewards"
@@ -78,7 +77,7 @@
 
     <!-- 本周晋升最快 -->
     <view v-if="weeklyRising.length > 0" class="page-checkin__rising">
-      <text class="page-checkin__section-title">🚀 本周晋升最快</text>
+      <text class="page-checkin__section-title">本周晋升最快</text>
       <view v-for="(user, i) in weeklyRising" :key="i" class="page-checkin__rising-item">
         <text class="page-checkin__rising-rank">{{ i + 1 }}</text>
         <text class="page-checkin__rising-name">{{ user.nickname }}</text>
@@ -127,12 +126,12 @@ const rewards = [
 ];
 
 const REWARD_SPECIAL = {
-  1:  { icon: '🏅', text: '获得「坚持打卡」徽章！' },
-  3:  { icon: '⚡', text: '获得 +30 XP 进化值！' },
-  5:  { icon: '🎮', text: '解锁 1 道签到专属趣味题！' },
-  7:  { icon: '👑', text: '解锁称号「AI践行者」！+50 XP' },
-  14: { icon: '🔭', text: '解锁称号「AI探索家」！' },
-  30: { icon: '🌟', text: '解锁称号「AI进化者」！+ 专属段位卡边框' },
+  1:  { text: '获得「坚持打卡」徽章' },
+  3:  { text: '获得 +30 XP 进化值' },
+  5:  { text: '解锁 1 道签到专属趣味题' },
+  7:  { text: '解锁称号「AI践行者」+50 XP' },
+  14: { text: '解锁称号「AI探索家」' },
+  30: { text: '解锁称号「AI进化者」+ 专属段位卡边框' },
 };
 
 onMounted(async () => {
@@ -269,7 +268,7 @@ function onShareClick() {
 onShareAppMessage(() => {
   const uid = getUserOpenidSync();
   return {
-    title: `连续签到${consecutiveDays.value}天！测测你的AI段位变化了吗？🧬`,
+    title: `连续签到${consecutiveDays.value}天！测测你的AI段位变化了吗`,
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
     imageUrl: '/static/images/default-share.png',
   };
@@ -278,7 +277,7 @@ onShareAppMessage(() => {
 onShareTimeline(() => {
   const uid = getUserOpenidSync();
   return {
-    title: '每日打卡追踪AI段位变化，看看你的进化之路 🚀',
+    title: '每日打卡追踪AI段位变化，看看你的进化之路',
     query: uid ? `from_uid=${uid}` : '',
   };
 });

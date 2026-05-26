@@ -13,6 +13,9 @@
       <text class="ai-comment__quote-mark ai-comment__quote-mark--end" :style="{ color: tierColor }">"</text>
     </view>
     <view class="ai-comment__byline">—— 进化湾 AI 裁判团</view>
+    <view v-if="showScreenshotHint" class="ai-comment__screenshot-hint">
+      <text>截图分享你的AI锐评</text>
+    </view>
   </view>
 </template>
 
@@ -27,10 +30,11 @@ const props = defineProps({
 });
 
 const visible = ref(false);
+const showScreenshotHint = ref(false);
 
 onMounted(() => {
-  // 延迟入场动画
   setTimeout(() => { visible.value = true; }, 100);
+  setTimeout(() => { showScreenshotHint.value = true; }, 3000);
 });
 </script>
 
@@ -107,5 +111,22 @@ onMounted(() => {
     margin-top: 10rpx;
     font-style: italic;
   }
+
+  &__screenshot-hint {
+    text-align: center;
+    margin-top: 20rpx;
+    padding: 12rpx 20rpx;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1rpx dashed rgba(255, 255, 255, 0.1);
+    border-radius: 10rpx;
+    font-size: 22rpx;
+    color: $color-text-muted;
+    animation: fade-in 0.5s ease-out both;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8rpx); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

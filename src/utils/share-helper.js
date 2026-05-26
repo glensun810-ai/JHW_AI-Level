@@ -22,32 +22,32 @@ const COPIES = {
   },
   1: {
     showoff: [
-      '💬 AI调戏师！{score}分，我和AI的关系比较乱，你们呢？',
-      '我竟然是调戏师 💬 {score}分！每天调戏AI的快乐谁懂？',
-      'AI调戏师在此 💬 {score}分，专治各种AI不服，来测！',
+      '💬 AI探索者！{score}分，我和AI的探索之旅，你也来？',
+      '我竟然是探索者 💬 {score}分！每天发现AI新玩法，你呢？',
+      'AI探索者在此 💬 {score}分，专治各种AI不服，来测！',
     ],
     selfmock: [
-      '调戏AI反被AI调戏 💬 我认了，你也来试试？',
-      '哈哈哈我被AI调戏了 💬 来测测你的AI被调戏指数？',
+      '探索AI的路上踩过坑 💬 但越探索越好玩，你也来试试？',
+      '哈哈哈我在AI世界里迷路了 💬 来测测你的AI探索指数？',
     ],
     challenge: [
-      '你确定你敢来调戏AI？来测，比我高算你赢！',
-      'AI调戏大赛开始 💬 来测，看看谁更会撩AI！',
+      '你敢来探索AI的边界吗？来测，比我高算你赢！',
+      'AI探索大赛开始 💬 来测，看看谁更懂AI！',
     ],
   },
   2: {
     showoff: [
-      '🛠️ AI工具人！{score}分，{persona}，AI时代的中坚力量！',
-      '工具人又如何 🛠️ {score}分！AI时代的基础设施！来测？',
-      'AI工具人认证 🛠️ {score}分，打工魂在燃烧，你呢？',
+      '🛠️ AI实践者！{score}分，{persona}，AI时代的行动派！',
+      '实践出真知 🛠️ {score}分！AI用起来才是王道，来测？',
+      'AI实践者认证 🛠️ {score}分，行动力拉满，你呢？',
     ],
     selfmock: [
-      'AI说我是工具人 🛠️ 我不服！你来测测看你是什么？',
-      '工具人实锤了 🛠️ 但我是高级工具人，来测测你的段位？',
+      'AI说我是实践者 🛠️ 低调务实型选手，你来测测看？',
+      '实践者实锤了 🛠️ 但我是高级实践者，来测测你的段位？',
     ],
     challenge: [
-      '工具人也有尊严！来测，看看谁才是真正的打工人',
-      '同为工具人，谁敢来战？🛠️ 测测你的AI段位！',
+      '实践者也有段位高低！来测，看看谁才是真正的行动派',
+      '同为实践者，谁敢来战？🛠️ 测测你的AI段位！',
     ],
   },
   3: {
@@ -180,17 +180,6 @@ export function getGroupChallengeCopy(tierName, tierEmoji, score = 0) {
     `本群AI段位摸底！@所有人 我先来——${tierName} ${tierEmoji}${scorePart} 🏆 你们也来测测？`,
     `${tierName} ${tierEmoji}${scorePart} — 我在这个群的AI地位如何？@所有人 来测！`,
     `群聊AI段位大比拼！我是${tierName} ${tierEmoji}${scorePart}，谁是本群最强？来测→`,
-  ];
-  return pickRandom(variants);
-}
-
-// C1: 好友段位悬赏文案
-export function getBountyCopy(myTier, myEmoji, myScore, friendName, guessedTier) {
-  const ctx = getTimeContext();
-  const variants = [
-    `${ctx.emoji} 我测出了${myTier} ${myEmoji}（${myScore}分）！我悬赏一杯奶茶 ☕，赌 @${friendName} 是${guessedTier}！不服来测 →`,
-    `${ctx.emoji} 我的AI段位是${myTier} ${myEmoji}！@${friendName} 我猜你是${guessedTier}，敢来揭晓答案吗？测完告诉我！→`,
-    `${ctx.emoji} ${myTier} ${myEmoji} — @${friendName} 我觉得你能达到${guessedTier}！来测测看我说对了吗？→`,
   ];
   return pickRandom(variants);
 }

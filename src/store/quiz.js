@@ -15,6 +15,8 @@ export const useQuizStore = defineStore('quiz', () => {
   const testStartTime = ref(null);
   const runningScore = ref(0);
   const deepMode = ref(false); // v0.9: 深度定段模式(10题)
+  const dailyMode = ref(false); // v1.0: 每日一题模式(1题)
+  const customCount = ref(0); // 自定义题目数（优先级高于 deepMode/dailyMode）
 
   // 结果页数据（替代 globalData）
   const lastResult = ref(null);
@@ -59,7 +61,7 @@ export const useQuizStore = defineStore('quiz', () => {
 
   // ── 动作 ──
   async function fetchQuestions() {
-    const questionCount = deepMode.value ? 10 : 5;
+    const questionCount = customCount.value > 0 ? customCount.value : (deepMode.value ? 10 : 5);
     const res = await fetchDailyQuestions(undefined, 0, questionCount);
 
     if (res.code === 0 && res.data) {
@@ -115,9 +117,10 @@ export const useQuizStore = defineStore('quiz', () => {
     runningScore.value = totalScore.value;
   }
 
+  // v1.1: 逐题反馈（processFeedback 云函数消费）
   function setAnswerFeedback(index, feedback) {
     if (index >= 0 && index < answers.value.length) {
-      answers.value[index].feedback = feedback;
+      answers.value[index] = { ...answers.value[index], feedback };
     }
   }
 
@@ -136,14 +139,7 @@ export const useQuizStore = defineStore('quiz', () => {
   async function submitTest(challengeId = '') {
     const app = getApp();
     const fromUid = app.globalData.shareFromUid || '';
-    const bountyTier = app.globalData.bountyTier || '';
-    const targetName = app.globalData.bountyTargetName || '';
-    const res = await submitTestScore(questionSetId.value, answers.value, fromUid, challengeId, bountyTier, targetName);
-    // 消费后清除，避免下次测试误用
-    if (bountyTier) {
-      app.globalData.bountyTier = '';
-      app.globalData.bountyTargetName = '';
-    }
+    const res = await submitTestScore(questionSetId.value, answers.value, fromUid, challengeId);
     if (res.code === 0 && res.data) {
       lastResult.value = res.data;
       lastAnswers.value = [...answers.value];
@@ -169,6 +165,11 @@ export const useQuizStore = defineStore('quiz', () => {
     deepMode.value = val;
   }
 
+  function setDailyMode(val) {
+    dailyMode.value = val;
+    if (val) customCount.value = 1;
+  }
+
   function reset() {
     questions.value = [];
     answers.value = [];
@@ -181,15 +182,18 @@ export const useQuizStore = defineStore('quiz', () => {
     lastResult.value = null;
     lastQuestions.value = null;
     lastAnswers.value = null;
+    dailyMode.value = false;
+    customCount.value = 0;
     // deepMode 保持不重置（由入口页设置）
   }
 
   return {
     questions, answers, currentIndex, totalScore, questionSetId,
-    questionStartTime, testStartTime, runningScore, deepMode,
+    questionStartTime, testStartTime, runningScore, deepMode, dailyMode, customCount,
     currentQuestion, totalQuestions, answeredCount, isLastQuestion, progress, runningTier,
     currentSavedAnswer,
     lastResult, lastQuestions, lastAnswers,
-    fetchQuestions, selectAnswer, startQuestion, advanceQuestion, submitTest, reset, setDeepMode, setAnswerFeedback,
+    fetchQuestions, selectAnswer, startQuestion, advanceQuestion, submitTest, reset, setDeepMode, setDailyMode,
+    setAnswerFeedback,
   };
 });

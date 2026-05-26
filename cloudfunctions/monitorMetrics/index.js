@@ -92,13 +92,13 @@ const METRICS = {
     help: '最高段位(无界)占比 >15% 为极度偏斜',
   },
   toolman_share: {
-    name: '「工具人」段位分享率',
+    name: '「实践者」段位分享率',
     green: 'above_avg',
     yellow: '0.7x_avg',
     red: 'below_0.7x',
     unit: '',
     weight: 'watch',
-    help: '工具人段位用户的分享率 vs 全体平均',
+    help: '实践者段位用户的分享率 vs 全体平均',
   },
 };
 
@@ -114,7 +114,7 @@ const RED_ACTIONS = {
   day7_retention: '① 加速题库更新频率\n② 强化签到打卡奖励\n③ 增加推送触达（订阅消息）',
   nps: '① 检查 AI 锐评是否引发反感\n② 调研用户不满意的原因\n③ 优化题目质量',
   tier_distribution: '① 检查题目难度是否过低\n② 调整 scores 权重分布',
-  toolman_share: '① 为「工具人」段位定制专属分享文案\n② 增加该段位的自嘲风格分享比例',
+  toolman_share: '① 为「实践者」段位定制专属分享文案\n② 增加该段位的自嘲风格分享比例',
 };
 
 // ── 时间段（过去 1 小时） ──
@@ -136,6 +136,26 @@ async function countEvent(eventName, extra = {}) {
     .where(where)
     .count();
   return total;
+}
+
+// ── A/B 变体分组计数 ──
+async function countByVariant(eventName, extra = {}) {
+  const { start, end } = getTimeRange();
+  const { data } = await db.collection('analytics_logs')
+    .where({
+      event: eventName,
+      serverTime: _.gte(start).and(_.lte(end)),
+      ...extra,
+    })
+    .field({ 'params.ab_variant': true })
+    .limit(2000)
+    .get();
+  const counts = {};
+  for (const log of data) {
+    const v = (log.params && log.params.ab_variant) || 'unknown';
+    counts[v] = (counts[v] || 0) + 1;
+  }
+  return counts;
 }
 
 // ── 计算指标 ──
@@ -223,9 +243,9 @@ async function computeMetrics() {
     ...METRICS.tier_distribution,
   };
 
-  // 9. toolman_share: 工具人段位分享率 vs 全体平均
-  const toolmanShareCount = await countEvent('share_success', { 'params.tier_level': '工具人' });
-  const toolmanResultViews = await countEvent('result_view', { 'params.tier_name': '工具人' });
+  // 9. toolman_share: 实践者段位分享率 vs 全体平均
+  const toolmanShareCount = await countEvent('share_success', { 'params.tier_level': '实践者' });
+  const toolmanResultViews = await countEvent('result_view', { 'params.tier_name': '实践者' });
   const toolmanShareRate = toolmanResultViews > 0 ? toolmanShareCount / toolmanResultViews : 0;
   const avgShareRate = shareRate / 100;
   let toolmanShareStatus = 'above_avg';
@@ -236,8 +256,32 @@ async function computeMetrics() {
   }
   results.toolman_share = {
     value: toolmanShareStatus,
-    detail: `工具人分享率 ${(toolmanShareRate * 100).toFixed(1)}% vs 平均 ${shareRate}%`,
+    detail: `实践者分享率 ${(toolmanShareRate * 100).toFixed(1)}% vs 平均 ${shareRate}%`,
     ...METRICS.toolman_share,
+  };
+
+  // 10. A/B 变体转化对比
+  const [completeByVariant, shareByVariant] = await Promise.all([
+    countByVariant('test_complete'),
+    countByVariant('share_success'),
+  ]);
+  const variantBreakdown = {};
+  const allVariants = new Set([...Object.keys(completeByVariant), ...Object.keys(shareByVariant)]);
+  for (const v of allVariants) {
+    const completes = completeByVariant[v] || 0;
+    const shares = shareByVariant[v] || 0;
+    variantBreakdown[v] = { completes, shares };
+  }
+  results.ab_variant = {
+    value: 'ok',
+    detail: JSON.stringify(variantBreakdown),
+    name: 'A/B 变体转化',
+    green: 'ok',
+    yellow: 'ok',
+    red: 'ok',
+    unit: '',
+    weight: 'watch',
+    help: '各变体的测试完成数和分享数',
   };
 
   return results;

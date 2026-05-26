@@ -37,6 +37,14 @@
         "navigationBarTextStyle": "white"
       }
     },
+    {
+      "path": "pages/admin/admin",
+      "style": {
+        "navigationBarTitleText": "指挥中心",
+        "navigationBarBackgroundColor": "#0d1b2a",
+        "navigationBarTextStyle": "white"
+      }
+    },
   ],
   "subPackages": [
     {

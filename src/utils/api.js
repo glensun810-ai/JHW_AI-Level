@@ -104,8 +104,8 @@ export function fetchDailyQuestions(date, setIndex = 0, count = 5) {
 /**
  * 提交分数
  */
-export function submitTestScore(questionSetId, answers, fromUid = '', challengeId = '', bountyTier = '', targetName = '') {
-  return callCloudFunction('submitScore', { questionSetId, answers, fromUid, challengeId, bountyTier, targetName }, { showLoading: true, loadingText: 'AI正在评估...' });
+export function submitTestScore(questionSetId, answers, fromUid = '', challengeId = '') {
+  return callCloudFunction('submitScore', { questionSetId, answers, fromUid, challengeId }, { showLoading: true, loadingText: 'AI正在评估...' });
 }
 
 /**
@@ -152,6 +152,13 @@ export function submitFeedback(testRecordId, isAccurate) {
 }
 
 /**
+ * 更新用户头像昵称（非阻断式授权）
+ */
+export function updateProfile(nickname, avatar) {
+  return callCloudFunction('getWeeklyStats', { action: 'updateProfile', nickname, avatar });
+}
+
+/**
  * 更新隐私设置
  */
 export function updatePrivacy(privacyHidden) {
@@ -159,10 +166,17 @@ export function updatePrivacy(privacyHidden) {
 }
 
 /**
- * 标记悬赏结果为已查看
+ * 获取管理面板数据（K-factor、漏斗、告警）
  */
-export function markBountyViewed(bountyId) {
-  return callCloudFunction('getFriendRank', { action: 'markBountyViewed', bountyId });
+export function fetchDashboard(adminToken) {
+  return callCloudFunction('getDashboardData', { adminToken });
+}
+
+/**
+ * K-factor 角标（轻量模式，无需鉴权）
+ */
+export function fetchKFactorBadge() {
+  return callCloudFunction('getDashboardData', { lite: true });
 }
 
 // 当前用户 openid 缓存

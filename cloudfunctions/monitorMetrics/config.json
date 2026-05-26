@@ -2,5 +2,12 @@
   "timeout": 60,
   "env": {
     "WECOM_WEBHOOK_URL": ""
-  }
+  },
+  "triggers": [
+    {
+      "name": "monitorMetrics",
+      "type": "timer",
+      "config": "0 7 * * * * *"
+    }
+  ]
 }

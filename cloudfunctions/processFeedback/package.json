@@ -1,0 +1,9 @@
+{
+  "name": "processFeedback",
+  "version": "1.0.0",
+  "description": "定时反馈聚合 + 题目质量评分",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

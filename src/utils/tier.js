@@ -5,8 +5,8 @@
 
 export const TIERS = [
   { name: '萌新',     emoji: '🐣', min: 5,  max: 9,  color: '#2e7d32', icon: 'newbie' },
-  { name: '调戏师',   emoji: '💬', min: 10, max: 18, color: '#f9a825', icon: 'teaser' },
-  { name: '工具人',   emoji: '🛠️', min: 19, max: 27, color: '#37474f', icon: 'toolman' },
+  { name: '探索者',   emoji: '💬', min: 10, max: 18, color: '#f9a825', icon: 'teaser' },
+  { name: '实践者',   emoji: '🛠️', min: 19, max: 27, color: '#37474f', icon: 'toolman' },
   { name: '协作者',   emoji: '🤝', min: 28, max: 35, color: '#1a237e', icon: 'collaborator' },
   { name: '驾驭者',   emoji: '⚡', min: 36, max: 42, color: '#e65100', icon: 'rider' },
   { name: '炼金术士', emoji: '🧪', min: 43, max: 46, color: '#4a148c', icon: 'alchemist' },
