@@ -521,10 +521,9 @@ async function submitAndGo() {
       return;
     }
 
-    // 403：旧云函数限制响应，放行到结果页（结果页有兜底）
+    // 403：内容违规或限制响应，放行到结果页但不消耗免费次数
     // 用户已完成答题，绝不因后台限制拦截展示
     if (res.code === 403) {
-      if (wasFree) markFreeTestUsed();
       uni.removeStorageSync('quiz_breakpoint');
       uni.redirectTo({ url: '/pages/result/result' });
       return;
@@ -764,6 +763,7 @@ onShareTimeline(() => {
   &__next-wrap {
     display: flex;
     justify-content: center;
+    align-self: stretch;
     margin-top: 48rpx;
     animation: comment-fade-in 0.3s ease-out;
   }

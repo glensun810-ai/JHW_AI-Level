@@ -117,21 +117,29 @@ const calYear = ref(now.getFullYear());
 const calMonth = ref(now.getMonth() + 1);
 
 const rewards = [
-  { day: 1, desc: '「坚持打卡」徽章' },
+  { day: 1, desc: '「坚持打卡」徽章 + 10 XP' },
   { day: 3, desc: '+30 XP 进化值' },
   { day: 5, desc: '解锁 1 道签到专属趣味题' },
   { day: 7, desc: '解锁称号「AI践行者」+ 50 XP' },
-  { day: 14, desc: '解锁称号「AI探索家」' },
+  { day: 14, desc: '解锁称号「AI探索家」+ 80 XP' },
+  { day: 21, desc: '+100 XP + 免费测试机会 ×1' },
   { day: 30, desc: '解锁称号「AI进化者」+ 专属段位卡边框' },
+  { day: 50, desc: '解锁称号「恒心大师」+ 200 XP' },
+  { day: 80, desc: '解锁称号「进化先驱」+ 500 XP + 专属徽章' },
+  { day: 100, desc: '解锁称号「百炼成金」+ 1000 XP + 永久免费测试' },
 ];
 
 const REWARD_SPECIAL = {
-  1:  { text: '获得「坚持打卡」徽章' },
+  1:  { text: '获得「坚持打卡」徽章 +10 XP' },
   3:  { text: '获得 +30 XP 进化值' },
   5:  { text: '解锁 1 道签到专属趣味题' },
   7:  { text: '解锁称号「AI践行者」+50 XP' },
-  14: { text: '解锁称号「AI探索家」' },
+  14: { text: '解锁称号「AI探索家」+80 XP' },
+  21: { text: '获得 +100 XP + 免费测试机会 ×1' },
   30: { text: '解锁称号「AI进化者」+ 专属段位卡边框' },
+  50: { text: '解锁称号「恒心大师」+ 200 XP' },
+  80: { text: '解锁称号「进化先驱」+ 500 XP' },
+  100: { text: '解锁称号「百炼成金」+ 1000 XP + 永久免费' },
 };
 
 onMounted(async () => {

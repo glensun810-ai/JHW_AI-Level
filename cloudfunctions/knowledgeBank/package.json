@@ -1,0 +1,9 @@
+{
+  "name": "knowledgeBank",
+  "version": "1.0.0",
+  "description": "知识卡数据库（暂未启用）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

@@ -1,11 +1,17 @@
 /**
  * 激励视频广告管理
  * v1.0 — 广告前置模型：每日首次免费，后续需看广告再进答题
+ * 当 AD_UNIT_ID 未配置时，降级为邀请解锁提示
  */
-const AD_UNIT_ID = ''; // TODO: 替换为实际广告位 ID
+const AD_UNIT_ID = ''; // TODO: 在微信公众平台→流量主→广告位管理中创建激励视频广告位后填入
 
 let rewardedVideoAd = null;
 let pendingCallback = null;
+
+// 广告是否可用（已配置且有广告位ID）
+export function isAdAvailable() {
+  return !!AD_UNIT_ID;
+}
 
 // ── 免费测试状态（storage key: free_test_date / free_test_used）──
 

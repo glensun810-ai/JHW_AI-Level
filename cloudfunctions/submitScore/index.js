@@ -384,6 +384,31 @@ exports.main = async (event, context) => {
     const newTier = isNewHighest ? tier.name : user.currentTier;
     const tierChanged = isNewHighest && previousTier && previousTier !== tier.name;
 
+    // ── 连续签到计算 ──
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const lastTestDate = user.lastTestDate || '';
+    const prevConsecutive = user.consecutiveDays || 0;
+    const prevBest = user.streakBest || 0;
+
+    let newConsecutiveDays;
+    if (lastTestDate === today) {
+      // 今天已测过（幂等保护的重复提交），保持 streak 不变
+      newConsecutiveDays = prevConsecutive;
+    } else if (lastTestDate === yesterday) {
+      // 昨天测过 → 连续+1
+      newConsecutiveDays = prevConsecutive + 1;
+    } else {
+      // 中断 → 重置为 1
+      newConsecutiveDays = 1;
+    }
+    const newStreakBest = Math.max(newConsecutiveDays, prevBest);
+
+    // 连续签到里程碑奖励
+    const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
+    const streakMilestoneHit = STREAK_MILESTONES.includes(newConsecutiveDays);
+    const streakBroken = prevConsecutive >= 3 && newConsecutiveDays === 1;
+
     // 计算全国百分比（统一用 5-50 分制比较，保证普通/深度模式可比）
     const { total: totalUsers } = await db.collection('users')
       .where({ highestScore: _.gt(0) })
@@ -393,8 +418,9 @@ exports.main = async (event, context) => {
       .where({ highestScore: _.lt(clampedTierScore).and(_.gt(0)) })
       .count();
 
+    // 前X% = 超越了多少比例的人 → 越高越好（top 20% = 只有20%的人在你前面）
     const percentile = totalUsers > 0
-      ? Math.floor((lowerCount / totalUsers) * 100)
+      ? Math.max(1, 100 - Math.floor((lowerCount / totalUsers) * 100))
       : 0;
 
     // 幂等保护：防止快速重复提交（同一用户 + 同一题本 60s 内去重）
@@ -439,6 +465,12 @@ exports.main = async (event, context) => {
           strongestDimension,
           weakestDimension,
           friendMatch: null,
+          streak: {
+            consecutiveDays: newConsecutiveDays,
+            streakBest: newStreakBest,
+            milestoneHit: false,
+            streakBroken: false,
+          },
 	        },
 	      };
 	    }
@@ -473,6 +505,9 @@ exports.main = async (event, context) => {
             highestScore: newHighestScore,
             currentTier: newTier,
             testCount: _.inc(1),
+            consecutiveDays: newConsecutiveDays,
+            lastTestDate: today,
+            streakBest: newStreakBest,
             updatedAt: new Date(),
           },
         });
@@ -485,7 +520,9 @@ exports.main = async (event, context) => {
           highestScore: clampedTierScore,
           currentTier: tier.name,
           testCount: 1,
-          consecutiveDays: 0,
+          consecutiveDays: 1,
+          lastTestDate: today,
+          streakBest: 1,
           privacyHidden: false,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -524,8 +561,14 @@ exports.main = async (event, context) => {
       });
     }
 
+    // Phase 3: 检测超越关系（仅在新高分时触发）
+    if (isNewHighest) {
+      await detectOvertakes(OPENID, clampedTierScore, tier.name);
+    }
+
     // 处理待接受的挑战（当前用户是被挑战者 target）
     const challengeId = event.challengeId || '';
+    let challengeResult = null;
     if (challengeId) {
       try {
         const { data: challenges } = await db.collection('challenges')
@@ -549,7 +592,19 @@ exports.main = async (event, context) => {
               completedAt: new Date(),
             },
           });
+          challengeResult = {
+            challengeId: ch._id,
+            result,
+            challengerName: ch.challengerName || '好友',
+            challengerTier: ch.challengerTier || '',
+            challengerScore: ch.challengerScore || 0,
+            challengerOpenid: ch.challengerOpenid || '',
+            myScore: clampedTierScore,
+            myTier: tier.name,
+          };
           console.log(`[submitScore] 挑战已结算: ${ch._id} result=${result}`);
+          // P0-3: 通知挑战发起者结果
+          await notifyChallengeResult(ch.challengerOpenid, ch.challengerName, clampedTierScore, tier.name, result);
         }
       } catch (e) {
         console.log(`[submitScore] 挑战结算失败: ${e.message}`);
@@ -676,6 +731,13 @@ exports.main = async (event, context) => {
         strongestDimension,
         weakestDimension,
         friendMatch,
+        streak: {
+          consecutiveDays: newConsecutiveDays,
+          streakBest: newStreakBest,
+          milestoneHit: streakMilestoneHit,
+          streakBroken: streakBroken,
+        },
+        challengeResult,
       },
     };
   } catch (err) {
@@ -881,6 +943,143 @@ async function sendBountyNotification(predictorOpenid, targetName, guessedTier, 
   } catch (e) {
     // 订阅消息发送失败不阻塞主流程
     console.log('[submitScore] sendBountyNotification 失败:', e.message);
+  }
+}
+
+// Phase 3: 发送"被超越"通知（模板：活动排名下降通知）
+// 关键词：thing1(活动名称) number2(当前排名) number3(之前排名) thing4(备注)
+async function sendOvertakeNotification(friend, surpasserOpenid, surpasserScore, surpasserTier, currentRank, previousRank) {
+  try {
+    const subs = friend.subscribeTemplates || [];
+    const TIER_CHANGE_TEMPLATE_ID = process.env.TIER_CHANGE_TEMPLATE_ID || '';
+    if (!TIER_CHANGE_TEMPLATE_ID) return;
+
+    const tierChangeSub = subs.find(
+      s => s.templateId === TIER_CHANGE_TEMPLATE_ID && s.status === 'accept'
+    );
+    if (!tierChangeSub) return;
+
+    const { data: surpasserUsers } = await db.collection('users')
+      .where({ _openid: surpasserOpenid })
+      .field({ nickname: true })
+      .get();
+    const surpasserName = surpasserUsers.length > 0
+      ? (surpasserUsers[0].nickname || '好友')
+      : '好友';
+
+    await cloud.openapi.subscribeMessage.send({
+      touser: friend._openid,
+      templateId: TIER_CHANGE_TEMPLATE_ID,
+      page: '/pages/rank/rank',
+      data: {
+        thing1: { value: '进化湾AI段位排名' },
+        number2: { value: String(currentRank) },
+        number3: { value: String(previousRank) },
+        thing4: { value: `${surpasserName}的AI段位（${surpasserTier}）超越了你，快来测测追回去` },
+      },
+    });
+    console.log(`[submitScore] 超越通知已发送: surpasser=${surpasserOpenid.slice(0, 8)}... -> friend=${friend._openid.slice(0, 8)}... rank ${previousRank}→${currentRank}`);
+  } catch (e) {
+    console.log('[submitScore] sendOvertakeNotification 失败:', e.message);
+  }
+}
+
+// Phase 3: 计算用户在好友中的段位排名
+async function computeFriendRank(openid, score) {
+  try {
+    const { data: friendships } = await db.collection('friendships')
+      .where(_.or([{ userA: openid }, { userB: openid }]))
+      .get();
+    if (friendships.length === 0) return 1;
+
+    const friendIds = friendships.map(f => f.userA === openid ? f.userB : f.userA);
+    const { data: friends } = await db.collection('users')
+      .where({ _openid: _.in(friendIds) })
+      .field({ highestScore: true })
+      .get();
+
+    const higherCount = friends.filter(f => (f.highestScore || 0) > score).length;
+    return higherCount + 1;
+  } catch (e) {
+    return 1;
+  }
+}
+
+// P0-3: 通知挑战发起者结果
+async function notifyChallengeResult(challengerOpenid, challengerName, targetScore, targetTier, result) {
+  try {
+    const { data: users } = await db.collection('users').where({ _openid: challengerOpenid }).get();
+    if (users.length === 0) return;
+    const subs = users[0].subscribeTemplates || [];
+    const CHALLENGE_NOTIFY_ID = process.env.CHALLENGE_NOTIFY_TEMPLATE_ID || '';
+    if (!CHALLENGE_NOTIFY_ID) return;
+    const sub = subs.find(s => s.templateId === CHALLENGE_NOTIFY_ID && s.status === 'accept');
+    if (!sub) return;
+
+    const resultText = result === 'target_win'
+      ? `你被${challengerName}击败了！TA的AI商数超越了你`
+      : result === 'challenger_win'
+      ? `你击败了${challengerName}！但TA可能卷土重来`
+      : `平局！你和${challengerName}旗鼓相当`;
+
+    await cloud.openapi.subscribeMessage.send({
+      touser: challengerOpenid,
+      templateId: CHALLENGE_NOTIFY_ID,
+      page: '/pages/rank/rank',
+      data: {
+        thing1: { value: 'AI段位挑战结果' },
+        thing2: { value: `${challengerName}（${targetTier}）` },
+        thing3: { value: resultText },
+        time4: { value: new Date().toLocaleString('zh-CN', { hour12: false }) },
+      },
+    });
+    console.log(`[submitScore] 挑战结果通知已发送: challenger=${challengerOpenid.slice(0, 8)}... result=${result}`);
+  } catch (e) {
+    console.log('[submitScore] notifyChallengeResult 失败:', e.message);
+  }
+}
+
+// Phase 3: 检测超越关系
+async function detectOvertakes(openid, newScore, newTier) {
+  try {
+    const { data: friendships } = await db.collection('friendships')
+      .where(_.or([{ userA: openid }, { userB: openid }]))
+      .get();
+    if (friendships.length === 0) return;
+
+    const friendIds = friendships.map(f => f.userA === openid ? f.userB : f.userA);
+
+    const { data: friends } = await db.collection('users')
+      .where({ _openid: _.in(friendIds) })
+      .field({
+        _openid: true, nickname: true,
+        highestScore: true, currentTier: true,
+        subscribeTemplates: true,
+      })
+      .get();
+    if (friends.length === 0) return;
+
+    // 获取用户上一次分数（第二条最新的 test_record）
+    const { data: prevTests } = await db.collection('test_records')
+      .where({ _openid: openid })
+      .orderBy('createdAt', 'desc')
+      .limit(2)
+      .get();
+    const prevScore = prevTests.length >= 2
+      ? Math.min(50, Math.max(5, (prevTests[1].totalScore || 0)))
+      : 0;
+
+    for (const friend of friends) {
+      const friendScore = friend.highestScore || 0;
+      if (friendScore > prevScore && newScore > friendScore) {
+        console.log(`[submitScore] 检测到超越: ${openid.slice(0, 8)}... (${newScore}) 超越 ${friend._openid.slice(0, 8)}... (${friendScore})`);
+        const currentRank = await computeFriendRank(friend._openid, friendScore);
+        const previousRank = Math.max(1, currentRank - 1);
+        await sendOvertakeNotification(friend, openid, newScore, newTier, currentRank, previousRank);
+      }
+    }
+  } catch (e) {
+    console.log('[submitScore] detectOvertakes 失败:', e.message);
   }
 }
 

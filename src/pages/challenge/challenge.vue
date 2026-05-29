@@ -53,7 +53,7 @@
       <view v-for="c in pendingChallenges" :key="c._id" class="page-challenge__pending-item">
         <text class="page-challenge__pending-from">{{ c.challengerName }}</text>
         <text class="page-challenge__pending-tier">{{ c.challengerTier }}</text>
-        <text class="page-challenge__pending-score">{{ c.challengerScore }}分</text>
+        <text class="page-challenge__pending-score">{{ toAIQ(c.challengerScore) }}</text>
         <button class="page-challenge__accept-btn" @click="acceptChallenge(c)">应战</button>
       </view>
     </view>
@@ -70,6 +70,12 @@ import { ref, onMounted } from 'vue';
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import { fetchFriendRank, getUserOpenidSync, requestSubscribeMessage } from '@/utils/api.js';
 import { trackPageView } from '@/utils/analytics.js';
+import { toAIQuotient } from '@/utils/tier.js';
+
+function toAIQ(rawScore) {
+  if (!rawScore || rawScore === 0) return '—';
+  return 'AI商数' + toAIQuotient(rawScore);
+}
 
 const winCount = ref(0);
 const loseCount = ref(0);

@@ -59,7 +59,7 @@
               <text class="page-rank__name">{{ f.nickname || '匿名用户' }}</text>
               <text class="page-rank__tier-tag">{{ f.currentTier || '?' }}</text>
             </view>
-            <text class="page-rank__score">{{ f.highestScore || 0 }}分</text>
+            <text class="page-rank__score">{{ toAIQ(f.highestScore) }}</text>
           </view>
         </view>
         <view v-else class="page-rank__empty">
@@ -128,11 +128,43 @@
       </template>
     </scroll-view>
 
-    <!-- Tab 3: 本周晋升最快 -->
+    <!-- Tab 3: 本周积分排行榜（Phase 3 改版） -->
     <scroll-view v-if="activeTab === 'weekly'" scroll-y class="page-rank__list">
       <view v-if="weeklyLoading" class="page-rank__loading">加载中…</view>
       <template v-else>
-        <view v-if="weeklyRising.length > 0" class="page-rank__items">
+        <!-- 新版：scored leaderboard -->
+        <template v-if="leaderboard.length > 0">
+          <view class="page-rank__leaderboard-header">
+            <text class="page-rank__leaderboard-week">{{ weekLabel }}</text>
+            <text class="page-rank__leaderboard-count">{{ weeklyTotal }} 人参与</text>
+          </view>
+          <view v-if="myWeeklyEntry" class="page-rank__leaderboard-my">
+            <text class="page-rank__leaderboard-my-label">我的排名</text>
+            <text class="page-rank__leaderboard-my-rank">#{{ myWeeklyEntry.rank }}</text>
+            <text class="page-rank__leaderboard-my-score">AI商数 {{ toAIQ(myWeeklyEntry.score) }}</text>
+            <text v-if="myWeeklyEntry.rankChange !== 0" class="page-rank__rank-change" :class="myWeeklyEntry.rankChange > 0 ? 'page-rank__rank-change--up' : 'page-rank__rank-change--down'">
+              {{ myWeeklyEntry.rankChange > 0 ? '↑' : '↓' }}{{ Math.abs(myWeeklyEntry.rankChange) }}
+            </text>
+          </view>
+          <view class="page-rank__items">
+            <view v-for="r in leaderboard" :key="r.rank" class="page-rank__item" :class="{ 'page-rank__item--me': myOpenid && r.rank === myWeeklyEntry?.rank }">
+              <text class="page-rank__rank" :class="{ 'page-rank__rank--top': r.rank <= 3 }">{{ r.rank }}</text>
+              <image class="page-rank__avatar" :src="r.avatar || defaultAvatar" mode="aspectFill" />
+              <view class="page-rank__info">
+                <text class="page-rank__name">{{ r.nickname }}</text>
+                <text class="page-rank__tier-tag">{{ r.currentTier }}</text>
+              </view>
+              <view class="page-rank__score-col">
+                <text class="page-rank__score">{{ toAIQ(r.score) }}</text>
+                <text class="page-rank__rank-change" :class="r.rankChange > 0 ? 'page-rank__rank-change--up' : r.rankChange < 0 ? 'page-rank__rank-change--down' : ''">
+                  {{ r.rankChange > 0 ? '↑' : r.rankChange < 0 ? '↓' : '—' }}{{ r.rankChange !== 0 ? Math.abs(r.rankChange) : '' }}
+                </text>
+              </view>
+            </view>
+          </view>
+        </template>
+        <!-- 旧版 fallback：段位晋升列表 -->
+        <template v-else-if="weeklyRising.length > 0">
           <view v-for="(r, i) in weeklyRising" :key="i" class="page-rank__item">
             <text class="page-rank__rank" :class="{ 'page-rank__rank--top': i < 3 }">{{ i + 1 }}</text>
             <view class="page-rank__info">
@@ -145,9 +177,9 @@
               </view>
             </view>
           </view>
-        </view>
+        </template>
         <view v-else class="page-rank__empty">
-          <text class="page-rank__empty-text">本周尚无晋升记录</text>
+          <text class="page-rank__empty-text">本周尚无排行数据</text>
           <text class="page-rank__empty-hint">加油测试，争取本周上榜！</text>
         </view>
       </template>
@@ -165,7 +197,10 @@
               <text class="page-rank__name">{{ g.nickname || '匿名用户' }}</text>
               <text class="page-rank__tier-tag">{{ g.currentTier || '?' }}</text>
             </view>
-            <text class="page-rank__score">{{ g.highestScore || 0 }}分</text>
+            <text class="page-rank__score">{{ toAIQ(g.highestScore) }}</text>
+          </view>
+          <view class="page-rank__group-share-card">
+            <button class="page-rank__group-share-btn" @click="generateGroupRankImage">📊 生成群排行图</button>
           </view>
         </view>
         <view v-else class="page-rank__empty">
@@ -188,7 +223,13 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import { fetchFriendRank, fetchTierDistribution, fetchWeeklyStats, updatePrivacy, getUserOpenidSync, fetchKFactorBadge } from '@/utils/api.js';
-import { TIERS } from '@/utils/tier.js';
+import { generateGroupRankShareImage } from '@/utils/canvas-renderer.js';
+import { TIERS, toAIQuotient } from '@/utils/tier.js';
+
+function toAIQ(rawScore) {
+  if (!rawScore || rawScore === 0) return '—';
+  return 'AI商数' + toAIQuotient(rawScore);
+}
 import { trackPageView, trackRankingView } from '@/utils/analytics.js';
 import PrivacyModal from '@/components/PrivacyModal/PrivacyModal.vue';
 
@@ -196,7 +237,7 @@ const tabs = ref([
   { key: 'friend', label: '好友段位榜' },
   { key: 'star', label: '知识星榜' },
   { key: 'national', label: '全国分布' },
-  { key: 'weekly', label: '本周晋升最快' },
+  { key: 'weekly', label: '本周排行' },
   { key: 'group', label: '群挑战榜' },
 ]);
 
@@ -219,6 +260,11 @@ const userPercentile = ref(0);
 // Tab 3
 const weeklyLoading = ref(true);
 const weeklyRising = ref([]);
+// Phase 3: 积分排行榜
+const leaderboard = ref([]);
+const myWeeklyEntry = ref(null);
+const weeklyTotal = ref(0);
+const weekLabel = ref('');
 
 // Tab 4
 const groupLoading = ref(true);
@@ -253,7 +299,17 @@ onMounted(() => {
 
   privacyHidden.value = !!uni.getStorageSync('privacy_hidden');
   loadFriendRank();
-  trackRankingView('friend');
+
+  // Phase 3: 从首页周榜徽章跳转时，默认切到周排行 tab
+  const app = getApp();
+  if (app.globalData.rankDefaultTab === 'weekly') {
+    activeTab.value = 'weekly';
+    loadedTabs.value['weekly'] = true;
+    loadWeeklyRising();
+    delete app.globalData.rankDefaultTab;
+  }
+
+  trackRankingView(activeTab.value);
   updateCountdown();
   countdownTimer = setInterval(updateCountdown, 1000);
   setTimeout(() => { showScreenshotHint.value = false; }, 3000);
@@ -326,13 +382,27 @@ async function loadDistribution() {
   }
 }
 
-// ── Tab 3: 本周晋升最快 ──
+// ── Tab 3: 本周积分排行 ──
 async function loadWeeklyRising() {
   weeklyLoading.value = true;
   try {
-    const res = await fetchWeeklyStats();
-    if (res.code === 0 && res.data) {
-      weeklyRising.value = res.data.weeklyRising || [];
+    // Phase 3: 优先使用积分排行榜
+    const res = await fetchWeeklyLeaderboard();
+    if (res.code === 0 && res.data && res.data.leaderboard && res.data.leaderboard.length > 0) {
+      leaderboard.value = res.data.leaderboard;
+      myWeeklyEntry.value = res.data.myEntry;
+      weeklyTotal.value = res.data.totalParticipants || leaderboard.value.length;
+      weekLabel.value = res.data.weekLabel || '';
+      return;
+    }
+    // Fallback: 旧版晋升列表
+    if (res.code === 0 && res.data && res.data.weeklyRising) {
+      weeklyRising.value = res.data.weeklyRising;
+      return;
+    }
+    const oldRes = await fetchWeeklyStats();
+    if (oldRes.code === 0 && oldRes.data) {
+      weeklyRising.value = oldRes.data.weeklyRising || [];
     }
   } catch (e) {
     console.error('[rank] loadWeeklyRising failed:', e);
@@ -355,6 +425,26 @@ async function loadGroupRank() {
     // 静默失败
   } finally {
     groupLoading.value = false;
+  }
+}
+
+async function generateGroupRankImage() {
+  uni.showLoading({ title: '正在生成群排行图…', mask: true });
+  try {
+    const tempPath = await generateGroupRankShareImage({
+      groupRankings: groupList.value,
+      currentUserOpenid: myOpenid.value,
+      miniCodeUrl: '',
+    });
+    uni.hideLoading();
+    if (tempPath) {
+      uni.previewImage({ urls: [tempPath] });
+    } else {
+      uni.showToast({ title: '生成失败，请重试', icon: 'none' });
+    }
+  } catch (e) {
+    uni.hideLoading();
+    uni.showToast({ title: '生成失败，请重试', icon: 'none' });
   }
 }
 
@@ -625,6 +715,26 @@ onShareTimeline(() => {
     flex-shrink: 0;
   }
 
+  &__group-share-card {
+    display: flex;
+    justify-content: center;
+    margin-top: 24rpx;
+    padding-bottom: 12rpx;
+  }
+
+  &__group-share-btn {
+    padding: 14rpx 40rpx;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1rpx solid rgba(245, 158, 11, 0.25);
+    border-radius: 32rpx;
+    font-size: 26rpx;
+    color: #ffb74d;
+    text-align: center;
+
+    &::after { border: none; }
+    &:active { background: rgba(245, 158, 11, 0.2); }
+  }
+
   // ====== 晋升信息 ======
   &__rise {
     display: flex;
@@ -652,6 +762,57 @@ onShareTimeline(() => {
     color: #4caf50;
     font-size: 20rpx;
     margin-left: 4rpx;
+  }
+
+  // ====== Phase 3: 周排行榜 ======
+  &__leaderboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12rpx 0 16rpx;
+  }
+  &__leaderboard-week {
+    font-size: 24rpx;
+    color: $color-text-secondary;
+  }
+  &__leaderboard-count {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.3);
+  }
+  &__leaderboard-my {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+    padding: 14rpx 20rpx;
+    margin-bottom: 16rpx;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1rpx solid rgba(245, 158, 11, 0.2);
+    border-radius: 12rpx;
+  }
+  &__leaderboard-my-label {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.4);
+  }
+  &__leaderboard-my-rank {
+    font-size: 28rpx;
+    font-weight: bold;
+    color: #f59e0b;
+  }
+  &__leaderboard-my-score {
+    flex: 1;
+    font-size: 22rpx;
+    color: #fff;
+  }
+  &__score-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2rpx;
+  }
+  &__rank-change {
+    font-size: 20rpx;
+    &--up { color: #4caf50; }
+    &--down { color: #ef5350; }
   }
 
   // ====== 分布图 ======

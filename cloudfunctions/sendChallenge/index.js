@@ -74,7 +74,7 @@ exports.main = async (event, context) => {
             thing6: { value: challengerName.slice(0, 20) },
             thing5: { value: targetName.slice(0, 20) },
           },
-          miniprogramState: 'developer',
+          miniprogramState: 'formal',
         });
         console.log(`[sendChallenge] 订阅消息已发送 → ${targetOpenid.slice(0, 8)}...`);
       } catch (e) {

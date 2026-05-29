@@ -2,5 +2,8 @@
   "name": "sendReminder",
   "version": "1.0.0",
   "description": "定时提醒云函数：签到提醒 + 测试提醒（流失预警）",
-  "main": "index.js"
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
 }

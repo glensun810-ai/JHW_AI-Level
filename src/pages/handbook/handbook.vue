@@ -1,57 +1,149 @@
 <template>
   <view class="page-handbook">
-    <!-- 顶部星图 -->
-    <view class="page-handbook__header">
-      <text class="page-handbook__title">🌌 进化手册</text>
-      <text class="page-handbook__subtitle">已点亮 {{ collectedCards.length }} 颗知识星</text>
-      <text class="page-handbook__hint">继续测试，解锁全部星空</text>
+    <!-- 固定顶栏 -->
+    <view class="page-handbook__topbar">
+      <view class="page-handbook__back" @click="goBack">
+        <text>← 返回</text>
+      </view>
+      <text class="page-handbook__topbar-title">进化手册</text>
+      <button class="page-handbook__topbar-share" open-type="share" @click="trackShareClick('handbook')">
+        📤
+      </button>
     </view>
 
-    <!-- P2-G: 进化之路时间线 -->
-    <view v-if="evolutionHistory.length >= 2" class="page-handbook__evo-road">
-      <text class="page-handbook__evo-road-title">🌱 进化之路</text>
-      <text class="page-handbook__evo-road-sub">你的 AI 段位进化轨迹</text>
-      <view class="page-handbook__evo-timeline">
-        <view v-for="(h, i) in evolutionHistory" :key="i" class="page-handbook__evo-node">
-          <view class="page-handbook__evo-node-line">
-            <view class="page-handbook__evo-node-dot" :class="{ 'page-handbook__evo-node-dot--latest': i === 0 }" />
-            <view v-if="i < evolutionHistory.length - 1" class="page-handbook__evo-node-connector" />
-          </view>
-          <view class="page-handbook__evo-node-body">
-            <view class="page-handbook__evo-node-header">
-              <text class="page-handbook__evo-node-tier">{{ h.emoji }} {{ h.tier }}</text>
-              <text class="page-handbook__evo-node-score">{{ h.score }}分</text>
+    <scroll-view scroll-y class="page-handbook__scroll" :style="{ height: scrollHeight + 'px' }">
+      <!-- Zone A: 星图进度 -->
+      <view class="page-handbook__starzone">
+        <view class="page-handbook__starzone-header">
+          <text class="page-handbook__starzone-title">🌌 知识星图</text>
+          <text class="page-handbook__starzone-sub">每测一次，必得一颗星 · 共 30 颗等你收集</text>
+        </view>
+
+        <!-- 进度环 + 数字 -->
+        <view class="page-handbook__progress-ring-wrap">
+          <view class="page-handbook__progress-ring">
+            <view class="page-handbook__progress-ring-inner">
+              <text class="page-handbook__progress-ring-num">{{ collectedCards.length }}</text>
+              <text class="page-handbook__progress-ring-divider">/</text>
+              <text class="page-handbook__progress-ring-total">30</text>
             </view>
-            <text class="page-handbook__evo-node-date">{{ h.date }}</text>
+            <view
+              class="page-handbook__progress-ring-circle"
+              :style="{ background: `conic-gradient(#ffd700 0deg ${progressDeg}deg, rgba(255,255,255,0.06) ${progressDeg}deg 360deg)` }"
+            />
           </view>
         </view>
-      </view>
-    </view>
 
-    <!-- 筛选栏 -->
-    <scroll-view scroll-x class="page-handbook__filters">
-      <view
-        v-for="f in filters"
-        :key="f.key"
-        class="page-handbook__filter"
-        :class="{ 'page-handbook__filter--active': activeFilter === f.key }"
-        @click="activeFilter = f.key"
-      >
-        {{ f.label }}
-      </view>
-    </scroll-view>
+        <text class="page-handbook__progress-label">星图完成度 {{ progressPercent }}%</text>
+        <text v-if="cardsRemaining > 0" class="page-handbook__progress-remain">
+          还差 <text class="page-handbook__progress-remain-num">{{ cardsRemaining }}</text> 颗点亮整个星空
+        </text>
+        <text v-else class="page-handbook__progress-done">你已点亮整个星空！🌟</text>
 
-    <!-- 星空网格 -->
-    <scroll-view scroll-y class="page-handbook__grid-wrap">
+        <!-- 社交对比 -->
+        <view v-if="starRankText" class="page-handbook__star-rank">
+          <text>{{ starRankText }}</text>
+        </view>
+
+        <!-- 5×6 星阵图 -->
+        <view class="page-handbook__star-grid">
+          <text
+            v-for="i in 30"
+            :key="'sg'+i"
+            class="page-handbook__star-grid-item"
+            :class="[
+              i <= collectedCards.length ? 'page-handbook__star-grid-item--lit' : 'page-handbook__star-grid-item--dim',
+              'page-handbook__star-grid-item--rarity-' + getStarRarity(i),
+            ]"
+            :style="{
+              animationDelay: (i <= collectedCards.length ? i * 0.03 : i * 0.06) + 's',
+            }"
+          >{{ i <= collectedCards.length ? '★' : '☆' }}</text>
+        </view>
+
+        <!-- 里程碑预告 -->
+        <view v-if="nextMilestone" class="page-handbook__next-milestone">
+          <text class="page-handbook__next-milestone-icon">{{ nextMilestone.icon }}</text>
+          <text class="page-handbook__next-milestone-text">{{ nextMilestone.text }}</text>
+        </view>
+      </view>
+
+      <!-- Zone B: 进化之路时间线 -->
+      <view class="page-handbook__evo-road">
+        <view class="page-handbook__evo-road-header">
+          <view class="page-handbook__evo-road-title-row">
+            <text class="page-handbook__evo-road-title">🌱 进化之路</text>
+            <text v-if="evolutionHistory.length > 0" class="page-handbook__evo-road-count">共 {{ evolutionHistory.length }} 次测试</text>
+          </view>
+          <!-- 段位路径摘要（始终可见） -->
+          <view v-if="tierPathText" class="page-handbook__evo-path">
+            <text class="page-handbook__evo-path-text">{{ tierPathText }}</text>
+          </view>
+        </view>
+
+        <!-- 有进化记录 -->
+        <view v-if="evolutionHistory.length >= 2" class="page-handbook__evo-timeline">
+          <view v-for="(h, i) in displayedHistory" :key="i" class="page-handbook__evo-node">
+            <view class="page-handbook__evo-node-line">
+              <view class="page-handbook__evo-node-dot" :class="{ 'page-handbook__evo-node-dot--latest': i === 0 && !showFullTimeline }" />
+              <view v-if="i < displayedHistory.length - 1 || (showFullTimeline && i < evolutionHistory.length - 1 && i === displayedHistory.length - 1)" class="page-handbook__evo-node-connector" />
+            </view>
+            <view class="page-handbook__evo-node-body">
+              <view class="page-handbook__evo-node-header">
+                <text class="page-handbook__evo-node-tier">{{ h.emoji }} {{ h.tier }}</text>
+                <text class="page-handbook__evo-node-score">{{ toAIQ(h.score) }}</text>
+              </view>
+              <text class="page-handbook__evo-node-date">{{ h.date }}</text>
+            </view>
+          </view>
+
+          <!-- 展开/收起按钮 -->
+          <view
+            v-if="evolutionHistory.length > 3"
+            class="page-handbook__evo-toggle"
+            @click="showFullTimeline = !showFullTimeline"
+          >
+            <text class="page-handbook__evo-toggle-text">
+              {{ showFullTimeline ? '收起 ▴' : '展开全部 ' + evolutionHistory.length + ' 条记录 ▾' }}
+            </text>
+          </view>
+        </view>
+
+        <!-- 空状态：引导首次/第二次测试 -->
+        <view v-else class="page-handbook__evo-empty">
+          <text class="page-handbook__evo-empty-icon">{{ evolutionHistory.length === 0 ? '🚀' : '🌱' }}</text>
+          <text class="page-handbook__evo-empty-text">
+            {{ evolutionHistory.length === 0 ? '完成首次测试，开启你的进化之路' : '再测一次，记录第二个进化节点' }}
+          </text>
+          <button class="page-handbook__evo-empty-btn" @click="goToTest">
+            {{ evolutionHistory.length === 0 ? '开始首次测试' : '继续测试 →' }}
+          </button>
+        </view>
+      </view>
+
+      <!-- Zone C: 筛选栏 -->
+      <view class="page-handbook__filters">
+        <view
+          v-for="f in filters"
+          :key="f.key"
+          class="page-handbook__filter"
+          :class="{ 'page-handbook__filter--active': activeFilter === f.key }"
+          @click="activeFilter = f.key"
+        >
+          {{ f.label }}
+        </view>
+      </view>
+
+      <!-- Zone C: 知识星网格 -->
       <view class="page-handbook__grid">
         <view
           v-for="card in filteredCards"
           :key="card.id"
           class="page-handbook__card"
-          :class="{
-            'page-handbook__card--collected': isCollected(card.id),
-            'page-handbook__card--uncollected': !isCollected(card.id),
-          }"
+          :class="[
+            isCollected(card.id) ? 'page-handbook__card--collected' : 'page-handbook__card--uncollected',
+            !isCollected(card.id) ? 'page-handbook__card--rarity-' + card.rarity : '',
+          ]"
           @click="openCard(card)"
         >
           <!-- 已收集 -->
@@ -62,15 +154,26 @@
             <text class="page-handbook__card-emoji">{{ card.emoji }}</text>
             <text class="page-handbook__card-title">{{ card.title }}</text>
           </template>
-          <!-- 未收集：暗色剪影 + 谜语提示 -->
+          <!-- 未收集 -->
           <template v-else>
+            <view class="page-handbook__card-lock-glow" :class="'page-handbook__card-lock-glow--' + card.rarity" />
             <text class="page-handbook__card-mystery">✦</text>
             <text class="page-handbook__card-clue">{{ card.clue }}</text>
+            <text class="page-handbook__card-unlock-hint">🔒 继续测试解锁</text>
           </template>
         </view>
       </view>
-      <view style="height: 60rpx" />
+
+      <!-- 底部留白 -->
+      <view style="height: 140rpx" />
     </scroll-view>
+
+    <!-- 固定底部 CTA -->
+    <view class="page-handbook__fixed-cta">
+      <button class="page-handbook__fixed-cta-btn" @click="goToTest">
+        🔄 继续测试，解锁更多知识星
+      </button>
+    </view>
 
     <!-- 卡片详情弹窗 -->
     <view v-if="selectedCard" class="page-handbook__overlay" @click="selectedCard = null">
@@ -91,38 +194,119 @@
           <text class="page-handbook__detail-fact-text">{{ selectedCard.funFact }}</text>
         </view>
         <view class="page-handbook__detail-actions">
-          <button class="page-handbook__detail-share" open-type="share" @click="onCardShare(selectedCard)">
+          <button class="page-handbook__detail-share" @click="generateCardImage(selectedCard)">
+            🎨 生成知识星卡片
+          </button>
+          <button class="page-handbook__detail-share-text" open-type="share" @click="onCardShare(selectedCard)">
             📤 分享这颗知识星
           </button>
           <button class="page-handbook__detail-close" @click="selectedCard = null">关闭</button>
         </view>
       </view>
     </view>
+
+    <!-- 隐藏 canvas 用于生成知识星卡片 -->
+    <canvas id="knowledge-card-canvas" type="2d" style="position:fixed;left:-9999px;width:750px;height:1000px" />
   </view>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
-import { getUserOpenidSync } from '@/utils/api.js';
-import { callCloudFunction, fetchWeeklyStats } from '@/utils/api.js';
+import { getUserOpenidSync, callCloudFunction, fetchWeeklyStats } from '@/utils/api.js';
+import { toAIQuotient } from '@/utils/tier.js';
+import { generateKnowledgeCardImage } from '@/utils/canvas-renderer.js';
+import { trackShareClick } from '@/utils/analytics.js';
+
+function toAIQ(rawScore) {
+  if (!rawScore || rawScore === 0) return '—';
+  return 'AI商数' + toAIQuotient(rawScore);
+}
 
 const collectedCards = ref([]);
 const selectedCard = ref(null);
 const activeFilter = ref('all');
 const evolutionHistory = ref([]);
+const showFullTimeline = ref(false);
+const starRankInFriends = ref(0);
+const starRankTotal = ref(0);
+const generatingImage = ref(false);
 
-const filters = [
-  { key: 'all', label: '全部' },
-  { key: 'uncollected', label: '未解锁' },
-  { key: 'legend', label: '🔮 传说' },
-  { key: 'limited', label: '⏳ 限时' },
-  { key: 'rare', label: '✨ 稀有' },
-  { key: 'common', label: '⭐ 普通' },
-  { key: 'collected', label: '已收集' },
-];
+// 段位路径摘要：🐣 → 💬 → 🛠️（你在这）
+const tierPathText = computed(() => {
+  if (evolutionHistory.value.length < 2) return '';
+  const seen = [];
+  // history is newest-first, reverse for chronological path
+  const reversed = [...evolutionHistory.value].reverse();
+  for (const h of reversed) {
+    const key = h.tier;
+    if (!seen.find(s => s.tier === key)) {
+      seen.push({ tier: key, emoji: h.emoji });
+    }
+  }
+  if (seen.length < 2) return '';
+  return seen.map(s => s.emoji + ' ' + s.tier).join(' → ') + '（你在这）';
+});
 
-// 卡片元数据（轻量版，仅用于展示）
+// 默认显示最新 3 条，展开后显示全部
+const displayedHistory = computed(() => {
+  if (showFullTimeline.value || evolutionHistory.value.length <= 3) {
+    return evolutionHistory.value;
+  }
+  return evolutionHistory.value.slice(0, 3);
+});
+
+const scrollHeight = computed(() => {
+  try {
+    const info = uni.getWindowInfo();
+    return info.windowHeight - 44;
+  } catch (e) { return 600; }
+});
+
+const filters = computed(() => {
+  const collected = collectedCards.value.length;
+  const total = 30;
+  return [
+    { key: 'all', label: `全部 (${total})` },
+    { key: 'collected', label: `已收集 (${collected})` },
+    { key: 'uncollected', label: `未解锁 (${total - collected})` },
+  ];
+});
+
+const progressPercent = computed(() => {
+  return Math.round((collectedCards.value.length / 30) * 100);
+});
+
+const progressDeg = computed(() => {
+  return (collectedCards.value.length / 30) * 360;
+});
+
+const cardsRemaining = computed(() => 30 - collectedCards.value.length);
+
+const starRankText = computed(() => {
+  if (starRankInFriends.value > 0 && starRankTotal.value > 0) {
+    const emoji = starRankInFriends.value <= 3 ? '🏆' : '📊';
+    return `${emoji} 好友中第 ${starRankInFriends.value} 名 · 共 ${starRankTotal.value} 人在收集`;
+  }
+  return '';
+});
+
+const nextMilestone = computed(() => {
+  const count = collectedCards.value.length;
+  const milestones = [
+    { at: 10, icon: '🌟', text: '还差 ' + (10 - count) + ' 颗达成「星图初现」里程碑' },
+    { at: 15, icon: '💫', text: '还差 ' + (15 - count) + ' 颗达成「半程星图」里程碑' },
+    { at: 20, icon: '✨', text: '还差 ' + (20 - count) + ' 颗达成「星光璀璨」里程碑' },
+    { at: 25, icon: '⭐', text: '还差 ' + (25 - count) + ' 颗达成「接近圆满」里程碑' },
+    { at: 30, icon: '👑', text: '还差 ' + (30 - count) + ' 颗达成「星图圆满」里程碑' },
+  ];
+  for (const m of milestones) {
+    if (count < m.at) return { icon: m.icon, text: m.text };
+  }
+  return null;
+});
+
+// 卡片元数据
 const ALL_CARDS = [
   { id: 'kc_prompt_001', rarity: 'common', title: '给 AI 一个"好问题"', emoji: '🎯', hook: '高段位玩家和AI对话的方式，跟你想象的有点不一样。', body: '把 AI 想象成一个超级能干但完全不了解你处境的实习生。你给它的信息越多、约束越具体，它产出的东西就越合用。', actionTip: '下次给 AI 指令时，试试加上三个要素：① 用在什么地方 ② 给谁看的 ③ 不要什么。', funFact: '有人做过对比测试：带具体约束的版本，AI 输出质量比模糊版本高出约 40%。', clue: '这张卡和"如何给AI下指令"有关' },
   { id: 'kc_prompt_002', rarity: 'common', title: '让 AI "演"一个角色', emoji: '🎭', hook: '有一个简单技巧，能让 AI 的回答质量瞬间提升一档。', body: 'AI 的一个隐藏特性：你让它"扮演"某个角色时，它调用的知识模式和语言风格会发生明显变化。', actionTip: '试试这个模板："你是[角色]，正在帮[我]做[任务]。你的风格应该是[3个形容词]。"', funFact: '有研究发现，让 AI 扮演"专家角色"后，它在专业领域的回答准确率提升了约 30%。', clue: '这张卡和"让AI扮演角色"有关' },
@@ -162,10 +346,8 @@ const filteredCards = computed(() => {
       return ALL_CARDS.filter(c => isCollected(c.id));
     case 'uncollected':
       return ALL_CARDS.filter(c => !isCollected(c.id));
-    case 'all':
-      return ALL_CARDS;
     default:
-      return ALL_CARDS.filter(c => c.rarity === activeFilter.value);
+      return ALL_CARDS;
   }
 });
 
@@ -178,17 +360,62 @@ function rarityLabel(rarity) {
   return map[rarity] || '';
 }
 
+function getStarRarity(i) {
+  if (i <= 18) return 'common';
+  if (i <= 25) return 'rare';
+  if (i <= 28) return 'legend';
+  return 'limited';
+}
+
 function openCard(card) {
   if (isCollected(card.id)) {
     selectedCard.value = card;
   } else {
-    uni.showToast({ title: '继续测试，解锁这颗星', icon: 'none' });
+    const rarityHint = {
+      common: '继续测试即可解锁',
+      rare: '继续测试，稀有星等你收集',
+      legend: '高分测试有机会掉落传说星',
+      limited: '限时活动中解锁这颗星',
+    };
+    uni.showToast({ title: rarityHint[card.rarity] || '继续测试，解锁这颗星', icon: 'none', duration: 2000 });
   }
 }
 
+async function generateCardImage(card) {
+  if (generatingImage.value) return;
+  generatingImage.value = true;
+  uni.showLoading({ title: '生成中…' });
+  try {
+    const imagePath = await generateKnowledgeCardImage(card, null, 'knowledge-card-canvas');
+    uni.hideLoading();
+    uni.showShareImageMenu({
+      path: imagePath,
+      success: () => {
+        uni.showToast({ title: '长按保存或分享给好友', icon: 'none' });
+      },
+      fail: (err) => {
+        console.warn('[handbook] 分享图片菜单失败:', err);
+        uni.previewImage({ urls: [imagePath] });
+      },
+    });
+  } catch (e) {
+    uni.hideLoading();
+    console.error('[handbook] 知识星卡片生成失败:', e);
+    uni.showToast({ title: '生成失败，请重试', icon: 'none' });
+  }
+  generatingImage.value = false;
+}
+
 function onCardShare(card) {
-  // 暂存分享上下文
   shareCardTitle.value = card?.title || '';
+}
+
+function goBack() {
+  uni.navigateBack({ delta: 1 });
+}
+
+function goToTest() {
+  uni.navigateTo({ url: '/pages/quiz/quiz' });
 }
 
 const shareCardTitle = ref('');
@@ -199,7 +426,7 @@ onShareAppMessage(() => {
   return {
     title: cardTitle
       ? `我收集到了知识星「${cardTitle}」🌟 测测你能收集多少颗？`
-      : '我在进化湾收集知识星 🌟 来看看你的AI段位吧',
+      : `我已点亮 ${collectedCards.value.length}/30 颗知识星 🌌 来看看你的AI段位吧`,
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
     imageUrl: '/static/images/default-share.png',
   };
@@ -208,7 +435,7 @@ onShareAppMessage(() => {
 onShareTimeline(() => {
   const uid = getUserOpenidSync();
   return {
-    title: '进化湾 · AI知识星座，你能点亮多少颗星？🌌',
+    title: `进化湾 · 我已收集 ${collectedCards.value.length}/30 颗AI知识星，你能点亮多少？🌌`,
     query: uid ? `from_uid=${uid}` : '',
   };
 });
@@ -216,12 +443,17 @@ onShareTimeline(() => {
 onMounted(async () => {
   try {
     const res = await fetchWeeklyStats();
-    if (res.code === 0 && res.data && res.data.collectedCards) {
-      collectedCards.value = res.data.collectedCards;
+    if (res.code === 0 && res.data) {
+      if (res.data.collectedCards) {
+        collectedCards.value = res.data.collectedCards;
+      }
+      if (res.data.starRankInFriends) {
+        starRankInFriends.value = res.data.starRankInFriends || 0;
+        starRankTotal.value = res.data.starRankTotal || 0;
+      }
     }
-  } catch (e) { /* 使用本地缓存 */ }
+  } catch (e) { /* 静默降级 */ }
 
-  // P2-G: 加载进化之路历史
   try {
     const historyRes = await callCloudFunction('getWeeklyStats', { action: 'getTestHistory' });
     if (historyRes.code === 0 && historyRes.data && historyRes.data.history) {
@@ -235,53 +467,280 @@ onMounted(async () => {
 .page-handbook {
   min-height: 100vh;
   background: linear-gradient(180deg, #0a0e27 0%, #0d1b2a 100%);
+  position: relative;
 }
 
-.page-handbook__header {
-  padding: 40rpx 32rpx 20rpx;
+// ── 固定顶栏 ──
+.page-handbook__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24rpx;
+  height: 88rpx;
+  background: rgba(10, 14, 39, 0.95);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.page-handbook__back {
+  font-size: 28rpx;
+  color: #b0bec5;
+  padding: 8rpx 0;
+}
+
+.page-handbook__topbar-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.page-handbook__topbar-share {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  font-size: 28rpx;
+  line-height: 1;
+
+  &::after { border: none; }
+}
+
+// ── Zone A: 星图进度 ──
+.page-handbook__starzone {
+  padding: 32rpx 32rpx 24rpx;
   text-align: center;
 }
 
-.page-handbook__title {
+.page-handbook__starzone-header {
+  margin-bottom: 20rpx;
+}
+
+.page-handbook__starzone-title {
   display: block;
-  font-size: 44rpx;
+  font-size: 40rpx;
   font-weight: bold;
   color: #ffd700;
+  margin-bottom: 8rpx;
+}
+
+.page-handbook__starzone-sub {
+  display: block;
+  font-size: 22rpx;
+  color: #8899aa;
+}
+
+// 进度环
+.page-handbook__progress-ring-wrap {
+  display: flex;
+  justify-content: center;
   margin-bottom: 12rpx;
 }
 
-.page-handbook__subtitle {
-  display: block;
-  font-size: 28rpx;
-  color: #b0bec5;
-  margin-bottom: 8rpx;
+.page-handbook__progress-ring {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.page-handbook__hint {
-  display: block;
-  font-size: 22rpx;
-  color: #8899aa;
+.page-handbook__progress-ring-circle {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mask: radial-gradient(transparent 58rpx, #000 60rpx);
+  -webkit-mask: radial-gradient(transparent 58rpx, #000 60rpx);
 }
 
-// P2-G: 进化之路时间线
-.page-handbook__evo-road {
-  padding: 24rpx 32rpx 8rpx;
-  margin-bottom: 8rpx;
+.page-handbook__progress-ring-inner {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  z-index: 1;
 }
 
-.page-handbook__evo-road-title {
-  display: block;
-  font-size: 28rpx;
+.page-handbook__progress-ring-num {
+  font-size: 52rpx;
   font-weight: bold;
   color: #ffd700;
+  line-height: 1;
+}
+
+.page-handbook__progress-ring-divider {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0 4rpx;
+}
+
+.page-handbook__progress-ring-total {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.35);
+  line-height: 1;
+}
+
+.page-handbook__progress-label {
+  display: block;
+  font-size: 24rpx;
+  color: #b0bec5;
   margin-bottom: 4rpx;
 }
 
-.page-handbook__evo-road-sub {
+.page-handbook__progress-remain {
   display: block;
+  font-size: 24rpx;
+  color: #8899aa;
+  margin-bottom: 8rpx;
+}
+
+.page-handbook__progress-remain-num {
+  color: #ffcc80;
+  font-weight: bold;
+  font-size: 28rpx;
+}
+
+.page-handbook__progress-done {
+  display: block;
+  font-size: 26rpx;
+  color: #ffd700;
+  font-weight: bold;
+  margin-bottom: 8rpx;
+}
+
+// 社交对比
+.page-handbook__star-rank {
+  display: inline-block;
+  padding: 8rpx 24rpx;
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+  border-radius: 20rpx;
+  font-size: 22rpx;
+  color: #ffcc80;
+  margin-bottom: 20rpx;
+}
+
+// 星阵图
+.page-handbook__star-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12rpx;
+  max-width: 500rpx;
+  margin: 0 auto;
+}
+
+.page-handbook__star-grid-item {
+  font-size: 40rpx;
+  line-height: 1;
+  animation: star-fade-in 0.5s ease-out both;
+
+  &--lit {
+    color: #ffd700;
+    text-shadow: 0 0 10rpx rgba(255, 215, 0, 0.4);
+  }
+
+  &--dim {
+    opacity: 0.4;
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  &--rarity-rare {
+    color: rgba(66, 165, 245, 0.5);
+  }
+
+  &--rarity-legend {
+    color: rgba(206, 147, 216, 0.5);
+  }
+
+  &--rarity-limited {
+    color: rgba(255, 215, 0, 0.6);
+  }
+}
+
+// 里程碑预告
+.page-handbook__next-milestone {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-top: 16rpx;
+  padding: 10rpx 20rpx;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.12);
+  border-radius: 20rpx;
+
+  &-icon { font-size: 24rpx; }
+  &-text { font-size: 22rpx; color: #ffcc80; }
+}
+
+// ── Zone B: 进化之路 ──
+.page-handbook__evo-road {
+  padding: 24rpx 32rpx 8rpx;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.page-handbook__evo-road-header {
+  margin-bottom: 12rpx;
+}
+
+.page-handbook__evo-road-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4rpx;
+}
+
+.page-handbook__evo-road-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.page-handbook__evo-road-count {
   font-size: 22rpx;
   color: #8899aa;
-  margin-bottom: 20rpx;
+  padding: 4rpx 14rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12rpx;
+}
+
+// 段位路径摘要
+.page-handbook__evo-path {
+  padding: 10rpx 16rpx;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.12);
+  border-radius: 12rpx;
+}
+
+.page-handbook__evo-path-text {
+  font-size: 22rpx;
+  color: #c4b5fd;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+// 展开/收起按钮
+.page-handbook__evo-toggle {
+  display: flex;
+  justify-content: center;
+  padding: 12rpx 0 8rpx;
+}
+
+.page-handbook__evo-toggle-text {
+  font-size: 24rpx;
+  color: #a78bfa;
+  padding: 8rpx 28rpx;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 20rpx;
 }
 
 .page-handbook__evo-timeline {
@@ -355,20 +814,54 @@ onMounted(async () => {
   opacity: 0.7;
 }
 
+// 进化空状态
+.page-handbook__evo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32rpx 0;
+  text-align: center;
+}
+
+.page-handbook__evo-empty-icon {
+  font-size: 56rpx;
+  margin-bottom: 12rpx;
+}
+
+.page-handbook__evo-empty-text {
+  font-size: 26rpx;
+  color: #b0bec5;
+  margin-bottom: 16rpx;
+  line-height: 1.5;
+}
+
+.page-handbook__evo-empty-btn {
+  padding: 12rpx 40rpx;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(0, 200, 255, 0.15));
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  color: #c4b5fd;
+  line-height: 1.4;
+
+  &::after { border: none; }
+}
+
+// ── 筛选栏 ──
 .page-handbook__filters {
-  white-space: nowrap;
-  padding: 16rpx 32rpx;
+  display: flex;
+  gap: 16rpx;
+  padding: 20rpx 32rpx;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .page-handbook__filter {
-  display: inline-block;
   font-size: 24rpx;
   color: #8899aa;
-  padding: 10rpx 22rpx;
-  margin-right: 16rpx;
-  border-radius: 20rpx;
+  padding: 10rpx 24rpx;
+  border-radius: 24rpx;
   background: rgba(255, 255, 255, 0.06);
-  transition: all 0.2s;
+  transition: background 0.15s, color 0.15s;
 
   &--active {
     color: #ffd700;
@@ -376,19 +869,17 @@ onMounted(async () => {
   }
 }
 
-.page-handbook__grid-wrap {
-  height: calc(100vh - 260rpx);
-  padding: 0 24rpx;
-}
-
+// ── Zone C: 卡片网格 ──
 .page-handbook__grid {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 16rpx;
+  padding: 0 24rpx;
 }
 
 .page-handbook__card {
-  width: calc(33.33% - 12rpx);
+  width: calc((100% - 40rpx) / 3);
   min-height: 180rpx;
   border-radius: 16rpx;
   padding: 16rpx 12rpx;
@@ -409,6 +900,33 @@ onMounted(async () => {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
+
+  // 稀有度边框光效（未收集卡）
+  &--rarity-rare {
+    border-color: rgba(66, 165, 245, 0.2);
+    box-shadow: 0 0 16rpx rgba(66, 165, 245, 0.06);
+  }
+
+  &--rarity-legend {
+    border-color: rgba(206, 147, 216, 0.25);
+    box-shadow: 0 0 20rpx rgba(206, 147, 216, 0.08);
+  }
+
+  &--rarity-limited {
+    border-color: rgba(255, 215, 0, 0.25);
+    box-shadow: 0 0 20rpx rgba(255, 215, 0, 0.08);
+  }
+}
+
+.page-handbook__card-lock-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+  border-radius: 16rpx;
+
+  &--rare { background: radial-gradient(circle at 50% 30%, #42a5f5, transparent 70%); }
+  &--legend { background: radial-gradient(circle at 50% 30%, #ce93d8, transparent 70%); }
+  &--limited { background: radial-gradient(circle at 50% 30%, #ffd700, transparent 70%); }
 }
 
 .page-handbook__card-rarity {
@@ -441,16 +959,55 @@ onMounted(async () => {
 .page-handbook__card-mystery {
   font-size: 36rpx;
   color: rgba(255, 255, 255, 0.3);
-  margin-bottom: 8rpx;
+  margin-bottom: 6rpx;
+  position: relative;
+  z-index: 1;
 }
 
 .page-handbook__card-clue {
   font-size: 20rpx;
   color: rgba(255, 255, 255, 0.4);
   line-height: 1.4;
+  margin-bottom: 8rpx;
+  position: relative;
+  z-index: 1;
 }
 
-// 详情弹窗
+.page-handbook__card-unlock-hint {
+  font-size: 18rpx;
+  color: rgba(255, 255, 255, 0.25);
+  position: relative;
+  z-index: 1;
+}
+
+// ── 固定底部 CTA ──
+.page-handbook__fixed-cta {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16rpx 32rpx 32rpx;
+  background: linear-gradient(0deg, rgba(10, 14, 39, 0.98) 60%, rgba(10, 14, 39, 0) 100%);
+  z-index: 10;
+}
+
+.page-handbook__fixed-cta-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.7), rgba(0, 200, 255, 0.5));
+  border: 1px solid rgba(124, 58, 237, 0.5);
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #ffffff;
+  box-shadow: 0 8rpx 24rpx rgba(124, 58, 237, 0.25);
+
+  &::after { border: none; }
+}
+
+// ── 详情弹窗 ──
 .page-handbook__overlay {
   position: fixed;
   inset: 0;
@@ -547,11 +1104,28 @@ onMounted(async () => {
   height: 80rpx;
   line-height: 80rpx;
   text-align: center;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(245, 158, 11, 0.15));
-  border: 1rpx solid rgba(124, 58, 237, 0.3);
-  color: #c4b5fd;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(0, 200, 255, 0.2));
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: #ffffff;
   border-radius: 16rpx;
   font-size: 28rpx;
+  font-weight: 600;
+
+  &::after { border: none; }
+}
+
+.page-handbook__detail-share-text {
+  width: 100%;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: #b0bec5;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+  border: none;
+
+  &::after { border: none; }
 }
 
 .page-handbook__detail-close {
@@ -559,10 +1133,17 @@ onMounted(async () => {
   height: 72rpx;
   line-height: 72rpx;
   text-align: center;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.5);
   border-radius: 16rpx;
   font-size: 26rpx;
   border: none;
+
+  &::after { border: none; }
+}
+
+@keyframes star-fade-in {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
 }
 </style>

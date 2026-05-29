@@ -218,6 +218,73 @@ exports.main = async (event, context) => {
       return { code: 0, data: { history, totalTests: records.length } };
     }
 
+    // Phase 3: 本周积分排行榜（基于 weekly_rankings 快照）
+    if (action === 'weeklyLeaderboard') {
+      const weekStart = getWeekStart();
+      const weekEnd = new Date(new Date(weekStart).getTime() + 7 * 86400000);
+      const weekLabel = `${weekStart.slice(5)} - ${weekEnd.toISOString().slice(5, 10)}`;
+
+      const { data: rankings } = await db.collection('weekly_rankings')
+        .where({ weekStart })
+        .orderBy('score', 'desc')
+        .limit(20)
+        .get();
+
+      let totalParticipants = 0;
+      try {
+        totalParticipants = ((await db.collection('weekly_rankings').where({ weekStart }).count()).total || 0);
+      } catch (e) { totalParticipants = rankings.length; }
+
+      // 批量查用户信息
+      const rankOpenids = rankings.map(r => r._openid);
+      const userMap = {};
+      if (rankOpenids.length > 0) {
+        const { data: users } = await db.collection('users')
+          .where({ _openid: _.in(rankOpenids) })
+          .field({ _openid: true, nickname: true, avatar: true, currentTier: true })
+          .get();
+        users.forEach(u => { userMap[u._openid] = u; });
+      }
+
+      const leaderboard = rankings.map((r, i) => ({
+        rank: i + 1,
+        nickname: (userMap[r._openid] && userMap[r._openid].nickname) || '匿名用户',
+        avatar: (userMap[r._openid] && userMap[r._openid].avatar) || '',
+        currentTier: r.tier || (userMap[r._openid] && userMap[r._openid].currentTier) || '',
+        score: r.score || 0,
+        rankChange: r.rankChange || 0,
+      }));
+
+      // 当前用户排名（可能不在 top 20）
+      let myEntry = null;
+      const myInTop = rankings.find(r => r._openid === OPENID);
+      if (myInTop) {
+        const myIdx = rankings.findIndex(r => r._openid === OPENID);
+        myEntry = { rank: myIdx + 1, score: myInTop.score, rankChange: myInTop.rankChange || 0 };
+      } else {
+        const { data: myRankings } = await db.collection('weekly_rankings')
+          .where({ _openid: OPENID, weekStart })
+          .limit(1)
+          .get();
+        if (myRankings.length > 0) {
+          let higherCount = 0;
+          try {
+            const countResult = await db.collection('weekly_rankings')
+              .where({ weekStart, score: _.gt(myRankings[0].score) })
+              .count();
+            higherCount = countResult.total || 0;
+          } catch (e) { /* fall through */ }
+          myEntry = {
+            rank: higherCount + 1,
+            score: myRankings[0].score,
+            rankChange: myRankings[0].rankChange || 0,
+          };
+        }
+      }
+
+      return { code: 0, data: { leaderboard, myEntry, totalParticipants, weekLabel } };
+    }
+
     // 默认：获取每周统计
     // 本周晋升最快
     const weekStart = getWeekStart();
@@ -254,9 +321,11 @@ exports.main = async (event, context) => {
 
     const { data: userData } = await db.collection('users')
       .where({ _openid: OPENID })
-      .field({ consecutiveDays: true, collectedCards: true, nickname: true, avatar: true })
+      .field({ consecutiveDays: true, collectedCards: true, nickname: true, avatar: true, streakBest: true, lastTestDate: true })
       .get();
     const consecutiveDays = userData[0]?.consecutiveDays || 0;
+    const streakBest = userData[0]?.streakBest || 0;
+    const lastTestDate = userData[0]?.lastTestDate || '';
     const collectedCards = userData[0]?.collectedCards || [];
 
     // 获取所有签到日期（用于日历展示）
@@ -281,7 +350,6 @@ exports.main = async (event, context) => {
       testDates.add(new Date(rec.createdAt).toISOString().slice(0, 10));
     }
     let testConsecutiveDays = 0;
-    const today = new Date().toISOString().slice(0, 10);
     const checkDate = new Date();
     // 从今天往回数连续天数
     for (let i = 0; i < 30; i++) {
@@ -337,8 +405,10 @@ exports.main = async (event, context) => {
       message: 'ok',
       data: {
         checkedToday: todayCheck.length > 0,
+        testedToday: lastTestDate === today,
         consecutiveDays,
         testConsecutiveDays,
+        streakBest,
         checkedDates,
         collectedCards,
         nickname: userData[0]?.nickname || '',

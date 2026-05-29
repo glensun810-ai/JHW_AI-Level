@@ -50,7 +50,7 @@ exports.main = async (event, context) => {
       .where({ _importBatch: 'v0.8-seed' })
       .count();
 
-    if (existingCount >= 50) {
+    if (existingCount >= questions.length) {
       return { code: 0, message: '题目已全部导入，跳过', data: { existingCount } };
     }
 

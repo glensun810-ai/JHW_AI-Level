@@ -15,7 +15,7 @@
       <!-- 我的段位 -->
       <view class="challenge-modal__my-tier" v-if="myScore > 0">
         <text class="challenge-modal__my-label">我的段位</text>
-        <text class="challenge-modal__my-value">{{ myTier }} · {{ myScore }}分</text>
+        <text class="challenge-modal__my-value">{{ myTier }} · {{ toAIQ(myScore) }}</text>
       </view>
 
       <!-- 加载中 -->
@@ -38,7 +38,7 @@
                 <text class="challenge-modal__friend-name">{{ f.nickname || '匿名用户' }}</text>
                 <text class="challenge-modal__friend-tier">{{ f.currentTier || '?' }}</text>
               </view>
-              <text class="challenge-modal__friend-score">{{ f.highestScore || 0 }}分</text>
+              <text class="challenge-modal__friend-score">{{ toAIQ(f.highestScore) }}</text>
               <text v-if="challengedIds.has(f._openid)" class="challenge-modal__challenged-tag">已挑战</text>
               <text v-else class="challenge-modal__challenge-btn">挑战 ›</text>
             </view>
@@ -70,6 +70,12 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { fetchFriendRank, sendChallengeRequest } from '@/utils/api.js';
+import { toAIQuotient } from '@/utils/tier.js';
+
+function toAIQ(rawScore) {
+  if (!rawScore || rawScore === 0) return '—';
+  return 'AI商数' + toAIQuotient(rawScore);
+}
 
 const props = defineProps({
   visible: { type: Boolean, default: false },

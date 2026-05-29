@@ -212,9 +212,8 @@ exports.main = async (event, context) => {
     const userTier = event.userTier || '';
 
     // 检查实例缓存（无 userTier 时可用）
-    const cacheKey = `${date}-${setIndex}-${questionCount}`;
-    if (!userTier && cache.date === date && cache.setIndex === setIndex && cache.data) {
-      console.log(`[getDailyQuestions] 缓存命中 ${cacheKey}`);
+    if (!userTier && cache.date === date && cache.setIndex === setIndex && cache.count === questionCount && cache.data) {
+      console.log(`[getDailyQuestions] 缓存命中 ${date}-${setIndex}-${questionCount}`);
       return cache.data;
     }
 
@@ -520,7 +519,7 @@ exports.main = async (event, context) => {
       },
     };
 
-    cache = { date, setIndex, data: result };
+    cache = { date, setIndex, count: questionCount, data: result };
 
     return result;
   } catch (err) {

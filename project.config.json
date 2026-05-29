@@ -17,7 +17,12 @@
   "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "value": "cloudfunctions",
+        "type": "folder"
+      }
+    ],
     "include": []
   },
   "appid": "wxfd3b695920a78e1b",

@@ -1,6 +1,11 @@
 {
+  "timeout": 60,
   "permissions": {
     "openapi": ["subscribeMessage.send"]
+  },
+  "env": {
+    "CHECKIN_TEMPLATE_ID": "StzfHPAanybtp6_b0izQaMoHpWDmLWEZDtiIajXavaw",
+    "TEST_REMINDER_TEMPLATE_ID": "NZKT0DzAHmOZfnPKyHaZvCUW3uN-S8H6YWxOGt59kMo"
   },
   "triggers": [
     {

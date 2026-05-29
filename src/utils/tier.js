@@ -1,6 +1,7 @@
 /**
  * 段位映射工具（前后端复用）— v0.6 进化叙事流
- * 分数 5-50 → 8个段位
+ * 内部引擎：5-50 原始分 → 8个段位
+ * 用户端：AI 商数 78-150（地板抬升变换）
  */
 
 export const TIERS = [
@@ -54,4 +55,12 @@ export function getTierIndex(score) {
 export function getTierColor(tierName) {
   const tier = TIERS.find(t => t.name === tierName);
   return tier ? tier.color : '#2e7d32';
+}
+
+/**
+ * 原始分 → AI 商数（地板抬升：5-50 → 78-150）
+ * 这是用户端唯一可见的分数体系
+ */
+export function toAIQuotient(rawScore) {
+  return Math.round((rawScore / 50) * 80 + 70);
 }

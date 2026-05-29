@@ -124,6 +124,29 @@ export function fetchFriendRank(action = 'rank', extra = {}) {
 }
 
 /**
+ * 获取挑战详情（首页应战模式）
+ * @param {string} challengeId
+ */
+export function fetchChallenge(challengeId) {
+  return callCloudFunction('getFriendRank', { action: 'getChallenge', challengeId });
+}
+
+/**
+ * 获取群内排行
+ * @param {string} groupId - 群聊 openGId
+ */
+export function fetchGroupRank(groupId) {
+  return callCloudFunction('getFriendRank', { action: 'groupRank', openGId: groupId });
+}
+
+/**
+ * 获取邀请解锁统计（邀请人数 + 可用解锁次数）
+ */
+export function fetchInviteStats() {
+  return callCloudFunction('getFriendRank', { action: 'getInviteStats' });
+}
+
+/**
  * 发起挑战
  */
 export function sendChallengeRequest(targetOpenid, score, tier) {
@@ -135,6 +158,13 @@ export function sendChallengeRequest(targetOpenid, score, tier) {
  */
 export function fetchWeeklyStats() {
   return callCloudFunction('getWeeklyStats');
+}
+
+/**
+ * 获取本周积分排行榜
+ */
+export function fetchWeeklyLeaderboard() {
+  return callCloudFunction('getWeeklyStats', { action: 'weeklyLeaderboard' });
 }
 
 /**
@@ -211,14 +241,23 @@ export function getUserOpenidSync() {
 // ── v1.0 订阅消息 ──
 
 /**
- * 订阅消息模板 ID 配置（需在微信公众平台申请后替换）
- * 模板在 mp-backend → 开发 → 订阅消息 中申请
+ * 订阅消息模板 ID 配置
+ *
+ * 申请路径：微信公众平台 → 功能 → 订阅消息 → 选用模板
+ *
+ * 推荐模板：
+ *   testReminder:    「待办事项提醒」— 关键词：测试、段位、进化
+ *   challengeNotify: 「挑战通知」— 关键词：挑战、好友、段位
+ *   checkinReminder: 「签到提醒」— 关键词：签到、连续、进化
+ *   tierChange:      「进度提醒」— 关键词：段位、晋升、超越
+ *
+ * 填入下方后即可激活推送功能：
  */
 const SUBSCRIBE_TEMPLATE_IDS = {
-  testReminder:  '', // 测试提醒：3天未测提醒
-  challengeNotify: '', // 挑战通知：好友发起挑战
-  checkinReminder: '', // 签到提醒：当日未签到（晚20:00）
-  tierChange: '', // 段位变化：被好友超越 / 段位晋升
+  testReminder: 'NZKT0DzAHmOZfnPKyHaZvCUW3uN-S8H6YWxOGt59kMo',   // 工作任务待办通知 — 3天未测召回
+  challengeNotify: 'm6jo3ZtPLelyLD4uCtZlx7ThnAulwP9XNESX5bw-PkI', // ✅ 好友挑战通知
+  checkinReminder: 'StzfHPAanybtp6_b0izQaMoHpWDmLWEZDtiIajXavaw', // 签到提醒 — 每日签到
+  tierChange: 'YxuhNDWsAsaIeKVePbb9Zl1zTz35LDi7H2hyvFKCqSM',     // 活动排名下降通知 — 段位被超越
 };
 
 /**
@@ -268,4 +307,19 @@ export function requestSubscribeMessage(templates = ['challengeNotify', 'tierCha
       },
     });
   });
+}
+
+/**
+ * 请求"明日进化提醒"订阅（连续签到场景专用）
+ * 在结果页 streak 展示后调用，转化率最高
+ */
+export function requestStreakReminder() {
+  return requestSubscribeMessage(['checkinReminder', 'testReminder']);
+}
+
+/**
+ * 检查是否有已配置的订阅模板
+ */
+export function hasSubscriptionTemplates() {
+  return Object.values(SUBSCRIBE_TEMPLATE_IDS).some(Boolean);
 }

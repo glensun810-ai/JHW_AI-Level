@@ -2,5 +2,8 @@
   "name": "weeklyReport",
   "version": "1.0.0",
   "description": "周报推送云函数：每周一向订阅用户发送 AI 进化周报",
-  "main": "index.js"
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
 }

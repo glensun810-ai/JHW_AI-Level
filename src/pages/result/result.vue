@@ -22,7 +22,7 @@
         <!-- 段位徽章 + 分数（阶段1） -->
         <view
           class="page-result__section"
-          :class="{ 'page-result__fade-in': stageAtLeast('1') }"
+          :class="{ 'page-result__fade-in': stageNum >= 1 }"
           @longpress="saveBadgeToAlbum"
         >
           <TierBadge :tier="result.tier" :score="result.totalScore" size="large" :animated="true" />
@@ -33,6 +33,15 @@
             <text class="page-result__score-label">AI 商数</text>
           </view>
           <text class="page-result__score-context">均值 ≈ 105 · 前 {{ result.percentile }}%</text>
+          <view class="page-result__aiq-level" :style="{ color: aiqLevel.color }">{{ aiqLevel.icon }} {{ aiqLevel.label }}</view>
+
+          <!-- 连续进化庆祝 -->
+          <view v-if="streakData" class="page-result__streak-celebrate">
+            <text class="page-result__streak-emoji">{{ streakEmoji }}</text>
+            <text class="page-result__streak-label">{{ streakLabel }}</text>
+            <text v-if="streakMilestoneText" class="page-result__streak-milestone">{{ streakMilestoneText }}</text>
+            <text v-if="streakData.streakBroken" class="page-result__streak-broken">连续记录中断了…今天重新开始吧</text>
+          </view>
 
           <!-- 段位名 + 人格名（一行精简） -->
           <view class="page-result__identity">
@@ -45,11 +54,75 @@
             <text class="page-result__tier-delta-text">{{ tierDeltaText }}</text>
           </view>
 
+          <!-- AI 读心术（首屏社交货币 — v1.2 从底部提升至此） -->
+          <view v-if="mindReadingInsight" class="page-result__mind-read page-result__fade-in">
+            <text class="page-result__section-title">{{ mindReadingInsight.title }}</text>
+            <view class="page-result__mind-read-card" :class="'page-result__mind-read-card--' + mindReadingInsight.flair">
+              <template v-if="mindReadingInsight.type === 'perfect'">
+                <text class="page-result__mind-read-body">{{ mindReadingInsight.body }}</text>
+                <view class="page-result__mind-read-highlight">
+                  <text>{{ mindReadingInsight.highlight }}</text>
+                </view>
+              </template>
+              <template v-else>
+                <view class="page-result__mind-read-question">
+                  <text class="page-result__mind-read-q-emoji">{{ mindReadingInsight.stemEmoji }}</text>
+                  <text class="page-result__mind-read-q-stem">"{{ mindReadingInsight.stem }}"</text>
+                </view>
+                <text class="page-result__mind-read-body">{{ mindReadingInsight.insight }}</text>
+                <view class="page-result__mind-read-trait">
+                  <text class="page-result__mind-read-trait-label">识别到隐藏特质：</text>
+                  <text class="page-result__mind-read-trait-name">{{ mindReadingInsight.trait }}</text>
+                </view>
+                <view class="page-result__mind-read-highlight">
+                  <text>{{ mindReadingInsight.highlight }}</text>
+                </view>
+              </template>
+            </view>
+            <button class="page-result__mind-read-share" open-type="share" @click="trackShareClick('mindread')">
+              📤 分享这个洞察
+            </button>
+          </view>
+
           <!-- L1 CTA：主分享按钮（首屏情绪高点） -->
           <button class="page-result__share-btn" open-type="share" @click="trackShareClick('persona')">
             {{ l1CtaText }}
           </button>
-          <text class="page-result__share-hint">将生成专属AI人格卡，分享到群比比谁段位高</text>
+          <text class="page-result__share-hint">{{ l1CtaHint }}</text>
+
+          <!-- Phase 1: 挑战对决结果 -->
+          <view v-if="challengeResult" class="page-result__battle page-result__fade-in">
+            <view class="page-result__battle-header">
+              <text class="page-result__battle-icon">{{ battleResultIcon }}</text>
+              <text class="page-result__battle-title">⚔️ 段位对决</text>
+            </view>
+            <view class="page-result__battle-vs">
+              <view class="page-result__battle-player" :class="{ 'page-result__battle-player--winner': challengeResult.result === 'challenger_win' }">
+                <text class="page-result__battle-player-name">{{ challengeResult.challengerName }}</text>
+                <text class="page-result__battle-player-tier">{{ challengeResult.challengerTier || '?' }}</text>
+                <text class="page-result__battle-player-aiq">AI商数 {{ challengerAIQ }}</text>
+                <text v-if="challengeResult.result === 'challenger_win'" class="page-result__battle-crown">👑</text>
+              </view>
+              <view class="page-result__battle-divider">
+                <text class="page-result__battle-vs-text">VS</text>
+              </view>
+              <view class="page-result__battle-player" :class="{ 'page-result__battle-player--winner': challengeResult.result === 'target_win' }">
+                <text class="page-result__battle-player-name">我</text>
+                <text class="page-result__battle-player-tier">{{ challengeResult.myTier }}</text>
+                <text class="page-result__battle-player-aiq">AI商数 {{ myAIQ }}</text>
+                <text v-if="challengeResult.result === 'target_win'" class="page-result__battle-crown">👑</text>
+              </view>
+            </view>
+            <text class="page-result__battle-verdict">{{ battleVerdict }}</text>
+            <view class="page-result__battle-actions">
+              <button class="page-result__battle-share" open-type="share" @click="trackShareClick('battle')">
+                📤 分享对决结果
+              </button>
+              <button class="page-result__battle-counter" @click="counterChallenge">
+                ⚔️ 回敬挑战
+              </button>
+            </view>
+          </view>
 
           <!-- 进化值获得提示 -->
           <view v-if="showXpGain" class="page-result__xp-gain">
@@ -91,16 +164,16 @@
         </view>
 
         <!-- 超越百分比 + 下一段位（阶段2） -->
-        <view v-if="stageAtLeast('2a')" class="page-result__section page-result__fade-in">
+        <view v-if="stageNum >= 2" class="page-result__section page-result__fade-in">
           <view class="page-result__percentile">
             <text class="page-result__percentile-num">前 {{ result.percentile }}%</text>
             <text class="page-result__percentile-sub">
-              每 100 个 AI 进化者中，只有 {{ result.percentile }} 人达到你的段位
+              你超越了 {{ 100 - result.percentile }}% 的AI进化者
             </text>
           </view>
           <view class="page-result__next-tier">
             <template v-if="result.nextTier">
-              距离 <text class="page-result__next-name">{{ result.nextTier }}</text> 还差 <text class="page-result__next-pts">{{ result.pointsToNext }} 分</text>
+              距离 <text class="page-result__next-name">{{ result.nextTier }}</text> 还差 <text class="page-result__next-pts">{{ aiqPointsToNext }} 点AI商数</text>
             </template>
             <template v-else>
               🌊 你已达到最高段位！
@@ -110,7 +183,7 @@
           <view v-if="nearMissProgress" class="page-result__near-miss">
             <view class="page-result__near-miss-header">
               <text class="page-result__near-miss-icon">⚡</text>
-              <text class="page-result__near-miss-text">只差 <text class="page-result__near-miss-pts">{{ result.pointsToNext }} 分</text> 晋升 <text class="page-result__near-miss-tier">{{ result.nextTier }}</text></text>
+              <text class="page-result__near-miss-text">只差 <text class="page-result__near-miss-pts">{{ aiqPointsToNext }} 点AI商数</text> 晋升 <text class="page-result__near-miss-tier">{{ result.nextTier }}</text></text>
             </view>
             <view class="page-result__near-miss-bar">
               <view class="page-result__near-miss-fill" :style="{ width: nearMissProgress.percent + '%' }">
@@ -131,19 +204,19 @@
           </view>
         </view>
 
-        <!-- v0.9: 进化建议（阶段2） -->
-        <view v-if="stageAtLeast('2b') && result.evolutionTip && result.evolutionTip.length > 0" class="page-result__section page-result__fade-in">
-          <view class="page-result__evo-tip">
-            <text class="page-result__evo-tip-title">想从「{{ result.tier }}」再进一步</text>
-            <view v-for="(tip, i) in result.evolutionTip" :key="i" class="page-result__evo-tip-item">
-              <text class="page-result__evo-tip-dot">▸</text>
-              <text class="page-result__evo-tip-text">{{ tip }}</text>
-            </view>
-          </view>
+        <!-- 进化路线（阶段2）：统一模块，替代碎片化的进化建议+GrowthPath -->
+        <view v-if="stageNum >= 2" class="page-result__section page-result__fade-in">
+          <GrowthPath
+            :tier-index="tierIndex"
+            :weakest-dimension="weakestDimension"
+            :next-tier="result.nextTier"
+            :next-tier-emoji="nextTierEmoji"
+            :aiq-points-to-next="aiqPointsToNext"
+          />
         </view>
 
-        <!-- 知识星收集（2b：进化资产） -->
-        <view v-if="stageAtLeast('2b')" class="page-result__section page-result__fade-in">
+        <!-- 知识星收集（阶段2） -->
+        <view v-if="stageNum >= 2" class="page-result__section page-result__fade-in">
           <view v-if="collectedCards.length > 0 || newCardsCollected.length > 0" class="page-result__star-collection">
             <view class="page-result__star-header">
               <view class="page-result__star-title-row">
@@ -169,6 +242,9 @@
             <view v-if="starMilestone" class="page-result__star-milestone">
               <text class="page-result__star-milestone-title">{{ starMilestone.title }}</text>
               <text class="page-result__star-milestone-sub">{{ starMilestone.sub }}</text>
+              <button class="page-result__star-milestone-share" open-type="share" @click="trackShareClick('stars')">
+                {{ starMilestone.shareText || '炫耀我的星图 ✨' }}
+              </button>
             </view>
             <text v-else-if="collectedCards.length >= 25" class="page-result__star-near-full">接近满星！继续测试解锁更多</text>
             <view v-if="newCardsCollected.length > 0" class="page-result__new-cards">
@@ -190,29 +266,37 @@
         </view>
 
         <!-- 操作区（2c：行动引导） -->
-        <view v-if="stageAtLeast('2c')" class="page-result__section page-result__fade-in">
+        <view v-if="stageNum >= 2" class="page-result__section page-result__fade-in">
           <view class="page-result__actions-block page-result__actions-block--early">
             <view class="page-result__actions">
               <button class="page-result__btn-challenge" @click="challengeFriend">挑战好友</button>
+              <button class="page-result__btn-invite" open-type="share" @click="trackInviteSentFromResult">📤 邀请好友解锁更多测试</button>
               <view class="page-result__save-row">
                 <button class="page-result__btn-poster" @click="saveTierCard">保存段位卡</button>
                 <button class="page-result__btn-moments" @click="saveSquareShare">保存朋友圈图</button>
               </view>
             </view>
 
-            <text class="page-result__invite-reward-hint">每邀请 1 位好友完成测试 → +1 次测试机会</text>
+            <text v-if="inviteStats.inviteCount > 0" class="page-result__invite-reward-hint">
+              已邀请 {{ inviteStats.inviteCount }} 位好友完成测试 · 累计 {{ inviteStats.inviteCount }} 次额外机会
+              <text v-if="inviteStats.inviteUnlocks > 0" class="page-result__invite-reward-available">（{{ inviteStats.inviteUnlocks }} 次可用）</text>
+            </text>
+            <text v-else class="page-result__invite-reward-hint">每邀请 1 位好友完成测试 → +1 次测试机会</text>
 
-            <!-- 头像授权：非阻断式，让段位卡带上个人身份 -->
-            <view v-if="showProfilePrompt" class="page-result__profile-prompt" @click="authorizeProfile">
-              <text class="page-result__profile-prompt-icon">👤</text>
-              <text class="page-result__profile-prompt-text">点击使用微信头像，让好友认出你的段位卡</text>
-              <text class="page-result__profile-prompt-arrow">→</text>
+            <!-- 头像授权：非阻断式，chooseAvatar + nickname input（微信新规范） -->
+            <view v-if="showProfilePrompt" class="page-result__profile-prompt">
+              <button class="page-result__profile-avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+                <image v-if="userProfile.avatar" class="page-result__profile-avatar-thumb" :src="userProfile.avatar" mode="aspectFill" />
+                <text v-else class="page-result__profile-avatar-placeholder">👤</text>
+              </button>
+              <input class="page-result__profile-nick-input" type="nickname" :value="userProfile.nickname" placeholder="点击设置微信昵称" @blur="onNicknameSave" />
             </view>
 
             <!-- v1.0: 订阅消息 -->
             <view v-if="showSubscribePrompt" class="page-result__subscribe-prompt" @click="requestSubscribe">
-              <text class="page-result__subscribe-dot" />
-              <text class="page-result__subscribe-text">开启段位变化通知，第一时间知道好友挑战结果</text>
+              <text class="page-result__subscribe-icon">{{ subscribeIcon }}</text>
+              <text class="page-result__subscribe-text">{{ subscribeText }}</text>
+              <text class="page-result__subscribe-arrow">→</text>
             </view>
 
             <view v-if="showCollectTip" class="page-result__collect-tip" @click="showCollectTip = false">
@@ -231,8 +315,8 @@
           />
         </view>
 
-        <!-- 雷达图 + 成长路径（阶段4） -->
-        <view v-if="stageNum >= 4" class="page-result__section page-result__fade-in">
+        <!-- 雷达图 + 成长路径（阶段3） -->
+        <view v-if="stageNum >= 3" class="page-result__section page-result__fade-in">
           <!-- P1-D: 答题回顾（可折叠） -->
           <view v-if="answerReviewItems.length > 0" class="page-result__answer-review">
             <view class="page-result__answer-review-header" @click="showAnswerReview = !showAnswerReview">
@@ -262,65 +346,106 @@
               <RadarChart
                 :dimensions="result.radarData.dimensions"
                 :values="displayRadarValues"
-                :width="280"
-                :height="280"
+                :width="240"
+                :height="240"
               />
             </view>
             <text class="page-result__radar-hint">雷达值经标准化 · 均值 ≈ 70</text>
           </view>
 
-          <GrowthPath :tier-name="result.tier" :tier-index="tierIndex" />
-
           <view class="page-result__friend-rank">
-            <text class="page-result__section-title">好友排行</text>
-            <view v-if="friendMatchText" class="page-result__friend-match">
-              <text class="page-result__friend-match-emoji">🧬</text>
-              <text class="page-result__friend-match-text">{{ friendMatchText }}</text>
+            <!-- 排行 Tab 切换 -->
+            <view v-if="hasGroupData" class="page-result__rank-tabs">
+              <text
+                class="page-result__rank-tab"
+                :class="{ 'page-result__rank-tab--active': activeRankTab === 'friend' }"
+                @click="activeRankTab = 'friend'"
+              >好友排行</text>
+              <text
+                class="page-result__rank-tab"
+                :class="{ 'page-result__rank-tab--active': activeRankTab === 'group' }"
+                @click="activeRankTab = 'group'"
+              >群排行</text>
             </view>
-            <view v-if="friendComparisonText" class="page-result__friend-compare">
-              <text class="page-result__friend-compare-text">{{ friendComparisonText }}</text>
-              <button
-                v-if="showFriendChallengeBtn"
-                class="page-result__friend-compare-btn"
-                @click="challengeFriend"
-              >不服来战</button>
-            </view>
-            <view v-if="friendLoaded" class="page-result__friend-list">
-              <view v-for="(f, i) in topFriends" :key="f.openid || i" class="page-result__friend-item" :class="{ 'page-result__friend-item--me': f.isMe }">
-                <text class="page-result__friend-rank">#{{ i + 1 }}</text>
-                <image class="page-result__friend-avatar" :src="f.avatar || defaultAvatar" mode="aspectFill" />
-                <text class="page-result__friend-name">{{ f.nickname || '匿名用户' }}</text>
-                <text class="page-result__friend-tier">{{ f.tier || '?' }}</text>
+            <text v-else class="page-result__section-title">好友排行</text>
+
+            <!-- 好友排行内容 -->
+            <template v-if="activeRankTab === 'friend'">
+              <view v-if="friendMatchText" class="page-result__friend-match">
+                <text class="page-result__friend-match-emoji">🧬</text>
+                <text class="page-result__friend-match-text">{{ friendMatchText }}</text>
               </view>
-              <view v-if="topFriends.length === 0" class="page-result__friend-empty">
-                <text>暂无好友数据</text>
-                <button class="page-result__friend-share-btn" open-type="share">分享给好友，看看他们的段位</button>
+              <view v-if="friendComparisonText" class="page-result__friend-compare">
+                <text class="page-result__friend-compare-text">{{ friendComparisonText }}</text>
+                <button
+                  v-if="showFriendChallengeBtn"
+                  class="page-result__friend-compare-btn"
+                  @click="challengeFriend"
+                >不服来战</button>
               </view>
-              <view v-if="myRankInFriends && myRankInFriends > 3" class="page-result__friend-my-rank">
-                <text class="page-result__friend-my-rank-dot">···</text>
-                <view class="page-result__friend-item page-result__friend-item--me">
-                  <text class="page-result__friend-rank">#{{ myRankInFriends }}</text>
-                  <image class="page-result__friend-avatar" :src="myAvatar || defaultAvatar" mode="aspectFill" />
-                  <text class="page-result__friend-name">我</text>
-                  <text class="page-result__friend-tier">{{ result.tier }}</text>
+              <view v-if="friendLoaded" class="page-result__friend-list">
+                <view v-for="(f, i) in topFriends" :key="f.openid || i" class="page-result__friend-item" :class="{ 'page-result__friend-item--me': f.isMe }">
+                  <text class="page-result__friend-rank">#{{ i + 1 }}</text>
+                  <image class="page-result__friend-avatar" :src="f.avatar || defaultAvatar" mode="aspectFill" />
+                  <text class="page-result__friend-name">{{ f.nickname || '匿名用户' }}</text>
+                  <text class="page-result__friend-tier">{{ f.tier || '?' }}</text>
+                </view>
+                <view v-if="topFriends.length === 0" class="page-result__friend-empty">
+                  <text v-if="globalTestCount > 0">已有 {{ globalTestCount }}+ 人完成 AI 段位测试</text>
+                  <text v-else>暂无好友数据</text>
+                  <button class="page-result__friend-share-btn" open-type="share">分享给好友，看看他们的段位</button>
+                </view>
+                <view v-if="myRankInFriends && myRankInFriends > 3" class="page-result__friend-my-rank">
+                  <text class="page-result__friend-my-rank-dot">···</text>
+                  <view class="page-result__friend-item page-result__friend-item--me">
+                    <text class="page-result__friend-rank">#{{ myRankInFriends }}</text>
+                    <image class="page-result__friend-avatar" :src="myAvatar || defaultAvatar" mode="aspectFill" />
+                    <text class="page-result__friend-name">我</text>
+                    <text class="page-result__friend-tier">{{ result.tier }}</text>
+                  </view>
                 </view>
               </view>
-            </view>
-            <view v-else class="page-result__friend-loading">
-              <text>加载好友排名中…</text>
-            </view>
+              <view v-else class="page-result__friend-loading">
+                <text>加载好友排名中…</text>
+              </view>
+            </template>
+
+            <!-- 群排行内容 -->
+            <template v-if="activeRankTab === 'group'">
+              <view v-if="groupRankLoaded" class="page-result__friend-list">
+                <view v-for="(m, i) in groupRankings" :key="m._openid || i" class="page-result__friend-item" :class="{ 'page-result__friend-item--me': m._openid === myOpenid }">
+                  <text class="page-result__friend-rank">#{{ i + 1 }}</text>
+                  <image class="page-result__friend-avatar" :src="m.avatar || defaultAvatar" mode="aspectFill" />
+                  <text class="page-result__friend-name">{{ m.nickname || '匿名用户' }}</text>
+                  <text class="page-result__friend-tier">{{ m.currentTier || '?' }}</text>
+                </view>
+                <view v-if="groupRankings.length > 0" class="page-result__group-share-card">
+                  <button class="page-result__group-share-btn" @click="generateGroupRankImage">📊 生成群排行图</button>
+                </view>
+                <view v-if="groupRankings.length === 0" class="page-result__friend-empty">
+                  <text>暂无群友数据</text>
+                  <button class="page-result__friend-share-btn" open-type="share">分享到群，看看大家的段位</button>
+                </view>
+              </view>
+              <view v-else class="page-result__friend-loading">
+                <text>加载群排行中…</text>
+              </view>
+            </template>
           </view>
         </view>
 
         <!-- 回顾：进化之路（阶段4） -->
         <view v-if="stageNum >= 4 && reviewData" class="page-result__section page-result__fade-in">
-          <text class="page-result__section-title">你的进化之路</text>
-          <view class="page-result__review">
+          <view class="page-result__answer-review-header" @click="showEvolutionJourney = !showEvolutionJourney">
+            <text class="page-result__answer-review-title">{{ showEvolutionJourney ? '▾' : '▸' }} 你的进化之路</text>
+            <text class="page-result__answer-review-hint">{{ showEvolutionJourney ? '点击收起' : '看看最近的变化' }}</text>
+          </view>
+          <view v-if="showEvolutionJourney" class="page-result__review">
             <view v-for="(h, i) in reviewData.history" :key="i" class="page-result__review-row">
               <text class="page-result__review-date">{{ h.date }}</text>
               <text class="page-result__review-arrow">→</text>
               <text class="page-result__review-tier">{{ h.emoji }} {{ h.tier }}</text>
-              <text class="page-result__review-score">({{ h.score }}分)</text>
+              <text class="page-result__review-score">(AI商数{{ toAIQuotient(h.score) }})</text>
             </view>
             <view class="page-result__review-change" :class="'page-result__review-change--' + reviewData.change">
               {{ reviewData.changeDetail }}
@@ -331,51 +456,21 @@
         <!-- 进化预言书（阶段4） -->
         <view v-if="stageNum >= 4" class="page-result__section page-result__fade-in">
 
-          <!-- 模块1：偷看更高段位的世界 -->
+          <!-- 模块1：偷看更高段位的世界（无重复tips，纯愿景+CTA） -->
           <view class="page-result__evo-next">
             <text class="page-result__section-title">
               {{ result.nextTier ? '偷看「' + nextTierEmoji + ' ' + result.nextTier + '」的世界' : '你已到达进化终点「无界」' }}
             </text>
             <view class="page-result__evo-card">
               <template v-if="result.nextTier">
-                <text class="page-result__evo-next-intro">{{ result.nextTier }} 们现在正在做的事：</text>
-                <view class="page-result__evo-next-tips">
-                  <text v-for="(tip, i) in evolutionTips" :key="i" class="page-result__evo-next-tip">▸ {{ tip }}</text>
-                </view>
-                <text class="page-result__evo-next-cta">你距离 {{ result.nextTier }} 只差 {{ result.pointsToNext }} 分，上面几条今天就能试试</text>
+                <text class="page-result__evo-next-intro">{{ nextTierWorldView }}</text>
+                <text class="page-result__evo-next-cta">你距离 {{ result.nextTier }} 只差 {{ aiqPointsToNext }} 点AI商数，今天就能跨过去</text>
               </template>
               <template v-else>
                 <text class="page-result__evo-next-intro">作为先行者，你的使命变了：</text>
                 <view class="page-result__evo-next-tips">
                   <text class="page-result__evo-next-tip">▸ 帮助更多人找到和 AI 相处的最佳方式</text>
                   <text class="page-result__evo-next-tip">▸ 你的经验本身就是最好的「知识卡」— 分享出去</text>
-                </view>
-              </template>
-            </view>
-          </view>
-
-          <!-- 模块2：AI 读心术 -->
-          <view v-if="mindReadingInsight" class="page-result__mind-read">
-            <text class="page-result__section-title">{{ mindReadingInsight.title }}</text>
-            <view class="page-result__mind-read-card" :class="'page-result__mind-read-card--' + mindReadingInsight.flair">
-              <template v-if="mindReadingInsight.type === 'perfect'">
-                <text class="page-result__mind-read-body">{{ mindReadingInsight.body }}</text>
-                <view class="page-result__mind-read-highlight">
-                  <text>{{ mindReadingInsight.highlight }}</text>
-                </view>
-              </template>
-              <template v-else>
-                <view class="page-result__mind-read-question">
-                  <text class="page-result__mind-read-q-emoji">{{ mindReadingInsight.stemEmoji }}</text>
-                  <text class="page-result__mind-read-q-stem">"{{ mindReadingInsight.stem }}"</text>
-                </view>
-                <text class="page-result__mind-read-body">{{ mindReadingInsight.insight }}</text>
-                <view class="page-result__mind-read-trait">
-                  <text class="page-result__mind-read-trait-label">识别到隐藏特质：</text>
-                  <text class="page-result__mind-read-trait-name">{{ mindReadingInsight.trait }}</text>
-                </view>
-                <view class="page-result__mind-read-highlight">
-                  <text>{{ mindReadingInsight.highlight }}</text>
                 </view>
               </template>
             </view>
@@ -410,12 +505,15 @@
     </scroll-view>
 
     <!-- 粘性操作栏：2c后始终可见 -->
-    <view v-if="stage === 'revealing' && stageAtLeast('2c')" class="page-result__sticky-bar">
+    <view v-if="stage === 'revealing' && stageNum >= 2" class="page-result__sticky-bar">
       <button class="page-result__sticky-btn page-result__sticky-btn--retry" @click="retryQuiz">
         再测一次
       </button>
       <button class="page-result__sticky-btn page-result__sticky-btn--share" open-type="share" @click="trackShareClick('sticky')">
         {{ stickyShareText }}
+      </button>
+      <button class="page-result__sticky-btn page-result__sticky-btn--home" @click="goHome">
+        🏠
       </button>
     </view>
 
@@ -477,10 +575,10 @@ import TierCard from '@/components/TierCard/TierCard.vue';
 
 import ChallengeModal from '@/components/ChallengeModal/ChallengeModal.vue';
 import { REVERSAL_FAKE_TIERS } from '@/utils/constants.js';
-import { getTierColor, getTierIndex, TIERS } from '@/utils/tier.js';
+import { getTierColor, getTierIndex, TIERS, toAIQuotient } from '@/utils/tier.js';
 import { getShareTitle } from '@/utils/share-helper.js';
-import { generateSquareShareImage } from '@/utils/canvas-renderer.js';
-import { fetchFriendRank, fetchWeeklyStats, updateProfile, submitFeedback as submitFeedbackApi, getUserOpenidSync, callCloudFunction, requestSubscribeMessage } from '@/utils/api.js';
+import { generateSquareShareImage, generateGroupRankShareImage } from '@/utils/canvas-renderer.js';
+import { fetchFriendRank, fetchGroupRank, fetchWeeklyStats, updateProfile, submitFeedback as submitFeedbackApi, getUserOpenidSync, callCloudFunction, requestSubscribeMessage, fetchInviteStats } from '@/utils/api.js';
 import { trackResultView, trackShareClick, trackShareSuccess, trackChallenge, trackQuickFeedback, trackReversalStart, trackReversalEnd, trackResultLinger, trackTestRetry, trackInviteSent, getABVariant } from '@/utils/analytics.js';
 import { useQuizStore } from '@/store/quiz.js';
 import { useExperienceStore } from '@/store/experience.js';
@@ -496,14 +594,20 @@ const displayScore = ref(0);
 const fakeTier = ref('');
 const topFriends = ref([]);
 const friendLoaded = ref(false);
+const groupRankings = ref([]);
+const groupRankLoaded = ref(false);
+const activeRankTab = ref('friend');
+const hasGroupData = ref(false);
 const generatedCardUrl = ref('');
 const showChallengeModal = ref(false);
+const inviteStats = ref({ inviteCount: 0, inviteUnlocks: 0 });
 const reviewData = ref(null);
 const showCollectTip = ref(false);
 const isFirstTimeTest = ref(false);
 const showJourneyCard = ref(false);
 const showSubscribePrompt = ref(false);
 const showAnswerReview = ref(false);
+const showEvolutionJourney = ref(false);
 // 用户头像昵称（非阻断式授权，默认匿名）
 const userProfile = ref({ nickname: '', avatar: '' });
 const showProfilePrompt = ref(false);
@@ -512,10 +616,13 @@ const miniCodeUrl = ref('');
 const questions = ref([]);
 const myAvatar = ref('');
 const myRankInFriends = ref(0);
+const myOpenid = ref('');
+const globalTestCount = ref(0);
 
 const defaultAvatar = '/static/icons/default-avatar.png';
 let lingerTimer = null;
 let resultRevealTime = 0;
+const stageTimers = [];
 
 const quizStore = useQuizStore();
 const expStore = useExperienceStore();
@@ -535,6 +642,81 @@ const tierColor = computed(() => {
 
 const tierIndex = computed(() => {
   try { return getTierIndex(result.value.totalScore); } catch (e) { return 0; }
+});
+
+function getAIQLevel(score) {
+  if (score >= 140) return { label: 'AI 先知', icon: '🔮', color: '#ffd700' };
+  if (score >= 125) return { label: 'AI 先锋', icon: '🚀', color: '#a78bfa' };
+  if (score >= 110) return { label: 'AI 中产', icon: '⚡', color: '#00c8ff' };
+  if (score >= 95)  return { label: 'AI 学徒', icon: '📖', color: '#66bb6a' };
+  return { label: 'AI 新人', icon: '🌱', color: '#90a4ae' };
+}
+
+const aiqLevel = computed(() => getAIQLevel(displayScore.value));
+
+// Phase 1: 挑战对决结果
+const challengeResult = computed(() => result.value.challengeResult || null);
+
+const challengerAIQ = computed(() => {
+  const cr = challengeResult.value;
+  if (!cr) return 0;
+  return Math.round((cr.challengerScore / 50) * 80 + 70);
+});
+
+const myAIQ = computed(() => {
+  const cr = challengeResult.value;
+  if (!cr) return 0;
+  return Math.round((cr.myScore / 50) * 80 + 70);
+});
+
+const battleResultIcon = computed(() => {
+  const cr = challengeResult.value;
+  if (!cr) return '';
+  if (cr.result === 'target_win') return '🏆';
+  if (cr.result === 'challenger_win') return '💪';
+  return '🤝';
+});
+
+const battleVerdict = computed(() => {
+  const cr = challengeResult.value;
+  if (!cr) return '';
+  if (cr.result === 'target_win') return `你击败了 ${cr.challengerName}！`;
+  if (cr.result === 'challenger_win') return `${cr.challengerName} 略胜一筹，再测一次翻盘！`;
+  return '平局！旗鼓相当的对手';
+});
+
+// 连续签到数据
+const streakData = computed(() => result.value.streak || null);
+
+const streakEmoji = computed(() => {
+  const days = streakData.value?.consecutiveDays || 0;
+  if (days >= 100) return '👑';
+  if (days >= 30) return '💎';
+  if (days >= 14) return '⚡';
+  if (days >= 7) return '🔥';
+  if (days >= 3) return '🌟';
+  return '🌱';
+});
+
+const streakLabel = computed(() => {
+  const days = streakData.value?.consecutiveDays || 0;
+  if (days === 0) return '';
+  if (days === 1) return '进化之旅第一天，从此每天不一样';
+  return `已连续进化 ${days} 天`;
+});
+
+const streakMilestoneText = computed(() => {
+  if (!streakData.value?.milestoneHit) return '';
+  const days = streakData.value.consecutiveDays;
+  const milestones = {
+    3: '解锁「坚持进化」成就 ✨',
+    7: '解锁「AI践行者」成就 🔥',
+    14: '解锁「AI探索家」成就 ⚡',
+    30: '解锁「AI进化者」成就 💎',
+    60: '解锁「恒心大师」成就 🏆',
+    100: '解锁「百炼成金」成就 👑',
+  };
+  return milestones[days] || '';
 });
 
 const friendRankData = computed(() => {
@@ -578,7 +760,8 @@ const friendComparisonText = computed(() => {
     f => getTierIndex(f.score) === myTierIdx && f.score > result.value.totalScore
   );
   if (sameTierAhead) {
-    return `@${sameTierAhead.nickname || '好友'} 跟你同段位但高 ${sameTierAhead.score - result.value.totalScore} 分 ⚡ 差一点点！`;
+    const aiqGap = toAIQuotient(sameTierAhead.score) - toAIQuotient(result.value.totalScore);
+    return `@${sameTierAhead.nickname || '好友'} 跟你同段位但高 ${aiqGap} 点AI商数 ⚡ 差一点点！`;
   }
 
   return `你目前排在好友榜第 ${data.rank} 名，再测一次说不定就上去了`;
@@ -752,15 +935,30 @@ const wasReversed = ref(false);
 
 // A3: 动态 L1 CTA — 根据用户状态选择最强分享理由
 const l1CtaText = computed(() => {
-  if (result.value.pointsToNext === 1) return '让人看看我有多可惜';
+  if (aiqPointsToNext.value > 0 && aiqPointsToNext.value <= 2) return '让人看看我有多可惜';
   if (personaRarity.value && Number(personaRarity.value) < 20) return '分享我的稀有AI人格';
   return '分享我的进化人格';
 });
 
+const l1CtaHint = computed(() => {
+  if (aiqPointsToNext.value > 0 && aiqPointsToNext.value <= 2) return '差一点就晋升了，分享让好友看看有多惊险';
+  if (personaRarity.value && Number(personaRarity.value) < 20) return `前 ${personaRarity.value}% 的稀有类型，值得炫耀一下`;
+  return '生成专属AI人格卡，分享到群比比谁段位高';
+});
+
 const stickyShareText = computed(() => {
-  if (result.value.pointsToNext === 1) return '晒我的可惜分';
+  if (aiqPointsToNext.value > 0 && aiqPointsToNext.value <= 2) return '晒我的可惜AI商数';
   if (personaRarity.value && Number(personaRarity.value) < 20) return '炫耀稀有段位';
   return '分享段位';
+});
+
+const aiqPointsToNext = computed(() => {
+  const pts = result.value.pointsToNext;
+  const nextTier = result.value.nextTier;
+  if (!pts || !nextTier) return 0;
+  const nextTierObj = TIERS.find(t => t.name === nextTier);
+  if (!nextTierObj) return 0;
+  return toAIQuotient(nextTierObj.min) - toAIQuotient(result.value.totalScore);
 });
 
 const nextTierEmoji = computed(() => {
@@ -781,8 +979,19 @@ const nearMissProgress = computed(() => {
   return { percent: Math.max(5, Math.round((filled / totalRange) * 100)) };
 });
 
-const evolutionTips = computed(() => {
-  return result.value.evolutionTip || [];
+const nextTierWorldView = computed(() => {
+  const tier = result.value.nextTier;
+  if (!tier) return '';
+  const views = {
+    '探索者': '探索者们已经把 AI 当作日常伙伴——写周报、做方案、学新技能。AI 不再是玩具，而是生产力工具。',
+    '实践者': '实践者们正在把 AI 融入工作流——自动整理邮件、生成报表、辅助决策。每一次使用都在积累经验。',
+    '协作者': '协作者们已经和 AI 建立了默契——他们懂得什么时候让 AI 主导，什么时候自己接手，人机配合如行云流水。',
+    '驾驭者': '驾驭者们像开车一样驾驭 AI——他们设方向、踩油门、急刹车。AI 是工具，他们是主人。',
+    '炼金术士': '炼金术士们把 prompt 变成了金矿——他们有自己的 prompt 模板库，每次交互都在提纯。',
+    '觉醒者': '觉醒者们超越了单纯的使用——他们思考 AI 的边界、伦理和未来。他们是 AI 时代的清醒者。',
+    '无界': '无界者们已站在顶峰——他们不再区分"人类的工作"和"AI 的工作"，只关注创造价值。',
+  };
+  return views[tier] || tier + '们正在探索 AI 的更多可能性，每一次测试都在拓宽边界。';
 });
 
 // 进化湾悄悄话：时间敏感的鼓励语
@@ -838,11 +1047,11 @@ const newCardsCollected = computed(() => {
 });
 
 const STAR_MILESTONES = {
-  10: { title: '10颗知识星', sub: '你已经是个AI知识小达人了' },
-  15: { title: '15颗星，半程达成', sub: '过半的星图已被你点亮' },
-  20: { title: '20颗知识星', sub: '知识星图渐显，进化之路越走越宽' },
-  25: { title: '25颗星，接近圆满', sub: '只差最后几颗，你就是星图大师' },
-  30: { title: '30颗全收集，星图圆满', sub: '你点亮了整个进化湾的星空' },
+  10: { title: '10颗知识星', sub: '你已经是个AI知识小达人了', shareText: '炫耀我的10星图 ✨' },
+  15: { title: '15颗星，半程达成', sub: '过半的星图已被你点亮', shareText: '秀出我的半程星图 ⭐' },
+  20: { title: '20颗知识星', sub: '知识星图渐显，进化之路越走越宽', shareText: '晒晒我的璀璨星图 🌟' },
+  25: { title: '25颗星，接近圆满', sub: '只差最后几颗，你就是星图大师', shareText: '快要满星了！来围观 💫' },
+  30: { title: '30颗全收集，星图圆满', sub: '你点亮了整个进化湾的星空', shareText: '满星达成！来膜拜 👑' },
 };
 
 const starMilestone = computed(() => {
@@ -907,13 +1116,18 @@ onMounted(() => {
   }
 
   loadFriendRank();
+  loadGroupRank();
+  loadInviteStats();
   loadReview();
   loadMiniCode();
   loadProfile();
+  loadGlobalCount();
 });
 
 onBeforeUnmount(() => {
   if (lingerTimer) clearTimeout(lingerTimer);
+  stageTimers.forEach(id => clearTimeout(id));
+  stageTimers.length = 0;
 });
 
 async function loadMiniCode() {
@@ -923,6 +1137,15 @@ async function loadMiniCode() {
       miniCodeUrl.value = res.data.miniCodeUrl;
     }
   } catch (e) { /* 静默失败，段位卡仍可生成 */ }
+}
+
+async function loadGlobalCount() {
+  try {
+    const res = await callCloudFunction('getTierDistribution');
+    if (res.code === 0 && res.data && res.data.totalUsers) {
+      globalTestCount.value = res.data.totalUsers;
+    }
+  } catch (e) { /* ignore */ }
 }
 
 async function loadReview() {
@@ -949,23 +1172,33 @@ async function loadProfile() {
   } catch (e) { /* ignore */ }
 }
 
-function authorizeProfile() {
-  uni.getUserProfile({
-    desc: '用于在段位卡上展示你的头像和昵称',
-    success: (res) => {
-      const info = res.userInfo;
-      userProfile.value = {
-        nickname: info.nickName || '',
-        avatar: info.avatarUrl || '',
-      };
-      showProfilePrompt.value = false;
-      updateProfile(info.nickName, info.avatarUrl).catch(() => {});
-      uni.showToast({ title: '已设置！段位卡将展示你的头像', icon: 'none', duration: 2000 });
-    },
-    fail: () => {
-      uni.showToast({ title: '可在设置中授权头像昵称', icon: 'none' });
-    },
-  });
+async function onChooseAvatar(e) {
+  const tempPath = e.detail.avatarUrl;
+  if (!tempPath) return;
+  try {
+    uni.showLoading({ title: '上传中...', mask: true });
+    const openid = getUserOpenidSync();
+    const cloudRes = await wx.cloud.uploadFile({
+      cloudPath: `avatars/${openid}_${Date.now()}.png`,
+      filePath: tempPath,
+    });
+    uni.hideLoading();
+    const fileID = cloudRes.fileID;
+    userProfile.value.avatar = fileID;
+    updateProfile(userProfile.value.nickname, fileID).catch(() => {});
+    uni.showToast({ title: '头像已设置', icon: 'success', duration: 1500 });
+  } catch (err) {
+    uni.hideLoading();
+    uni.showToast({ title: '上传失败，请重试', icon: 'none' });
+  }
+}
+
+function onNicknameSave(e) {
+  const nick = (e.detail.value || '').trim();
+  if (!nick) return;
+  userProfile.value.nickname = nick;
+  updateProfile(nick, userProfile.value.avatar).catch(() => {});
+  showProfilePrompt.value = false;
 }
 
 const starRankInFriends = ref(0);
@@ -973,17 +1206,17 @@ const starRankTotal = ref(0);
 
 async function loadFriendRank() {
   const res = await fetchFriendRank();
+  myOpenid.value = getUserOpenidSync();
   if (res.code === 0 && res.data) {
     const allFriends = res.data.friendRankings || [];
-    const myOpenid = getUserOpenidSync();
-    const myEntry = allFriends.find(f => (f.openid === myOpenid) || f.isMe);
+    const myEntry = allFriends.find(f => (f.openid === myOpenid.value) || f.isMe);
     if (myEntry) {
       myRankInFriends.value = allFriends.indexOf(myEntry) + 1;
     } else if (allFriends.length > 0) {
       // 用户不在列表中，排名在最后
       myRankInFriends.value = allFriends.length + 1;
     }
-    topFriends.value = allFriends.slice(0, 3);
+    topFriends.value = allFriends.slice(0, 10);
     // 获取用户头像
     myAvatar.value = res.data.myAvatar || '';
   }
@@ -998,6 +1231,64 @@ async function loadFriendRank() {
   }).catch(() => {});
 }
 
+async function loadGroupRank() {
+  const app = getApp();
+  const groupId = app.globalData.groupId;
+  if (!groupId) {
+    groupRankLoaded.value = true;
+    return;
+  }
+  hasGroupData.value = true;
+  try {
+    const res = await fetchGroupRank(groupId);
+    if (res.code === 0 && res.data) {
+      groupRankings.value = res.data.groupRankings || [];
+      // If we have group data, default to group tab
+      if (groupRankings.value.length > 0) {
+        activeRankTab.value = 'group';
+      }
+    }
+  } catch (e) { /* ignore */ }
+  groupRankLoaded.value = true;
+}
+
+async function generateGroupRankImage() {
+  uni.showLoading({ title: '正在生成群排行图…', mask: true });
+  try {
+    const tempPath = await generateGroupRankShareImage({
+      groupRankings: groupRankings.value,
+      currentUserOpenid: myOpenid.value,
+      miniCodeUrl: miniCodeUrl.value,
+    });
+    uni.hideLoading();
+    if (tempPath) {
+      uni.previewImage({ urls: [tempPath] });
+    } else {
+      uni.showToast({ title: '生成失败，请重试', icon: 'none' });
+    }
+  } catch (e) {
+    uni.hideLoading();
+    uni.showToast({ title: '生成失败，请重试', icon: 'none' });
+  }
+}
+
+async function loadInviteStats() {
+  try {
+    const res = await fetchInviteStats();
+    if (res.code === 0 && res.data) {
+      inviteStats.value = {
+        inviteCount: res.data.inviteCount || 0,
+        inviteUnlocks: res.data.inviteUnlocks || 0,
+      };
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function trackInviteSentFromResult() {
+  trackInviteSent('private');
+  trackShareClick('invite');
+}
+
 function computeTierDelta() {
   const prevTier = uni.getStorageSync('last_tier_name');
   const prevScore = Number(uni.getStorageSync('last_score') || 0);
@@ -1006,14 +1297,15 @@ function computeTierDelta() {
   lastScore.value = prevScore;
   const currTierIdx = getTierIndex(result.value.totalScore);
   const prevTierObj = TIERS.find(t => t.name === prevTier);
-  const prevTierIdx = prevTierObj ? getTierIndex(prevTierObj.minScore) : -1;
+  const prevTierIdx = prevTierObj ? getTierIndex(prevTierObj.min) : -1;
   if (prevTierIdx < 0) return;
   if (currTierIdx > prevTierIdx) {
     tierDeltaText.value = `已从「${prevTier}」晋升至「${result.value.tier}」`;
   } else if (currTierIdx < prevTierIdx) {
     tierDeltaText.value = `段位有波动，继续加油回到「${prevTier}」`;
   } else if (result.value.totalScore > prevScore) {
-    tierDeltaText.value = `「${result.value.tier}」段位内分数提升 +${result.value.totalScore - prevScore} 分`;
+    const aiqGain = toAIQuotient(result.value.totalScore) - toAIQuotient(prevScore);
+    tierDeltaText.value = `「${result.value.tier}」段位内AI商数提升 +${aiqGain}`;
   } else if (result.value.totalScore === prevScore) {
     tierDeltaText.value = `「${result.value.tier}」段位稳固，再测一次突破`;
   } else {
@@ -1074,7 +1366,7 @@ function startSequence() {
       const prevScore = lastScore.value;
       const currTierIdx = getTierIndex(result.value.totalScore);
       const prevTierObj = TIERS.find(t => t.name === prevTier);
-      const prevTierIdx = prevTierObj ? getTierIndex(prevTierObj.minScore) : -1;
+      const prevTierIdx = prevTierObj ? getTierIndex(prevTierObj.min) : -1;
       const scoreImproved = result.value.totalScore - prevScore >= 5;
 
       if (prevTierIdx >= 0 && currTierIdx > prevTierIdx) {
@@ -1112,14 +1404,15 @@ function startSequence() {
       animateScore();
       showXpAnimation();
       scheduleStages();
-      setTimeout(() => { showScreenshotHint.value = true; }, 1000);
-      setTimeout(() => { showScreenshotHint.value = false; }, 4500);
-      // 自动生成人格卡（2s后，供分享使用）
-      setTimeout(() => {
-        if (personaCardRef.value && !personaCardUrl.value) {
-          personaCardRef.value.generate();
-        }
-      }, 2000);
+      // 触觉反馈：段位揭晓时轻震
+      if (wx && wx.vibrateShort) wx.vibrateShort({ type: 'medium' });
+      // 立即预生成分享卡片（不等动画），避免快速分享时拿到默认图
+      if (tierCardRef.value && !generatedCardUrl.value) tierCardRef.value.generate(false);
+      if (personaCardRef.value && !personaCardUrl.value) personaCardRef.value.generate(false);
+      stageTimers.push(
+        setTimeout(() => { showScreenshotHint.value = true; }, 1000),
+        setTimeout(() => { showScreenshotHint.value = false; }, 4500),
+      );
       uni.setStorageSync('last_tier_name', result.value.tier);
       uni.setStorageSync('last_score', result.value.totalScore);
       trackResultView(result.value.tier, tierIndex.value, false);
@@ -1137,52 +1430,38 @@ function onReversalDone() {
   animateScore();
   showXpAnimation();
   scheduleStages();
-  setTimeout(() => { showScreenshotHint.value = true; }, 1000);
-  setTimeout(() => { showScreenshotHint.value = false; }, 4500);
-  // 仅首次测试展示进化之旅引导卡片
+  // 触觉反馈：反转揭晓时重震
+  if (wx && wx.vibrateShort) wx.vibrateShort({ type: 'heavy' });
+  stageTimers.push(
+    setTimeout(() => { showScreenshotHint.value = true; }, 1000),
+    setTimeout(() => { showScreenshotHint.value = false; }, 4500),
+    setTimeout(() => { autoCollectNewCards(); }, 1200),
+  );
+  // 立即预生成分享卡片（不等动画），避免快速分享时拿到默认图
+  if (tierCardRef.value && !generatedCardUrl.value) tierCardRef.value.generate(false);
+  if (personaCardRef.value && !personaCardUrl.value) personaCardRef.value.generate(false);
   if (isFirstTimeTest.value) {
-    setTimeout(() => { showJourneyCard.value = true; }, 1500);
+    stageTimers.push(setTimeout(() => { showJourneyCard.value = true; }, 1500));
   }
-  setTimeout(() => { autoCollectNewCards(); }, 1200);
-  // 自动生成人格卡（2s后，供分享使用）
-  setTimeout(() => {
-    if (personaCardRef.value && !personaCardUrl.value) {
-      personaCardRef.value.generate();
-    }
-  }, 2000);
   trackReversalEnd(result.value.tier);
 }
 
 function showXpAnimation() {
   xpGained.value = expStore.getLastGain() || expStore.getExpForAction('test');
-  // 如果之前的 gain 为 0，确保显示测试的基本经验值
   if (xpGained.value === 0) xpGained.value = 10;
   showXpGain.value = true;
-  setTimeout(() => { showXpGain.value = false; }, 3000);
-}
-
-const STAGE_ORDER = ['1', '2a', '2b', '2c', '3', '4', '5'];
-
-function stageAtLeast(threshold) {
-  const current = String(stageNum.value);
-  const currentIdx = STAGE_ORDER.indexOf(current);
-  const thresholdIdx = STAGE_ORDER.indexOf(threshold);
-  if (currentIdx === -1) return false;
-  return currentIdx >= thresholdIdx;
+  stageTimers.push(setTimeout(() => { showXpGain.value = false; }, 3000));
 }
 
 function scheduleStages() {
-  // 第一呼吸（1.5s）：成就与行动 — 百分位 + 下一段位 + 差一分 + 进化建议 + 知识星 + 操作按钮
-  // 直接跳到 '2c' 使 2a/2b/2c 同时出现，一个画面获得完整情境理解
-  setTimeout(() => { stageNum.value = '2c'; }, 1500);
-  // 第二呼吸（3.5s）：深层分析 — AI锐评 + 雷达图 + 好友排行 + 成长路径 + 读心术 + 悄悄话
-  setTimeout(() => { stageNum.value = 4; }, 3500);
-  // 第三呼吸（6.0s）：反馈闭合
-  setTimeout(() => { stageNum.value = 5; }, 6000);
-  // 第一呼吸后 300ms 展示订阅消息入口
-  setTimeout(() => { showSubscribePrompt.value = true; }, 1800);
-  // 第一呼吸后 200ms 自动收集知识卡
-  setTimeout(() => { autoCollectNewCards(); }, 1700);
+  stageTimers.push(
+    setTimeout(() => { stageNum.value = 2; }, 1500),
+    setTimeout(() => { stageNum.value = 3; }, 3500),
+    setTimeout(() => { stageNum.value = 4; }, 5000),
+    setTimeout(() => { stageNum.value = 5; }, 6500),
+    setTimeout(() => { autoCollectNewCards(); }, 1700),
+    setTimeout(() => { showSubscribePrompt.value = true; }, 5300),
+  );
 }
 
 function animateScore() {
@@ -1253,6 +1532,32 @@ function onPersonaCardGenerated(imagePath) { personaCardUrl.value = imagePath; }
 function onCardSaved(imagePath) { trackShareSuccess(result.value.tier, 'save'); expStore.addExp('share'); }
 function onCardShared({ tierName, shareStyle, channel }) { trackShareSuccess(tierName, channel); expStore.addExp('share'); }
 function challengeFriend() { showChallengeModal.value = true; }
+// P0-3: 回敬挑战（挑战结果场景下，被挑战者发起反挑战）
+function counterChallenge() {
+  const cr = challengeResult.value;
+  if (!cr || !cr.challengerOpenid) {
+    showChallengeModal.value = true;
+    return;
+  }
+  uni.showToast({ title: '正在发起挑战…', icon: 'loading' });
+  callCloudFunction('sendChallenge', {
+    targetOpenid: cr.challengerOpenid,
+    score: result.value.totalScore,
+    tier: result.value.tier,
+  }, { retry: false }).then(res => {
+    uni.hideToast();
+    if (res.code === 0) {
+      uni.showToast({ title: '挑战已发送！', icon: 'success' });
+      pendingChallengeShareId.value = res.data?.challengeId || '';
+    } else {
+      uni.showToast({ title: res.message || '发送失败', icon: 'none' });
+    }
+  }).catch(() => {
+    uni.hideToast();
+    uni.showToast({ title: '网络异常，请稍后重试', icon: 'none' });
+  });
+}
+function goHome() { uni.redirectTo({ url: '/pages/index/index' }); }
 
 async function saveBadgeToAlbum() {
   // 确保有一张已生成的段位卡（静默生成，不弹预览）
@@ -1292,7 +1597,8 @@ async function saveBadgeToAlbum() {
   }
 }
 
-function onChallengeSent({ targetOpenid, challengeId }) { trackChallenge(targetOpenid); uni.showToast({ title: '挑战已发送！', icon: 'success' }); }
+const pendingChallengeShareId = ref(''); // Phase 1: 刚创建的挑战ID，供分享使用
+function onChallengeSent({ targetOpenid, challengeId }) { trackChallenge(targetOpenid); pendingChallengeShareId.value = challengeId || ''; uni.showToast({ title: '挑战已发送！', icon: 'success' }); }
 function retryQuiz() {
   const timeSinceLast = resultRevealTime ? Date.now() - resultRevealTime : 0;
   trackTestRetry(result.value.tier, timeSinceLast, 'free');
@@ -1301,14 +1607,8 @@ function retryQuiz() {
   const quizStoreHook = useQuizStore();
   quizStoreHook.reset();
 
-  // 有免费测试机会 → 直接进答题页，跳过首页广告门控
-  if (!hasUsedFreeTestToday()) {
-    uni.redirectTo({ url: '/pages/quiz/quiz' });
-    return;
-  }
-
-  // 需要广告 → 回首页走完整门控
-  uni.redirectTo({ url: '/pages/index/index' });
+  // 直接进答题页，无需走首页广告门控（setIndex 递增确保题目不重复）
+  uni.reLaunch({ url: '/pages/quiz/quiz?retry=1' });
 }
 
 // P1-E: 首次用户"明天继续进化" — 建立 habit loop
@@ -1341,9 +1641,26 @@ function submitFeedback(isAccurate) {
   uni.showToast({ title: isAccurate ? '感谢认可！' : '感谢反馈，我们持续优化', icon: 'none' });
 }
 
+const subscribeIcon = computed(() => {
+  if (streakData.value?.consecutiveDays >= 3) return '🔥';
+  if (streakData.value?.consecutiveDays >= 1) return '📅';
+  return '🔔';
+});
+
+const subscribeText = computed(() => {
+  const days = streakData.value?.consecutiveDays || 0;
+  if (days >= 3) return `守护 ${days} 天连续记录，开启明日自动提醒`;
+  if (days >= 1) return '明天同一时间，AI 提醒你继续进化';
+  return '开启通知，第一时间看好友挑战结果';
+});
+
 async function requestSubscribe() {
-  await requestSubscribeMessage(['challengeNotify', 'tierChange']);
-  uni.showToast({ title: '设置成功！', icon: 'success' });
+  if (streakData.value?.consecutiveDays >= 1) {
+    await requestSubscribeMessage(['checkinReminder', 'tierChange']);
+  } else {
+    await requestSubscribeMessage(['challengeNotify', 'tierChange']);
+  }
+  uni.showToast({ title: '设置成功！明天见 👋', icon: 'success' });
   showSubscribePrompt.value = false;
 }
 
@@ -1354,12 +1671,12 @@ onShareAppMessage(() => {
   trackShareClick(tierName, style);
 
   let title;
-  // "差一分"戏剧化分享 — 优先级最高
-  if (result.value.pointsToNext === 1 && result.value.nextTier) {
+  // "差一点就晋升"戏剧化分享 — 优先级最高
+  if (aiqPointsToNext.value > 0 && aiqPointsToNext.value <= 2 && result.value.nextTier) {
     const diffOneCopies = [
-      `就差1分！我离${result.value.nextTier}只差1分，卡得我难受…你测测看？`,
-      `1分！只差1分我就是${result.value.nextTier}了！你也来试试运气？`,
-      `${result.value.tier}→${result.value.nextTier}只差1分！你敢来测吗？`,
+      `就差一点点！我离${result.value.nextTier}只差临门一脚…你测测看？`,
+      `差一点我就是${result.value.nextTier}了！你也来试试运气？`,
+      `${result.value.tier}→${result.value.nextTier}就差一步！你敢来测吗？`,
     ];
     title = diffOneCopies[Math.floor(Math.random() * diffOneCopies.length)];
   } else if (wasReversed.value) {
@@ -1405,12 +1722,16 @@ onShareAppMessage(() => {
   }, 1200);
 
   const uid = getUserOpenidSync();
+  const nick = userProfile.value.nickname || '';
   let path = uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index';
-  // C2: 反转用户分享路径追加 reversal 参数
-  if (wasReversed.value) {
-    path += '&reversal=1';
-  }
-  // 分享图优先用人格卡（最高社交货币），其次段位卡
+  if (nick) path += `&friend_name=${encodeURIComponent(nick)}`;
+  if (tierName) path += `&friend_tier=${encodeURIComponent(tierName)}`;
+  if (wasReversed.value) path += '&reversal=1';
+  // Phase 1: 挑战分享链路
+  const shareChallengeId = challengeResult.value?.challengeId || pendingChallengeShareId.value;
+  if (shareChallengeId) path += `&challengeId=${encodeURIComponent(shareChallengeId)}`;
+  // 消费掉一次性挑战分享 ID
+  pendingChallengeShareId.value = '';
   const shareImage = personaCardUrl.value || generatedCardUrl.value || '/static/images/default-share.png';
   return {
     title: finalTitle,
@@ -1454,6 +1775,7 @@ onShareTimeline(() => {
     border-radius: 50%;
     border: 2rpx solid rgba(124, 58, 237, 0.3);
     animation: ripple-pulse 1.5s ease-out infinite;
+    will-change: transform, opacity;
   }
 
   &__eval-text {
@@ -1518,6 +1840,54 @@ onShareTimeline(() => {
     text-align: center;
   }
 
+  &__aiq-level {
+    display: block;
+    margin-top: 6rpx;
+    font-size: 26rpx;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 2rpx;
+  }
+
+  // 连续进化庆祝
+  &__streak-celebrate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rpx;
+    margin-top: 16rpx;
+    padding: 14rpx 28rpx;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(255, 152, 0, 0.04));
+    border: 1rpx solid rgba(245, 158, 11, 0.2);
+    border-radius: 20rpx;
+    animation: streak-pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  }
+
+  &__streak-emoji {
+    font-size: 40rpx;
+    animation: flame-bounce 0.6s ease-in-out infinite alternate;
+  }
+
+  &__streak-label {
+    font-size: 24rpx;
+    color: $color-gold;
+    font-weight: 600;
+  }
+
+  &__streak-milestone {
+    font-size: 26rpx;
+    color: #ffd700;
+    font-weight: bold;
+    text-shadow: 0 0 12rpx rgba(255, 215, 0, 0.4);
+    animation: milestone-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  }
+
+  &__streak-broken {
+    font-size: 22rpx;
+    color: #ff6b6b;
+    font-weight: 500;
+  }
+
   // 段位名 + 人格名（一行精简）
   &__identity {
     display: flex;
@@ -1564,6 +1934,146 @@ onShareTimeline(() => {
     color: $color-text-muted;
     text-align: center;
     opacity: 0.7;
+  }
+
+  // Phase 1: 挑战对决结果
+  &__battle {
+    margin: 24rpx 32rpx;
+    padding: 28rpx 24rpx;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(239, 83, 80, 0.05));
+    border: 1rpx solid rgba(245, 158, 11, 0.2);
+    border-radius: 20rpx;
+    animation: battle-in 0.5s ease-out both;
+  }
+
+  &__battle-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    margin-bottom: 20rpx;
+  }
+
+  &__battle-icon {
+    font-size: 40rpx;
+  }
+
+  &__battle-title {
+    font-size: 28rpx;
+    color: #f59e0b;
+    font-weight: bold;
+  }
+
+  &__battle-vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16rpx;
+  }
+
+  &__battle-player {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rpx;
+    padding: 16rpx 12rpx;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12rpx;
+    border: 1rpx solid rgba(255, 255, 255, 0.06);
+    position: relative;
+
+    &--winner {
+      background: rgba(255, 215, 0, 0.08);
+      border-color: rgba(255, 215, 0, 0.3);
+      box-shadow: 0 0 20rpx rgba(255, 215, 0, 0.1);
+    }
+  }
+
+  &__battle-player-name {
+    font-size: 26rpx;
+    color: #fff;
+    font-weight: bold;
+  }
+
+  &__battle-player-tier {
+    font-size: 28rpx;
+    color: #ffd700;
+    font-weight: bold;
+  }
+
+  &__battle-player-aiq {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  &__battle-crown {
+    position: absolute;
+    top: -20rpx;
+    right: -8rpx;
+    font-size: 32rpx;
+    animation: crown-bounce 0.6s ease-in-out infinite alternate;
+  }
+
+  &__battle-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__battle-vs-text {
+    font-size: 28rpx;
+    color: rgba(255, 255, 255, 0.3);
+    font-weight: bold;
+    letter-spacing: 4rpx;
+  }
+
+  &__battle-verdict {
+    display: block;
+    text-align: center;
+    margin-top: 16rpx;
+    font-size: 26rpx;
+    color: #ffd700;
+    font-weight: bold;
+  }
+
+  &__battle-actions {
+    display: flex;
+    gap: 16rpx;
+    justify-content: center;
+    margin-top: 20rpx;
+  }
+
+  &__battle-share {
+    width: 280rpx;
+    height: 72rpx;
+    line-height: 72rpx;
+    border-radius: 36rpx;
+    font-size: 24rpx;
+    font-weight: bold;
+    color: #fff;
+    text-align: center;
+    background: linear-gradient(135deg, #f59e0b, #ef5350);
+    border: none;
+    box-shadow: 0 4rpx 20rpx rgba(245, 158, 11, 0.35);
+
+    &:active { transform: scale(0.97); }
+  }
+
+  &__battle-counter {
+    width: 200rpx;
+    height: 72rpx;
+    line-height: 72rpx;
+    border-radius: 36rpx;
+    font-size: 24rpx;
+    font-weight: bold;
+    color: #f59e0b;
+    text-align: center;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1rpx solid rgba(245, 158, 11, 0.3);
+
+    &:active { transform: scale(0.97); background: rgba(245, 158, 11, 0.2); }
   }
 
   &__percentile {
@@ -1810,6 +2320,28 @@ onShareTimeline(() => {
   &__friend-rank {
     width: 100%;
     margin-top: 32rpx;
+  }
+
+  &__rank-tabs {
+    display: flex;
+    gap: 24rpx;
+    margin-bottom: 16rpx;
+    justify-content: center;
+  }
+
+  &__rank-tab {
+    font-size: 26rpx;
+    color: $color-text-muted;
+    padding: 8rpx 28rpx;
+    border-radius: 20rpx;
+    background: rgba(255, 255, 255, 0.03);
+    transition: color 0.2s, background 0.2s;
+
+    &--active {
+      color: $color-accent;
+      background: rgba(0, 200, 255, 0.1);
+      font-weight: 600;
+    }
   }
 
   &__friend-match {
@@ -2147,6 +2679,22 @@ onShareTimeline(() => {
     &:active { transform: scale(0.97); }
   }
 
+  &__btn-invite {
+    width: 100%;
+    height: 72rpx;
+    line-height: 72rpx;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1rpx solid rgba(245, 158, 11, 0.2);
+    border-radius: 36rpx;
+    font-size: 24rpx;
+    color: #ffb74d;
+    text-align: center;
+    margin-top: 12rpx;
+
+    &::after { border: none; }
+    &:active { background: rgba(245, 158, 11, 0.2); }
+  }
+
   &__btn-poster {
     flex: 1;
     height: 72rpx;
@@ -2181,6 +2729,30 @@ onShareTimeline(() => {
     text-align: center;
     margin-top: 4rpx;
     opacity: 0.8;
+  }
+
+  &__invite-reward-available {
+    color: #ffb74d;
+    font-weight: bold;
+  }
+
+  &__group-share-card {
+    display: flex;
+    justify-content: center;
+    margin-top: 20rpx;
+  }
+
+  &__group-share-btn {
+    padding: 14rpx 40rpx;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1rpx solid rgba(245, 158, 11, 0.25);
+    border-radius: 32rpx;
+    font-size: 26rpx;
+    color: #ffb74d;
+    text-align: center;
+
+    &::after { border: none; }
+    &:active { background: rgba(245, 158, 11, 0.2); }
   }
 
   // 回访用户段位变化
@@ -2427,8 +2999,8 @@ onShareTimeline(() => {
   &__subscribe-prompt {
     margin-top: 16rpx;
     padding: 18rpx 24rpx;
-    background: rgba(0, 200, 255, 0.08);
-    border: 1rpx solid rgba(0, 200, 255, 0.2);
+    background: linear-gradient(135deg, rgba(0, 200, 255, 0.08), rgba(124, 58, 237, 0.06));
+    border: 1rpx solid rgba(0, 200, 255, 0.25);
     border-radius: 14rpx;
     display: flex;
     align-items: center;
@@ -2436,42 +3008,54 @@ onShareTimeline(() => {
     animation: fade-in 0.5s ease-out both;
     &:active { background: rgba(0, 200, 255, 0.15); }
   }
-  &__subscribe-icon { font-size: 32rpx; }
+  &__subscribe-icon { font-size: 32rpx; flex-shrink: 0; }
   &__subscribe-text {
     font-size: 24rpx;
     color: $color-accent;
     line-height: 1.4;
     flex: 1;
   }
+  &__subscribe-arrow {
+    font-size: 24rpx;
+    color: $color-accent;
+    flex-shrink: 0;
+  }
 
   &__profile-prompt {
     margin-top: 12rpx;
-    padding: 16rpx 24rpx;
+    padding: 12rpx 20rpx;
     background: rgba(245, 158, 11, 0.08);
     border: 1rpx solid rgba(245, 158, 11, 0.2);
     border-radius: 14rpx;
     display: flex;
     align-items: center;
-    gap: 10rpx;
+    gap: 12rpx;
     animation: fade-in 0.5s ease-out both;
-    &:active { background: rgba(245, 158, 11, 0.15); }
   }
-  &__profile-prompt-icon { font-size: 32rpx; flex-shrink: 0; }
-  &__profile-prompt-text {
-    font-size: 24rpx;
-    color: $color-gold;
-    line-height: 1.4;
-    flex: 1;
-  }
-  &__profile-prompt-arrow {
-    font-size: 28rpx;
-    color: $color-gold;
+  &__profile-avatar-btn {
+    width: 64rpx; height: 64rpx; padding: 0; margin: 0;
+    border-radius: 50%; overflow: hidden;
+    background: rgba(255,255,255,0.06);
+    border: 2rpx solid rgba(245, 158, 11, 0.3);
+    display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
+    line-height: 1;
+    &::after { border: none; }
+  }
+  &__profile-avatar-thumb { width: 100%; height: 100%; }
+  &__profile-avatar-placeholder { font-size: 32rpx; }
+  &__profile-nick-input {
+    flex: 1; height: 64rpx;
+    font-size: 24rpx; color: $color-gold;
+    background: rgba(255,255,255,0.04);
+    border-radius: 10rpx; padding: 0 16rpx;
   }
 }
 
 .page-result__fade-in {
   animation: fade-in 0.5s ease-out both;
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 @keyframes ripple-pulse {
@@ -2508,6 +3092,17 @@ onShareTimeline(() => {
 @keyframes share-pulse {
   0%, 100% { box-shadow: 0 6rpx 24rpx rgba(0, 200, 255, 0.4); }
   50% { box-shadow: 0 6rpx 36rpx rgba(0, 200, 255, 0.7), 0 0 60rpx rgba(124, 58, 237, 0.3); }
+}
+
+@keyframes streak-pop-in {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.03); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes flame-bounce {
+  from { transform: scale(1); }
+  to { transform: scale(1.2); }
 }
 
 @keyframes star-glow {
@@ -2628,6 +3223,26 @@ onShareTimeline(() => {
   &--mystery {
     color: rgba(255, 255, 255, 0.10);
   }
+
+  &--rarity-common {
+    color: rgba(255, 255, 255, 0.12);
+    animation: star-shimmer-slow 3.2s ease-in-out infinite;
+  }
+
+  &--rarity-rare {
+    color: rgba(0, 200, 255, 0.20);
+    animation: star-shimmer-rare 1.8s ease-in-out infinite;
+  }
+
+  &--rarity-legend {
+    color: rgba(160, 120, 255, 0.22);
+    animation: star-shimmer-legend 1.5s ease-in-out infinite;
+  }
+
+  &--rarity-limited {
+    color: rgba(245, 158, 11, 0.25);
+    animation: star-shimmer-limited 1.2s ease-in-out infinite;
+  }
 }
 
 .page-result__star-near-full {
@@ -2662,6 +3277,29 @@ onShareTimeline(() => {
   &-sub {
     font-size: 22rpx;
     color: rgba(255, 255, 255, 0.5);
+  }
+
+  &-share {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 14rpx;
+    padding: 12rpx 32rpx;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
+    border: 1rpx solid rgba(245, 158, 11, 0.35);
+    border-radius: 32rpx;
+    font-size: 24rpx;
+    font-weight: 600;
+    color: $color-gold;
+    line-height: 1.4;
+    transition: background 0.15s, transform 0.15s;
+
+    &::after { border: none; }
+
+    &:active {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.15));
+      transform: scale(0.97);
+    }
   }
 }
 
@@ -2824,9 +3462,7 @@ onShareTimeline(() => {
   font-weight: bold;
   color: #fff;
   text-align: center;
-  transition: all 0.2s;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(0, 200, 255, 0.12));
-  border: 1rpx solid rgba(124, 58, 237, 0.3);
+  transition: opacity 0.2s, transform 0.2s;
 
   &--primary {
     width: 420rpx;
@@ -3004,6 +3640,19 @@ onShareTimeline(() => {
   font-size: 22rpx;
 }
 
+.page-result__mind-read-share {
+  margin-top: 16rpx;
+  width: 100%;
+  height: 64rpx;
+  line-height: 64rpx;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1rpx solid rgba(124, 58, 237, 0.25);
+  border-radius: 32rpx;
+  font-size: 24rpx;
+  color: $color-accent;
+  text-align: center;
+}
+
 @keyframes legend-border-glow {
   0%, 100% { border-color: rgba(124, 58, 237, 0.3); }
   50% { border-color: rgba(245, 158, 11, 0.5); }
@@ -3024,6 +3673,7 @@ onShareTimeline(() => {
   backdrop-filter: blur(20rpx);
   border-top: 1rpx solid rgba(255, 255, 255, 0.08);
   animation: sticky-bar-in 0.3s ease-out;
+  will-change: transform;
 }
 
 @keyframes sticky-bar-in {
@@ -3062,5 +3712,23 @@ onShareTimeline(() => {
     font-size: 26rpx;
     border: none;
   }
+
+  &--home {
+    flex: 0.35;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1rpx solid rgba(255, 255, 255, 0.12);
+    font-size: 32rpx;
+    box-shadow: none;
+  }
+}
+
+@keyframes battle-in {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes crown-bounce {
+  from { transform: translateY(0) rotate(-5deg); }
+  to { transform: translateY(-6rpx) rotate(5deg); }
 }
 </style>

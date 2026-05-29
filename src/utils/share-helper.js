@@ -53,7 +53,7 @@ const COPIES = {
   3: {
     showoff: [
       '🤝 AI协作者！{score}分，我和AI会开周会了，你呢？',
-      'AI协作大师 🤝 {score}分，人机协同新境界！来测你的水平？',
+      'AI协作大师 🤝 {score}分，人机协同新境界！来测？',
       '协作者达成 🤝 {score}分！我和AI配合得比同事还默契…',
     ],
     selfmock: [
@@ -67,9 +67,9 @@ const COPIES = {
   },
   4: {
     showoff: [
-      '⚡ AI驾驭者！{score}分，{persona}，我在开AI，不是被AI开！测测你的段位？',
+      '⚡ AI驾驭者！{score}分，我在开AI，不是被AI开！来测？',
       '驾驭者认证 ⚡ {score}分！AI是我的工具，不是我的老板！',
-      'AI驾驭者在此 ⚡ {score}分，指挥AI就像开车一样顺手，来测？',
+      'AI驾驭者在此 ⚡ {score}分，开车一样顺！来测？',
     ],
     selfmock: [
       '驾驭者…这匹马跑得太快，缰绳有点烫手 ⚡',
@@ -82,7 +82,7 @@ const COPIES = {
   },
   5: {
     showoff: [
-      '🧪 AI炼金术士！{score}分，{persona}，AI炼丹中，勿扰。你也来炼一颗？',
+      '🧪 AI炼金术士！{score}分，AI炼丹中，勿扰。来测？',
       '炼金术士在此 🧪 {score}分！AI炼丹，出金率极高！来测？',
       'AI炼金中 🧪 {score}分，每个prompt都是一次炼金实验…',
     ],
@@ -97,7 +97,7 @@ const COPIES = {
   },
   6: {
     showoff: [
-      '🧠 AI觉醒者！{score}分，{persona}，Neo本Neo，测测你的AI段位？',
+      '🧠 AI觉醒者！{score}分，Neo本Neo，测测你的段位？',
       '觉醒者降临 🧠 {score}分！看清了AI的本质，你呢？',
       '我已觉醒 🧠 {score}分，AI时代的清醒者，来测你的觉醒度？',
     ],
@@ -112,8 +112,8 @@ const COPIES = {
   },
   7: {
     showoff: [
-      '🌊 无界！{score}分，已超越人类定义，测测你离无界有多远？',
-      '到达无界 🌊 {score}分！AI与人类的边界已被我打破…',
+      '🌊 无界！{score}分，已超越人类定义，来测你有多远？',
+      '到达无界 🌊 {score}分！人机边界已被我打破…',
       '无界之境 🌊 {score}分，这就是AI进化的终极形态吗？',
     ],
     selfmock: [
@@ -148,12 +148,13 @@ function pickRandom(arr) {
 }
 
 function formatTemplate(template, opts = {}) {
-  const scoreStr = opts.score ? `${opts.score}分` : '';
+  const aiqScore = opts.score ? Math.round((opts.score / 50) * 80 + 70) : 0;
+  const scoreStr = aiqScore ? `AI商数${aiqScore}` : '';
   const rankStr = opts.rank && opts.total ? `好友第${opts.rank}/${opts.total}` : '';
   const personaStr = opts.persona || '';
 
   let t = template;
-  t = t.replace('{score}', scoreStr).replace('{score} ', scoreStr ? scoreStr + ' ' : '');
+  t = t.replace('{score}分', scoreStr).replace('{score}', scoreStr);
   t = t.replace('{rank}', rankStr).replace('{total}', String(opts.total || ''));
   t = t.replace('{persona}', personaStr).replace('{persona}，', personaStr ? personaStr + '，' : '');
   t = t.replace('，{persona}', personaStr ? '，' + personaStr : '');
@@ -175,7 +176,8 @@ export function getShareCopy(tierIndex, style = 'showoff', opts = {}) {
 }
 
 export function getGroupChallengeCopy(tierName, tierEmoji, score = 0) {
-  const scorePart = score ? `，${score}分` : '';
+  const aiq = score ? Math.round((score / 50) * 80 + 70) : 0;
+  const scorePart = aiq ? `，AI商数${aiq}` : '';
   const variants = [
     `本群AI段位摸底！@所有人 我先来——${tierName} ${tierEmoji}${scorePart} 🏆 你们也来测测？`,
     `${tierName} ${tierEmoji}${scorePart} — 我在这个群的AI地位如何？@所有人 来测！`,

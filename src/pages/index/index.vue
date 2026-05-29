@@ -5,17 +5,20 @@
     <view v-if="showOverlay" class="page-index__overlay" />
 
 
-    <!-- 帮朋友测 Banner（个性化：显示好友段位） -->
-    <view v-if="friendName && !showReversalBanner" class="page-index__friend-banner">
-      <text class="page-index__friend-banner-text">
-        <template v-if="friendTier">
+    <!-- 帮朋友测 Banner（个性化：显示好友段位+对比动机） -->
+    <view v-if="friendName && !showReversalBanner" class="page-index__friend-banner" @click="handleStart">
+      <template v-if="friendTier">
+        <text class="page-index__friend-banner-challenge">
           <text class="page-index__friend-banner-tier">{{ friendTierEmoji }} {{ friendTier }}</text>
+        </text>
+        <text class="page-index__friend-banner-name">@{{ friendName }}</text> 邀你来战
+        <text class="page-index__friend-banner-vs">你能超过 TA 吗？⚡</text>
+      </template>
+      <template v-else>
+        <text class="page-index__friend-banner-text">
           <text class="page-index__friend-banner-name">@{{ friendName }}</text> 邀你来测AI段位
-        </template>
-        <template v-else>
-          <text class="page-index__friend-banner-name">@{{ friendName }}</text> 帮 TA 测测AI段位
-        </template>
-      </text>
+        </text>
+      </template>
     </view>
 
     <!-- 反转 Banner：好友的AI段位被AI耍了 -->
@@ -23,6 +26,17 @@
       <text class="page-index__reversal-banner-text">
         你的好友测出了一个AI段位，但<text class="page-index__reversal-banner-highlight">先被AI骗了</text>… 反转后才知道真相。你敢来测吗？
       </text>
+    </view>
+
+    <!-- Phase 1: 挑战应战模式 -->
+    <view v-if="challengeMode && challengeData" class="page-index__challenge-banner">
+      <view class="page-index__challenge-badge">⚔️ 段位挑战</view>
+      <text class="page-index__challenge-title">
+        <text class="page-index__challenge-name">{{ challengeData.challengerName }}</text>
+        <text v-if="challengeData.challengerTier">（{{ challengeData.challengerTier }} · AI商数 {{ challengeAIQ }}）</text>
+      </text>
+      <text class="page-index__challenge-sub">向你发起 AI 段位挑战</text>
+      <text class="page-index__challenge-vs">你能超过 TA 吗？</text>
     </view>
 
     <!-- ====== 首屏可见区 ====== -->
@@ -41,12 +55,36 @@
         <text class="page-index__prejudge-text">{{ prejudgeText }}</text>
       </view>
 
-      <!-- 新用户简化引导：一行文字 -->
-      <text v-if="isFirstVisit" class="page-index__quick-guide">① 答5题 → ② AI分析段位 → ③ 分享比一比 · ⏱ 2分钟</text>
+      <!-- 新用户引导：三步流程可视化 -->
+      <view v-if="isFirstVisit" class="page-index__onboarding">
+        <view class="page-index__onboarding-steps">
+          <view class="page-index__onboarding-step">
+            <text class="page-index__onboarding-step-num">①</text>
+            <text class="page-index__onboarding-step-text">答5题</text>
+          </view>
+          <text class="page-index__onboarding-arrow">→</text>
+          <view class="page-index__onboarding-step">
+            <text class="page-index__onboarding-step-num">②</text>
+            <text class="page-index__onboarding-step-text">AI分析</text>
+          </view>
+          <text class="page-index__onboarding-arrow">→</text>
+          <view class="page-index__onboarding-step">
+            <text class="page-index__onboarding-step-num">③</text>
+            <text class="page-index__onboarding-step-text">分享比一比</text>
+          </view>
+        </view>
+        <text class="page-index__onboarding-time">⏱ 仅需2分钟 · 测出你的AI真实水平</text>
+      </view>
 
-      <!-- 连续测试天数徽章 -->
-      <view v-if="streakDays >= 2" class="page-index__streak">
-        <text>{{ streakDays >= 7 ? '⚡' : '🔥' }} 已连续测试 {{ streakDays }} 天</text>
+      <!-- 连续进化天数 -->
+      <view v-if="streakDays >= 1" class="page-index__streak">
+        <view class="page-index__streak-flame">
+          <text class="page-index__streak-emoji">{{ streakDays >= 30 ? '👑' : streakDays >= 7 ? '⚡' : '🔥' }}</text>
+          <text class="page-index__streak-count">{{ streakDays }}</text>
+        </view>
+        <text class="page-index__streak-label">连续进化 {{ streakDays }} 天</text>
+        <text v-if="streakBest > streakDays" class="page-index__streak-best">最长记录 {{ streakBest }} 天</text>
+        <text v-if="!testedToday && streakDays > 0" class="page-index__streak-risk">⚡ 今天还没测，连续记录要断了！</text>
       </view>
 
       <!-- CTA 按钮 -->
@@ -64,6 +102,36 @@
       </view>
 
       <text v-if="showHint" class="page-index__hint">3秒测出你的AI段位</text>
+    </view>
+
+    <!-- Phase 2: 邀请进度横幅 -->
+    <view v-if="inviteStatsLoaded" class="page-index__invite-banner" :class="{ 'page-index__invite-banner--has-unlocks': inviteStats.inviteUnlocks > 0 }">
+      <template v-if="inviteStats.inviteUnlocks > 0">
+        <view class="page-index__invite-banner-inner" @click="handleStart">
+          <text class="page-index__invite-banner-icon">🎁</text>
+          <text class="page-index__invite-banner-text">{{ inviteStats.inviteUnlocks }} 次额外测试机会可用</text>
+          <text class="page-index__invite-banner-action">立即使用 →</text>
+        </view>
+      </template>
+      <template v-else-if="inviteStats.inviteCount > 0">
+        <view class="page-index__invite-banner-inner">
+          <text class="page-index__invite-banner-icon">📤</text>
+          <text class="page-index__invite-banner-text">已邀请 {{ inviteStats.inviteCount }} 位好友完成测试，累计 {{ inviteStats.inviteCount }} 次额外机会</text>
+        </view>
+      </template>
+      <template v-else>
+        <button class="page-index__invite-banner-share-btn" open-type="share" @click="trackInviteSent('private')">
+          <text class="page-index__invite-banner-icon">👥</text>
+          <text class="page-index__invite-banner-text">邀请好友测试 → 解锁额外次数</text>
+        </button>
+      </template>
+    </view>
+
+    <!-- Phase 3: 本周排名徽章 -->
+    <view v-if="myWeeklyRank" class="page-index__weekly-rank" @click="goToWeeklyRank">
+      <text class="page-index__weekly-rank-icon">📊</text>
+      <text class="page-index__weekly-rank-text">本周排名：第 {{ myWeeklyRank }} 位 · 共 {{ weeklyTotalParticipants }} 人</text>
+      <text class="page-index__weekly-rank-arrow">→</text>
     </view>
 
     <!-- ====== 滚动探索区 ====== -->
@@ -108,7 +176,7 @@
       <!-- 段位晋升进度条（回访用户） -->
       <view v-if="nextTierInfo" class="page-index__tier-teaser" @click="handleStart">
         <text class="page-index__tier-teaser-text">
-          距「{{ nextTierInfo.name }}」{{ nextTierInfo.emoji }} 还差 {{ nextTierInfo.gap }} 分
+          距「{{ nextTierInfo.name }}」{{ nextTierInfo.emoji }} 还差 {{ nextTierInfo.gap }} 点AI商数
         </text>
         <view class="page-index__tier-teaser-bar">
           <view class="page-index__tier-teaser-fill" :style="{ width: nextTierInfo.progress + '%' }" />
@@ -138,12 +206,12 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { onShareAppMessage, onShareTimeline, onShow } from '@dcloudio/uni-app';
 import ParticleBg from '@/components/ParticleBg/ParticleBg.vue';
 import PrivacyModal from '@/components/PrivacyModal/PrivacyModal.vue';
-import { fetchTierDistribution, fetchFriendRank, preloadDailyQuestions, fetchWeeklyStats, getUserOpenid, getUserOpenidSync, callCloudFunction } from '@/utils/api.js';
-import { trackPageViewHome, trackHomeHesitate, trackInviteUnlock, trackTestStart, trackShareClick } from '@/utils/analytics.js';
+import { fetchTierDistribution, fetchFriendRank, preloadDailyQuestions, fetchWeeklyStats, fetchWeeklyLeaderboard, getUserOpenid, getUserOpenidSync, callCloudFunction, fetchChallenge, fetchInviteStats } from '@/utils/api.js';
+import { trackPageViewHome, trackHomeHesitate, trackInviteUnlock, trackTestStart, trackShareClick, trackInviteSent } from '@/utils/analytics.js';
 import { hasUsedFreeTestToday, markFreeTestUsed, showRewardedAd } from '@/utils/ad.js';
 import { useExperienceStore } from '@/store/experience.js';
 import { useQuizStore } from '@/store/quiz.js';
-import { TIERS, pointsToNextTier, getNextTier, getTier } from '@/utils/tier.js';
+import { TIERS, pointsToNextTier, getNextTier, getTier, toAIQuotient } from '@/utils/tier.js';
 
 const particleRef = ref(null);
 const privacyRef = ref(null);
@@ -159,6 +227,16 @@ const friendTier = ref('');
 const friendTierEmoji = ref('');
 const showReversalBanner = ref(false);
 const inviteUnlockCached = ref(null); // null=未加载, true=可用, false=不可用
+// Phase 1: 挑战应战模式
+const challengeMode = ref(false);
+const challengeData = ref(null); // { _id, challengerName, challengerTier, challengerScore }
+const challengeAIQ = ref(0);
+// Phase 2: 邀请进度
+const inviteStats = ref({ inviteCount: 0, inviteUnlocks: 0 });
+const inviteStatsLoaded = ref(false);
+// Phase 3: 本周排名
+const myWeeklyRank = ref(null);
+const weeklyTotalParticipants = ref(0);
 let t5 = null, t10 = null, ctaTimer = null;
 
 // F1: CTA 按钮文案轮换
@@ -209,6 +287,8 @@ const prejudgeText = ref(PREJUDGE_TEXTS[Math.floor(Math.random() * PREJUDGE_TEXT
 
 // 连续测试天数
 const streakDays = ref(0);
+const streakBest = ref(0);
+const testedToday = ref(false);
 
 // 每日一题
 function handleDailyStart() {
@@ -258,6 +338,16 @@ async function loadTierProgress() {
     if (res.code === 0 && res.data) {
       // 连续测试天数
       streakDays.value = res.data.testConsecutiveDays || 0;
+      streakBest.value = res.data.streakBest || 0;
+      testedToday.value = res.data.testedToday || false;
+
+      // 连续进化中但今天还没测 → 紧迫模式
+      if (streakDays.value >= 2 && !testedToday.value) {
+        isUrgent.value = true;
+        ctaText.value = streakDays.value >= 7
+          ? `守护 ${streakDays.value} 天连冠，现在开测`
+          : `连续 ${streakDays.value} 天了！别让它断掉`;
+      }
 
       // 用户已完成过测试，有签到/测试记录
       if (res.data.consecutiveDays === undefined) return;
@@ -276,15 +366,32 @@ async function loadTierProgress() {
         const totalRange = nextMin - currentMin;
         const progressInTier = lastScore - currentMin;
         const progress = totalRange > 0 ? Math.floor((progressInTier / totalRange) * 100) : 0;
+        const aiqGap = toAIQuotient(nextTierObj ? nextTierObj.min : 50) - toAIQuotient(lastScore);
         nextTierInfo.value = {
           name: nextTier,
           emoji: nextTierObj ? nextTierObj.emoji : '',
-          gap,
+          gap: aiqGap,
           progress: Math.min(99, Math.max(1, progress)),
         };
       }
     }
   } catch (e) { /* 静默 */ }
+}
+
+// Phase 3: 静默加载本周排名
+async function loadWeeklyRank() {
+  try {
+    const res = await fetchWeeklyLeaderboard();
+    if (res.code === 0 && res.data && res.data.myEntry) {
+      myWeeklyRank.value = res.data.myEntry.rank;
+      weeklyTotalParticipants.value = res.data.totalParticipants || 0;
+    }
+  } catch (e) { /* 静默 */ }
+}
+
+function goToWeeklyRank() {
+  uni.switchTab({ url: '/pages/rank/rank' });
+  getApp().globalData.rankDefaultTab = 'weekly';
 }
 
 onMounted(async () => {
@@ -303,6 +410,11 @@ onMounted(async () => {
     friendName.value = decodeURIComponent(options.friend_name);
     uni.setStorageSync('friend_name', friendName.value);
   }
+  if (options.friend_tier) {
+    friendTier.value = decodeURIComponent(options.friend_tier);
+    const tier = TIERS.find(t => t.name === friendTier.value);
+    if (tier) friendTierEmoji.value = tier.emoji;
+  }
 
   if (options.from_uid) {
     app.globalData.shareFromUid = options.from_uid;
@@ -312,14 +424,24 @@ onMounted(async () => {
     showReversalBanner.value = true;
   }
 
+  // Phase 1: 挑战应战模式
+  if (options.challengeId) {
+    challengeMode.value = true;
+    ctaText.value = '⚔️ 接受挑战';
+    loadChallengeData(options.challengeId);
+  }
+
   // F1: CTA 按钮文案轮换（随机起始 + 8s 轮换）
-  const startIdx = Math.floor(Math.random() * CTA_COPIES.length);
-  ctaText.value = CTA_COPIES[startIdx];
-  let copyIdx = startIdx;
-  ctaTimer = setInterval(() => {
-    copyIdx = (copyIdx + 1) % CTA_COPIES.length;
-    ctaText.value = CTA_COPIES[copyIdx];
-  }, 8000);
+  // Phase 1: 挑战模式下跳过轮换，保持 '⚔️ 接受挑战'
+  if (!challengeMode.value) {
+    const startIdx = Math.floor(Math.random() * CTA_COPIES.length);
+    ctaText.value = CTA_COPIES[startIdx];
+    let copyIdx = startIdx;
+    ctaTimer = setInterval(() => {
+      copyIdx = (copyIdx + 1) % CTA_COPIES.length;
+      ctaText.value = CTA_COPIES[copyIdx];
+    }, 8000);
+  }
 
   // A3: AI实时评价轮换（随机起始 + 3s 轮换）
   aiEvalText.value = AI_EVAL_TEXTS[Math.floor(Math.random() * AI_EVAL_TEXTS.length)];
@@ -341,6 +463,7 @@ onMounted(async () => {
   loadFriendBubble();
   loadTierProgress(); // 回访用户段位进度（静默）
   preloadInviteStatus(); // 预加载邀请解锁状态
+  loadWeeklyRank(); // Phase 3: 静默加载本周排名
 
   // 埋点：首页浏览
   trackPageViewHome({
@@ -360,11 +483,37 @@ onMounted(async () => {
 onBeforeUnmount(() => { clearTimeout(t5); clearTimeout(t10); clearInterval(ctaTimer); clearInterval(aiEvalTimer); clearInterval(animateTimer); });
 
 // 页面重新显示时重置状态（修复从 quiz 返回后按钮卡死）
+// P1-3: 也刷新存储相关的状态，修复状态栏滞后
 onShow(() => {
   transitioning.value = false;
   btnShrink.value = false;
   showOverlay.value = false;
+  // 刷新免费测试状态（storage 可能已被其他页面修改）
+  loadTierProgress();
+  loadWeeklyRank();
 });
+
+// Phase 1: 加载挑战数据
+async function loadChallengeData(challengeId) {
+  try {
+    const res = await fetchChallenge(challengeId);
+    if (res.code === 0 && res.data) {
+      challengeData.value = res.data;
+      challengeAIQ.value = res.data.challengerScore > 0
+        ? Math.round((res.data.challengerScore / 50) * 80 + 70)
+        : 0;
+      // 挑战模式也设置 friend 参数，复用部分逻辑
+      friendName.value = res.data.challengerName;
+      friendTier.value = res.data.challengerTier;
+    } else {
+      // 挑战不存在或已结束，回退到普通模式
+      challengeMode.value = false;
+    }
+  } catch (e) {
+    // 网络异常等，回退到普通模式
+    challengeMode.value = false;
+  }
+}
 
 // F2: 加载好友段位气泡
 async function loadFriendBubble() {
@@ -415,6 +564,18 @@ function animateNumber(target) {
 
 // 预加载邀请解锁状态，减少 handleStart 中的云函数等待
 async function preloadInviteStatus() {
+  // Phase 2: 先加载邀请统计数据（用于 banner 展示）
+  try {
+    const statsRes = await fetchInviteStats();
+    if (statsRes.code === 0 && statsRes.data) {
+      inviteStats.value = {
+        inviteCount: statsRes.data.inviteCount || 0,
+        inviteUnlocks: statsRes.data.inviteUnlocks || 0,
+      };
+    }
+  } catch (e) { /* silent */ }
+  inviteStatsLoaded.value = true;
+
   if (!hasUsedFreeTestToday()) {
     inviteUnlockCached.value = false; // 免费次数可用，无需邀请解锁
     return;
@@ -429,6 +590,12 @@ async function preloadInviteStatus() {
 
 async function handleStart() {
   if (transitioning.value) return;
+
+  // Phase 1: 挑战应战模式 — 零摩擦直接进入答题
+  if (challengeMode.value) {
+    startQuiz();
+    return;
+  }
 
   // ① 每日免费测试
   if (!hasUsedFreeTestToday()) {
@@ -510,14 +677,19 @@ function startQuiz() {
   quizStore.reset();
   quizStore.setDeepMode(false);
   uni.removeStorageSync('quiz_breakpoint'); // 清除旧断点，确保全新开始
-  trackTestStart('new', ctaText.value);
+  trackTestStart(challengeMode.value ? 'challenge' : 'new', ctaText.value);
   transitioning.value = true;
   if (particleRef.value) particleRef.value.accelerate();
   btnShrink.value = true;
   setTimeout(() => { showOverlay.value = true; }, 300);
   setTimeout(() => {
+    let quizUrl = '/pages/quiz/quiz';
+    // Phase 1: 挑战模式传递 challengeId
+    if (challengeMode.value && challengeData.value) {
+      quizUrl += '?challengeId=' + encodeURIComponent(challengeData.value._id);
+    }
     uni.navigateTo({
-      url: '/pages/quiz/quiz',
+      url: quizUrl,
       fail: () => {
         transitioning.value = false;
         btnShrink.value = false;
@@ -569,7 +741,7 @@ onShareTimeline(() => {
 
 <style scoped lang="scss">
 .page-index {
-  position: relative; min-height: 100vh; overflow: hidden;
+  position: relative; min-height: 100vh; overflow-x: hidden;
   background: linear-gradient(180deg, #1a0533 0%, #0d1b2a 100%);
 
   &__overlay {
@@ -592,6 +764,13 @@ onShareTimeline(() => {
       color: #fff;
     }
 
+    &-challenge {
+      display: block;
+      font-size: 48rpx;
+      margin-bottom: 6rpx;
+      line-height: 1.2;
+    }
+
     &-name {
       color: $color-gold;
       font-weight: bold;
@@ -602,6 +781,20 @@ onShareTimeline(() => {
       font-weight: bold;
       margin-right: 4rpx;
     }
+
+    &-vs {
+      display: block;
+      margin-top: 10rpx;
+      font-size: 26rpx;
+      color: $color-accent;
+      font-weight: 600;
+      animation: pulse-vs 1.8s ease-in-out infinite;
+    }
+  }
+
+  @keyframes pulse-vs {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.03); }
   }
 
   &__reversal-banner {
@@ -635,11 +828,63 @@ onShareTimeline(() => {
     }
   }
 
+  // Phase 1: 挑战应战模式
+  &__challenge-banner {
+    position: relative;
+    z-index: 10;
+    margin: 60rpx 32rpx 0;
+    padding: 28rpx;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(239, 83, 80, 0.08));
+    border: 1rpx solid rgba(245, 158, 11, 0.35);
+    border-radius: 20rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    animation: challenge-glow 2s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  &__challenge-badge {
+    font-size: 22rpx;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+    padding: 4rpx 16rpx;
+    border-radius: 8rpx;
+    letter-spacing: 2rpx;
+  }
+
+  &__challenge-title {
+    font-size: 26rpx;
+    color: #fff;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  &__challenge-name {
+    color: #f59e0b;
+    font-weight: bold;
+    font-size: 30rpx;
+  }
+
+  &__challenge-sub {
+    font-size: 24rpx;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  &__challenge-vs {
+    font-size: 32rpx;
+    color: #ffd700;
+    font-weight: bold;
+    margin-top: 4rpx;
+    text-shadow: 0 0 20rpx rgba(255, 215, 0, 0.3);
+  }
+
   // ====== 首屏英雄区 ======
   &__hero {
     position: relative; z-index: 10;
     display: flex; flex-direction: column; align-items: center;
-    padding-top: 20vh; transition: transform 0.3s ease-out;
+    padding-top: 120rpx; transition: transform 0.3s ease-out;
     &--shrink { transform: scale(0.92); opacity: 0.7; }
   }
 
@@ -660,16 +905,102 @@ onShareTimeline(() => {
     animation: fade-in 0.5s ease-out both;
   }
 
-  // 连续测试天数
+  // P0-4: 新用户三步引导
+  &__onboarding {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12rpx;
+    margin-top: 24rpx;
+    padding: 20rpx 28rpx;
+    background: rgba(124, 58, 237, 0.06);
+    border: 1rpx solid rgba(124, 58, 237, 0.15);
+    border-radius: 20rpx;
+    animation: fade-in 0.5s ease-out both;
+  }
+
+  &__onboarding-steps {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  &__onboarding-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rpx;
+  }
+
+  &__onboarding-step-num {
+    font-size: 22rpx;
+    color: #7c3aed;
+    font-weight: bold;
+  }
+
+  &__onboarding-step-text {
+    font-size: 20rpx;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  &__onboarding-arrow {
+    font-size: 20rpx;
+    color: rgba(124, 58, 237, 0.3);
+  }
+
+  &__onboarding-time {
+    font-size: 20rpx;
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  // 连续进化天数
   &__streak {
-    margin-top: 16rpx;
-    padding: 6rpx 20rpx;
-    background: rgba(245, 158, 11, 0.1);
-    border: 1rpx solid rgba(245, 158, 11, 0.2);
-    border-radius: 16rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rpx;
+    margin-top: 20rpx;
+    padding: 14rpx 32rpx;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(255, 152, 0, 0.04));
+    border: 1rpx solid rgba(245, 158, 11, 0.25);
+    border-radius: 20rpx;
+    animation: fade-in 0.4s ease-out both;
+  }
+
+  &__streak-flame {
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+  }
+
+  &__streak-emoji {
+    font-size: 36rpx;
+    animation: flame-bounce 0.6s ease-in-out infinite alternate;
+  }
+
+  &__streak-count {
+    font-size: 48rpx;
+    font-weight: bold;
+    color: $color-gold;
+    text-shadow: 0 0 16rpx rgba(245, 158, 11, 0.5);
+  }
+
+  &__streak-label {
     font-size: 22rpx;
     color: $color-gold;
-    animation: fade-in 0.4s ease-out both;
+    font-weight: 500;
+  }
+
+  &__streak-best {
+    font-size: 20rpx;
+    color: rgba(245, 158, 11, 0.5);
+  }
+
+  &__streak-risk {
+    font-size: 22rpx;
+    color: #ff6b6b;
+    font-weight: 600;
+    animation: risk-pulse 1.5s ease-in-out infinite;
   }
 
   // A3: AI实时评价
@@ -734,7 +1065,7 @@ onShareTimeline(() => {
   &__scroll {
     position: relative; z-index: 10;
     display: flex; flex-direction: column; align-items: center;
-    padding: 32rpx 0 60rpx;
+    padding: 32rpx 0 160rpx;
   }
 
   // 每日一题快速入口
@@ -747,7 +1078,7 @@ onShareTimeline(() => {
     border: 1rpx solid rgba(0, 200, 255, 0.15);
     border-radius: 20rpx;
     margin-bottom: 20rpx;
-    transition: all 0.15s;
+    transition: background 0.15s, transform 0.15s;
     &:active { background: rgba(0, 200, 255, 0.15); transform: scale(0.97); }
 
     &-icon { font-size: 22rpx; }
@@ -822,7 +1153,8 @@ onShareTimeline(() => {
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 8rpx 40rpx rgba(124, 58, 237, 0.4);
     animation: breathe 1.5s ease-in-out infinite;
-    &--urgent { animation: breathe-fast 0.8s ease-in-out infinite; }
+    will-change: transform;
+    &--urgent { animation: breathe-fast 0.8s ease-in-out infinite; will-change: transform; }
   }
 
   &__hint {
@@ -834,6 +1166,84 @@ onShareTimeline(() => {
     display: flex; align-items: baseline; gap: 6rpx; margin-top: 20rpx;
     &-num { font-size: 28rpx; font-weight: 700; color: rgba(255,255,255,0.5); }
     &-label { font-size: 22rpx; color: rgba(255,255,255,0.3); }
+  }
+
+  // Phase 2: 邀请进度横幅
+  &__invite-banner {
+    position: relative;
+    z-index: 10;
+    margin: 24rpx 32rpx 0;
+    border-radius: 16rpx;
+    overflow: hidden;
+
+    &--has-unlocks {
+      animation: invite-glow 2s ease-in-out infinite;
+      will-change: transform, opacity;
+    }
+
+    &-inner {
+      display: flex;
+      align-items: center;
+      gap: 10rpx;
+      padding: 18rpx 28rpx;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(255, 152, 0, 0.05));
+      border: 1rpx solid rgba(245, 158, 11, 0.25);
+      border-radius: 16rpx;
+    }
+
+    &-share-btn {
+      display: flex;
+      align-items: center;
+      gap: 10rpx;
+      padding: 18rpx 28rpx;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(124, 58, 237, 0.03));
+      border: 1rpx solid rgba(124, 58, 237, 0.2);
+      border-radius: 16rpx;
+      width: 100%;
+      text-align: left;
+      font-size: 24rpx;
+
+      &::after { border: none; }
+    }
+
+    &-icon {
+      font-size: 32rpx;
+      flex-shrink: 0;
+    }
+
+    &-text {
+      font-size: 24rpx;
+      color: #fff;
+      flex: 1;
+      line-height: 1.4;
+    }
+
+    &-action {
+      font-size: 24rpx;
+      color: #f59e0b;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+  }
+
+  @keyframes invite-glow {
+    0%, 100% { box-shadow: 0 0 0 rgba(245, 158, 11, 0); }
+    50% { box-shadow: 0 0 20rpx rgba(245, 158, 11, 0.25); }
+  }
+
+  // Phase 3: 本周排名徽章
+  &__weekly-rank {
+    margin: 20rpx 32rpx 0;
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+    padding: 14rpx 24rpx;
+    background: rgba(124, 58, 237, 0.06);
+    border: 1rpx solid rgba(124, 58, 237, 0.15);
+    border-radius: 20rpx;
+    &-icon { font-size: 28rpx; }
+    &-text { font-size: 24rpx; color: rgba(255, 255, 255, 0.7); flex: 1; }
+    &-arrow { font-size: 22rpx; color: rgba(124, 58, 237, 0.6); }
   }
 
   // F2: 好友段位气泡
@@ -934,7 +1344,7 @@ onShareTimeline(() => {
     background: rgba(124, 58, 237, 0.08);
     border: 1rpx solid rgba(124, 58, 237, 0.2);
     border-radius: 16rpx;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.2s;
 
     &:active {
       background: rgba(124, 58, 237, 0.15);
@@ -984,5 +1394,20 @@ onShareTimeline(() => {
 @keyframes reversal-glow {
   0%, 100% { box-shadow: 0 0 0 rgba(124, 58, 237, 0); }
   50% { box-shadow: 0 0 24rpx rgba(124, 58, 237, 0.25); }
+}
+
+@keyframes flame-bounce {
+  from { transform: scale(1); }
+  to { transform: scale(1.15); }
+}
+
+@keyframes risk-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@keyframes challenge-glow {
+  0%, 100% { box-shadow: 0 0 0 rgba(245, 158, 11, 0); border-color: rgba(245, 158, 11, 0.25); }
+  50% { box-shadow: 0 0 30rpx rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); }
 }
 </style>

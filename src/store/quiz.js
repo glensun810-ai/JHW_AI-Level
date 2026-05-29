@@ -62,7 +62,11 @@ export const useQuizStore = defineStore('quiz', () => {
   // ── 动作 ──
   async function fetchQuestions() {
     const questionCount = customCount.value > 0 ? customCount.value : (deepMode.value ? 10 : 5);
-    const res = await fetchDailyQuestions(undefined, 0, questionCount);
+    // 同日重测种子变化：同一用户同一天多次测试时 setIndex 递增，确保题目不同
+    const today = new Date().toISOString().slice(0, 10);
+    const retestKey = `retest_${today}`;
+    const setIndex = uni.getStorageSync(retestKey) || 0;
+    const res = await fetchDailyQuestions(undefined, setIndex, questionCount);
 
     if (res.code === 0 && res.data) {
       questions.value = (res.data.questions || []).map(q => ({
@@ -76,6 +80,7 @@ export const useQuizStore = defineStore('quiz', () => {
       }));
       questionSetId.value = res.data.questionSetId || '';
       testStartTime.value = Date.now();
+      uni.setStorageSync(retestKey, setIndex + 1);
     }
 
     return res;
@@ -139,8 +144,20 @@ export const useQuizStore = defineStore('quiz', () => {
   async function submitTest(challengeId = '') {
     const app = getApp();
     const fromUid = app.globalData.shareFromUid || '';
+    // P0-7: 提交前本地暂存分数，防止网络失败丢失
+    const backupData = {
+      questionSetId: questionSetId.value,
+      answers: [...answers.value],
+      fromUid,
+      challengeId,
+      timestamp: Date.now(),
+    };
+    uni.setStorageSync('score_submit_backup', backupData);
+
     const res = await submitTestScore(questionSetId.value, answers.value, fromUid, challengeId);
     if (res.code === 0 && res.data) {
+      // 提交成功，清除备份
+      uni.removeStorageSync('score_submit_backup');
       lastResult.value = res.data;
       lastAnswers.value = [...answers.value];
       lastQuestions.value = questions.value.map(q => ({
@@ -157,6 +174,9 @@ export const useQuizStore = defineStore('quiz', () => {
           expStore.addExp('record');
         }
       }
+    } else if (res.code === 500 || res.code === -1) {
+      // 网络错误：保留备份供重试，但仍尝试跳转结果页（lastResult 可能已由前次提交设置）
+      console.warn('[quiz] submitTest 网络错误，备份已保留');
     }
     return res;
   }

@@ -1,6 +1,6 @@
 <script>
 import { initAnalytics, trackShareCardClick, trackInviteClick } from '@/utils/analytics.js';
-import { callCloudFunction, getUserOpenidSync, preloadDailyQuestions } from '@/utils/api.js';
+import { callCloudFunction, getUserOpenid, getUserOpenidSync, preloadDailyQuestions } from '@/utils/api.js';
 
 export default {
   globalData: {
@@ -11,6 +11,16 @@ export default {
   },
   onLaunch(options) {
     this.globalData.appLaunchTime = Date.now();
+
+    // 初始化云开发（必须在所有云 API 调用之前）
+    if (wx.cloud) {
+      wx.cloud.init({
+        env: 'cloudbase-7gp7l6qu464a196a',
+        traceUser: true,
+      });
+    } else {
+      console.error('请在微信开发者工具中运行');
+    }
 
     // 启用带 shareTicket 的分享（群排行/群挑战需要）
     if (typeof wx !== 'undefined' && wx.showShareMenu) {
@@ -45,16 +55,6 @@ export default {
       }
     }
 
-    // 初始化云开发
-    if (wx.cloud) {
-      wx.cloud.init({
-        env: 'cloudbase-7gp7l6qu464a196a',
-        traceUser: true,
-      });
-    } else {
-      console.error('请在微信开发者工具中运行');
-    }
-
     // 全局未捕获错误处理（避免白屏）
     if (typeof wx !== 'undefined' && wx.onError) {
       wx.onError((err) => {
@@ -86,13 +86,15 @@ export default {
         // v1.0: 记录邀请关系（排除自己）
         if (q.from_uid) {
           trackInviteClick(q.from_uid, shareChannel);
-          const myUid = getUserOpenidSync();
-          if (myUid && q.from_uid !== myUid) {
-            callCloudFunction('submitScore', {
-              action: 'recordInvite',
-              inviterUid: q.from_uid,
-            }, { retry: false }).catch(() => { /* 静默 */ });
-          }
+          // 异步获取 openid 确保冷启动时也能正确记录邀请关系
+          getUserOpenid().then(myUid => {
+            if (myUid && q.from_uid !== myUid) {
+              callCloudFunction('submitScore', {
+                action: 'recordInvite',
+                inviterUid: q.from_uid,
+              }, { retry: false }).catch(() => { /* 静默 */ });
+            }
+          }).catch(() => { /* 静默 */ });
         }
       }
       // 群聊进入：保存 shareTicket 用于群排行/群挑战

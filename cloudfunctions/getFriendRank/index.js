@@ -59,6 +59,61 @@ exports.main = async (event, context) => {
       return { code: 0, message: 'ok', data: { privacyHidden: !!privacyHidden } };
     }
 
+    // Phase 1: 获取挑战详情（供首页应战模式使用）
+    if (action === 'getChallenge') {
+      const { challengeId } = event;
+      if (!challengeId) return { code: 400, message: '缺少 challengeId', data: null };
+      try {
+        const { data: challenges } = await db.collection('challenges')
+          .where({ _id: challengeId, status: 'pending' })
+          .get();
+        if (challenges.length === 0) {
+          return { code: 404, message: '挑战不存在或已结束', data: null };
+        }
+        const ch = challenges[0];
+        return {
+          code: 0, message: 'ok',
+          data: {
+            _id: ch._id,
+            challengerName: ch.challengerName || '好友',
+            challengerTier: ch.challengerTier || '',
+            challengerScore: ch.challengerScore || 0,
+            targetName: ch.targetName || '',
+          },
+        };
+      } catch (e) {
+        console.log('[getFriendRank] getChallenge 失败:', e.message);
+        return { code: 500, message: '查询失败', data: null };
+      }
+    }
+
+    // Phase 2: 获取邀请解锁统计（邀请人数 + 可用解锁次数）
+    if (action === 'getInviteStats') {
+      try {
+        const { data: users } = await db.collection('users')
+          .where({ _openid: OPENID })
+          .field({ inviteUnlocks: true })
+          .get();
+        const inviteUnlocks = users.length > 0 ? (users[0].inviteUnlocks || 0) : 0;
+
+        let inviteCount = 0;
+        try {
+          const result = await db.collection('invites')
+            .where({ inviterOpenid: OPENID, completed: true })
+            .count();
+          inviteCount = result.total || 0;
+        } catch (e) { /* invites 集合可能不存在 */ }
+
+        return {
+          code: 0, message: 'ok',
+          data: { inviteCount, inviteUnlocks },
+        };
+      } catch (e) {
+        console.log('[getFriendRank] getInviteStats 失败:', e.message);
+        return { code: 500, message: '查询失败', data: null };
+      }
+    }
+
     if (action === 'collectRank') {
       // 获取好友列表
       let friendOpenids = [];

@@ -2,6 +2,7 @@
   "timeout": 15,
   "env": {
     "WECOM_WEBHOOK_URL": "",
-    "BOUNTY_TEMPLATE_ID": ""
+    "BOUNTY_TEMPLATE_ID": "m6jo3ZtPLelyLD4uCtZlx7ThnAulwP9XNESX5bw-PkI",
+    "TIER_CHANGE_TEMPLATE_ID": "YxuhNDWsAsaIeKVePbb9Zl1zTz35LDi7H2hyvFKCqSM"
   }
 }

@@ -126,6 +126,51 @@ async function computeABComparison() {
   return result;
 }
 
+// ── 实时 K-factor 计算（不依赖 monitor_results cron）──
+async function computeRealtimeKFactor() {
+  const weekAgo = daysAgo(7);
+
+  // 1. 分享率 = share_success / test_complete
+  const [{ total: testComplete7d }, { total: shareSuccess7d }, { total: shareCardClick7d }] = await Promise.all([
+    db.collection('analytics_logs').where({ event: 'test_complete', serverTime: _.gte(weekAgo) }).count(),
+    db.collection('analytics_logs').where({ event: 'share_success', serverTime: _.gte(weekAgo) }).count(),
+    db.collection('analytics_logs').where({ event: 'share_card_click', serverTime: _.gte(weekAgo) }).count(),
+  ]);
+
+  // 2. 转化率 = 通过分享进入并完成测试 / 分享卡点击
+  const { data: fromShareLogs } = await db.collection('analytics_logs')
+    .where({ event: 'test_complete', 'params.from_uid': _.exists(true), serverTime: _.gte(weekAgo) })
+    .field({ 'params.from_uid': true })
+    .limit(500)
+    .get();
+  const fromShareComplete = fromShareLogs.length;
+
+  const shareRate = testComplete7d > 0 ? shareSuccess7d / testComplete7d : 0;
+  const clickRate = shareSuccess7d > 0 ? shareCardClick7d / shareSuccess7d : 0;
+  const conversionRate = shareCardClick7d > 0 ? fromShareComplete / shareCardClick7d : 0;
+  const avgInvitees = shareSuccess7d > 0 ? shareCardClick7d / shareSuccess7d : 0;
+  const kFactor = +(shareRate * avgInvitees * clickRate * conversionRate).toFixed(4);
+
+  // 3. 总用户数 & 周增长
+  const [{ total: totalUsers }, { total: newUsers7d }, { total: activeUsers7d }] = await Promise.all([
+    db.collection('users').count(),
+    db.collection('users').where({ createdAt: _.gte(weekAgo) }).count(),
+    db.collection('analytics_logs').where({ event: 'page_view_home', serverTime: _.gte(weekAgo) }).count(),
+  ]);
+
+  return {
+    kFactor,
+    shareRate: +(shareRate * 100).toFixed(1),
+    clickRate: +(clickRate * 100).toFixed(1),
+    conversionRate: +(conversionRate * 100).toFixed(1),
+    avgInvitees: +(avgInvitees).toFixed(1),
+    totalUsers,
+    newUsers7d: newUsers7d.total,
+    activeUsers7d: activeUsers7d.total,
+    period: '7d',
+  };
+}
+
 // ── 管理员鉴权 ──
 function checkAdminAuth(event) {
   const password = process.env.ADMIN_PASSWORD || '';
@@ -145,29 +190,28 @@ exports.main = async (event, context) => {
   try {
     const latest = await getLatestSnapshot();
 
-    // Lite 模式：仅返回 K-factor 当前值（供 rank 页角标使用）
+    // Lite 模式：仅返回实时 K-factor（供 rank 页角标使用）
     if (authResult === 'lite') {
-      const kf = latest && latest.metrics && latest.metrics.viral_coef ? latest.metrics.viral_coef.value : 0;
+      const rt = await computeRealtimeKFactor();
       return {
         code: 0,
         message: 'ok',
         data: {
-          kFactor: {
-            current: kf,
-            trend24h: { delta: 0, direction: 'flat' },
-            trend7d: { delta: 0, direction: 'flat' },
-          },
+          kFactor: { current: rt.kFactor },
+          shareRate: rt.shareRate,
+          totalUsers: rt.totalUsers,
           lite: true,
         },
       };
     }
 
-    const [snapshots24h, snapshots7d, snapshots30d, dauData, abComparison] = await Promise.all([
+    const [snapshots24h, snapshots7d, snapshots30d, dauData, abComparison, realtimeKF] = await Promise.all([
       getSnapshotsInRange(hoursAgo(24), new Date()),
       getSnapshotsInRange(daysAgo(7), new Date()),
       getSnapshotsInRange(daysAgo(30), new Date()),
       computeDAU(),
       computeABComparison(),
+      computeRealtimeKFactor(),
     ]);
 
     // 前一时间段快照（用于趋势对比）
@@ -207,6 +251,7 @@ exports.main = async (event, context) => {
           trend24h: trends24h.viral_coef || { delta: 0, direction: 'flat' },
           trend7d: trends7d.viral_coef || { delta: 0, direction: 'flat' },
         },
+        realtimeKF,
         funnel,
         alerts,
         dau: dauData,
