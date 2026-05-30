@@ -116,7 +116,7 @@ onShareAppMessage(() => {
   return {
     title: '测测你的AI段位！我在进化湾等你来战',
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
-    imageUrl: '/static/images/default-share.png',
+    imageUrl: getApp().globalData.defaultShareImage || '/static/images/default-share.png',
   };
 });
 

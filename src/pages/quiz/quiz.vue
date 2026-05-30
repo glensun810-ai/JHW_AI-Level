@@ -546,7 +546,7 @@ onShareAppMessage(() => {
   return {
     title: '测测你的AI段位！5道题揭晓你的AI真实水平',
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
-    imageUrl: '/static/images/default-share.png',
+    imageUrl: getApp().globalData.defaultShareImage || '/static/images/default-share.png',
   };
 });
 

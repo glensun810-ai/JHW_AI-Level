@@ -278,7 +278,7 @@ onShareAppMessage(() => {
   return {
     title: `连续签到${consecutiveDays.value}天！测测你的AI段位变化了吗`,
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
-    imageUrl: '/static/images/default-share.png',
+    imageUrl: getApp().globalData.defaultShareImage || '/static/images/default-share.png',
   };
 });
 

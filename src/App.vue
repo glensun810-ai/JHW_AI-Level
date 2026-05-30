@@ -1,6 +1,7 @@
 <script>
 import { initAnalytics, trackShareCardClick, trackInviteClick } from '@/utils/analytics.js';
 import { callCloudFunction, getUserOpenid, getUserOpenidSync, preloadDailyQuestions } from '@/utils/api.js';
+import { generateDefaultShareCard } from '@/utils/share-card-generator.js';
 
 export default {
   globalData: {
@@ -8,6 +9,7 @@ export default {
     shareFromUid: '',
     shareTicket: '',
     groupId: '',
+    defaultShareImage: '', // v1.2: 预生成的分享卡片（含小程序码）
   },
   onLaunch(options) {
     this.globalData.appLaunchTime = Date.now();
@@ -29,6 +31,14 @@ export default {
 
     // 冷启动优化：后台预加载今日题目（不阻塞渲染）
     preloadDailyQuestions().catch(() => {});
+
+    // v1.2: 预生成分享卡片（含小程序码），供所有页面分享使用
+    generateDefaultShareCard().then((path) => {
+      this.globalData.defaultShareImage = path;
+    }).catch(() => {
+      // 降级到静态图
+      this.globalData.defaultShareImage = '/static/images/default-share.png';
+    });
     // 群聊 shareTicket 解析 → 提取群 ID 用于群排行
     if (options && options.shareTicket) {
       this.globalData.shareTicket = options.shareTicket;

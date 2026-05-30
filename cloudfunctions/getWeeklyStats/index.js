@@ -158,9 +158,11 @@ exports.main = async (event, context) => {
       };
     }
 
-    // 获取小程序码（供段位长图使用）
+    // 获取小程序码（供分享卡片 + 段位长图使用）
+    // v1.2: 固定 cloudPath，自动覆盖旧文件，客户端缓存结果
     if (action === 'getMiniCode') {
       try {
+        const cachePath = 'qrcodes/share_default.png';
         const qrRes = await cloud.openapi.wxacode.getUnlimited({
           scene: 'share',
           page: 'pages/index/index',
@@ -169,16 +171,16 @@ exports.main = async (event, context) => {
           lineColor: { r: 255, g: 215, b: 0 },
           isHyaline: true,
         });
-        const fileID = await cloud.uploadFile({
-          cloudPath: `qrcodes/${OPENID}_share.png`,
+        const uploadRes = await cloud.uploadFile({
+          cloudPath: cachePath,
           fileContent: qrRes.buffer,
         });
-        return {
-          code: 0,
-          data: { miniCodeUrl: fileID.fileID },
-        };
+        // fileID 格式: cloud://env.xxx/qrcodes/share_default.png
+        // 小程序端 canvas.createImage 支持 cloud:// 协议
+        return { code: 0, data: { miniCodeUrl: uploadRes.fileID } };
       } catch (e) {
-        // getUnlimited 需要云函数权限，降级返回空
+        // getUnlimited 需要云函数 openapi.wxacode.get 权限
+        // 失败时客户端降级使用 jhw-xcx.jpg 静态小程序码
         console.log('[getWeeklyStats] getMiniCode failed:', e.message);
         return { code: 0, data: { miniCodeUrl: '' } };
       }

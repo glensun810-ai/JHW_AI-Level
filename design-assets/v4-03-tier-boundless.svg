@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="无界段位徽章">
+  <defs>
+    <radialGradient id="g8" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#ffd700" stop-opacity="0.25"/>
+      <stop offset="35%" stop-color="#f59e0b" stop-opacity="0.08"/>
+      <stop offset="70%" stop-color="#ff8f00" stop-opacity="0.02"/>
+      <stop offset="100%" stop-color="#0d1b2a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="f8" cx="45%" cy="38%" r="62%">
+      <stop offset="0%"  stop-color="#2a2000"/>
+      <stop offset="55%" stop-color="#191200"/>
+      <stop offset="100%" stop-color="#0d0900"/>
+    </radialGradient>
+    <linearGradient id="b8" x1="5%" y1="5%" x2="95%" y2="95%">
+      <stop offset="0%"   stop-color="#ffe082"/><stop offset="22%" stop-color="#ffd700"/>
+      <stop offset="42%"  stop-color="#ffffff"/><stop offset="55%" stop-color="#ffd700"/>
+      <stop offset="72%"  stop-color="#b8860b"/><stop offset="100%" stop-color="#ffc107"/>
+    </linearGradient>
+    <radialGradient id="core8" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#fff"/>
+      <stop offset="25%"  stop-color="#fff9c4"/>
+      <stop offset="55%"  stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#e65100" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sh8" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="bloom8">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- 外光晕双层 -->
+  <circle cx="100" cy="100" r="96" fill="url(#g8)"/>
+  <circle cx="100" cy="100" r="64" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-opacity="0.06"/>
+
+  <!-- 芒尖（8方向，L8专属） -->
+  <g fill="#ffd700" opacity="0.15" filter="url(#bloom8)">
+    <polygon points="100,2 96,14 100,22 104,14"/>
+    <polygon points="100,198 96,186 100,178 104,186"/>
+    <polygon points="2,100 14,96 22,100 14,104"/>
+    <polygon points="198,100 186,96 178,100 186,104"/>
+    <polygon points="30,30 37,37 42,35 41,43 35,48 28,43"/>
+    <polygon points="170,30 163,37 158,35 159,43 165,48 172,43"/>
+    <polygon points="30,170 37,163 42,158 43,164 48,170 43,175"/>
+    <polygon points="170,170 163,163 158,158 159,164 165,170 172,175"/>
+  </g>
+
+  <!-- 铭文装饰环 -->
+  <circle cx="100" cy="100" r="91" fill="none" stroke="#ffd700" stroke-width="0.8" stroke-opacity="0.25" stroke-dasharray="2 10"/>
+  <circle cx="100" cy="100" r="91" fill="none" stroke="#fff" stroke-width="0.5" stroke-opacity="0.12" stroke-dasharray="2 10" stroke-dashoffset="5"/>
+
+  <!-- 金属边框 8px -->
+  <circle cx="100" cy="100" r="78" fill="none" stroke="url(#b8)" stroke-width="8"/>
+  <circle cx="100" cy="100" r="73" fill="none" stroke="#fff" stroke-width="0.8" opacity="0.08"/>
+  <circle cx="100" cy="100" r="83" fill="none" stroke="#fff" stroke-width="0.8" opacity="0.06"/>
+
+  <!-- 底盘 -->
+  <circle cx="100" cy="100" r="72" fill="url(#f8)"/>
+
+  <!-- ═══ 核心：人体剪影+内核溢出（L8 终极觉醒） ═══ -->
+  <g transform="translate(100, 82)">
+    <!-- 剪影本身变成几何线构（不再是实心填充），部分边界已溶解 -->
+    <path d="M0,-44 C18,-44 34,-30 40,-10 L40,-8 C42,8 38,18 28,28
+             L24,32 L18,36 L10,40 L0,44 L-10,40 L-18,36 L-24,32
+             L-28,28 C-38,18 -42,8 -40,-8 L-40,-10 C-34,-30 -18,-44 0,-44 Z"
+          fill="none" stroke="#ffd700" stroke-width="1.5" stroke-opacity="0.35"/>
+
+    <!-- 头部剪影的几何碎片（剪影正在"溶解"为几何结构） -->
+    <path d="M0,-44 L6,-36 L-6,-36 Z" fill="#ffd700" opacity="0.12"/>
+    <path d="M-36,0 L-30,-8 L-30,8 Z" fill="#ffd700" opacity="0.1"/>
+    <path d="M36,0 L30,-8 L30,8 Z" fill="#ffd700" opacity="0.1"/>
+
+    <!-- 肩线（几何化，延长为光芒射线） -->
+    <g stroke="#ffd700" stroke-width="1" stroke-opacity="0.3" stroke-linecap="round" fill="none">
+      <line x1="-28" y1="42" x2="-54" y2="60"/>
+      <line x1="28" y1="42" x2="54" y2="60"/>
+    </g>
+
+    <!-- L8 内核：全连接网络（12节点+全连接+溢出边界） -->
+    <!-- 中心光核 -->
+    <circle cx="0" cy="0" r="14" fill="url(#core8)" opacity="0.25"/>
+    <circle cx="0" cy="0" r="5" fill="#fff" opacity="0.95" filter="url(#bloom8)"/>
+    <circle cx="0" cy="0" r="2.5" fill="#fff"/>
+
+    <!-- 内层6节点（全连接） -->
+    <g fill="#ffd700" opacity="0.7">
+      <circle cx="0" cy="-20" r="2.5"/>
+      <circle cx="17" cy="-10" r="2.5"/>
+      <circle cx="17" cy="10" r="2.5"/>
+      <circle cx="0" cy="20" r="2.5"/>
+      <circle cx="-17" cy="10" r="2.5"/>
+      <circle cx="-17" cy="-10" r="2.5"/>
+    </g>
+    <!-- 内层全连接线 -->
+    <g fill="none" stroke="#ffd700" stroke-width="0.7" opacity="0.35">
+      <polygon points="0,-20 17,-10 17,10 0,20 -17,10 -17,-10"/>
+      <line x1="0" y1="0" x2="0" y2="-20"/><line x1="0" y1="0" x2="17" y2="-10"/>
+      <line x1="0" y1="0" x2="17" y2="10"/><line x1="0" y1="0" x2="0" y2="20"/>
+      <line x1="0" y1="0" x2="-17" y2="10"/><line x1="0" y1="0" x2="-17" y2="-10"/>
+      <!-- 环上连接 -->
+      <line x1="0" y1="-20" x2="17" y2="-10"/><line x1="17" y1="-10" x2="17" y2="10"/>
+      <line x1="17" y1="10" x2="0" y2="20"/><line x1="0" y1="20" x2="-17" y2="10"/>
+      <line x1="-17" y1="10" x2="-17" y2="-10"/><line x1="-17" y1="-10" x2="0" y2="-20"/>
+    </g>
+
+    <!-- 外层12节点（部分在剪影内，部分溢出） -->
+    <g fill="#f59e0b" opacity="0.5">
+      <circle cx="0" cy="-34" r="2.2"/>
+      <circle cx="17" cy="-29" r="2.2"/>
+      <circle cx="30" cy="-17" r="2.2"/>
+      <circle cx="34" cy="0" r="2.2"/>
+      <circle cx="30" cy="17" r="2.2"/>
+      <circle cx="17" cy="29" r="2.2"/>
+      <circle cx="0" cy="34" r="2.2"/>
+      <circle cx="-17" cy="29" r="2.2"/>
+      <circle cx="-30" cy="17" r="2.2"/>
+      <circle cx="-34" cy="0" r="2.2"/>
+      <circle cx="-30" cy="-17" r="2.2"/>
+      <circle cx="-17" cy="-29" r="2.2"/>
+    </g>
+
+    <!-- 外层到内层的部分连接（不完全连接=有机感） -->
+    <g fill="none" stroke="#f59e0b" stroke-width="0.5" opacity="0.25">
+      <line x1="0" y1="-20" x2="0" y2="-34"/><line x1="0" y1="-20" x2="17" y2="-29"/>
+      <line x1="17" y1="-10" x2="17" y2="-29"/><line x1="17" y1="-10" x2="30" y2="-17"/>
+      <line x1="17" y1="10" x2="30" y2="17"/><line x1="0" y1="20" x2="17" y2="29"/>
+      <line x1="-17" y1="10" x2="-30" y2="17"/><line x1="-17" y1="-10" x2="-30" y2="-17"/>
+      <line x1="0" y1="20" x2="-17" y2="29"/><line x1="0" y1="20" x2="0" y2="34"/>
+    </g>
+
+    <!-- 溢出射线（4条，延伸出剪影边界） -->
+    <g stroke="#ffd700" stroke-width="0.8" opacity="0.3" stroke-linecap="round" fill="none" filter="url(#bloom8)">
+      <line x1="0" y1="-34" x2="0" y2="-52"/>
+      <line x1="34" y1="0" x2="52" y2="0"/>
+      <line x1="-34" y1="0" x2="-52" y2="0"/>
+      <line x1="0" y1="34" x2="0" y2="52"/>
+    </g>
+
+    <!-- 溢出射线末端的星点 -->
+    <g fill="#fff" opacity="0.7">
+      <circle cx="0" cy="-52" r="1.5"/>
+      <circle cx="52" cy="0" r="1.5"/>
+      <circle cx="-52" cy="0" r="1.5"/>
+      <circle cx="0" cy="52" r="1.5"/>
+    </g>
+  </g>
+
+  <!-- 表面高光 -->
+  <ellipse cx="84" cy="44" rx="34" ry="17" fill="url(#sh8)" transform="rotate(-15 84 44)"/>
+
+  <!-- 粒子 L8=16 -->
+  <g fill="#ffd700">
+    <circle cx="26" cy="68" r="2.2" opacity="0.5"/>
+    <circle cx="176" cy="40" r="2.8" opacity="0.55"/>
+    <circle cx="30" cy="132" r="1.8" opacity="0.38"/>
+    <circle cx="172" cy="135" r="2.2" opacity="0.42"/>
+    <circle cx="22" cy="98" r="1.5" opacity="0.28"/>
+    <circle cx="180" cy="92" r="1.8" opacity="0.32"/>
+    <circle cx="38" cy="168" r="1.6" opacity="0.28"/>
+    <circle cx="162" cy="170" r="1.8" opacity="0.32"/>
+    <circle cx="48" cy="36" r="1.5" opacity="0.32"/>
+    <circle cx="150" cy="30" r="1.8" opacity="0.38"/>
+    <circle cx="16" cy="50" r="1.2" opacity="0.22"/>
+    <circle cx="186" cy="58" r="1.5" opacity="0.24"/>
+    <circle cx="44" cy="152" r="1.2" opacity="0.2"/>
+    <circle cx="157" cy="152" r="1.5" opacity="0.24"/>
+    <circle cx="10" cy="78" r="1" opacity="0.18"/>
+    <circle cx="192" cy="112" r="1.2" opacity="0.2"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="172" cy="56" r="1.2" opacity="0.65"/>
+    <circle cx="28" cy="50" r="1" opacity="0.55"/>
+    <circle cx="112" cy="24" r="1.5" opacity="0.5"/>
+    <circle cx="88" cy="176" r="1.2" opacity="0.4"/>
+  </g>
+</svg>

@@ -1732,7 +1732,7 @@ onShareAppMessage(() => {
   if (shareChallengeId) path += `&challengeId=${encodeURIComponent(shareChallengeId)}`;
   // 消费掉一次性挑战分享 ID
   pendingChallengeShareId.value = '';
-  const shareImage = personaCardUrl.value || generatedCardUrl.value || '/static/images/default-share.png';
+  const shareImage = personaCardUrl.value || generatedCardUrl.value || getApp().globalData.defaultShareImage || '/static/images/default-share.png';
   return {
     title: finalTitle,
     path,

@@ -428,7 +428,7 @@ onShareAppMessage(() => {
       ? `我收集到了知识星「${cardTitle}」🌟 测测你能收集多少颗？`
       : `我已点亮 ${collectedCards.value.length}/30 颗知识星 🌌 来看看你的AI段位吧`,
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
-    imageUrl: '/static/images/default-share.png',
+    imageUrl: getApp().globalData.defaultShareImage || '/static/images/default-share.png',
   };
 });
 

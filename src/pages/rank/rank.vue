@@ -514,7 +514,7 @@ onShareAppMessage(() => {
   return {
     title: '测测你的AI段位！看看你在好友中排第几',
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
-    imageUrl: '/static/images/default-share.png',
+    imageUrl: getApp().globalData.defaultShareImage || '/static/images/default-share.png',
   };
 });
 
