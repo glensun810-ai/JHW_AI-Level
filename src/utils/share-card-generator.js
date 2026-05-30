@@ -42,15 +42,25 @@ export async function generateDefaultShareCard() {
     // 静默 fallback 到静态小程序码
   }
 
-  // ③ 尝试离屏 canvas 生成
+  // ③ 尝试离屏 canvas 生成（优先云函数码，失败则回退静态码）
   try {
     const tempPath = await renderShareCard(qrUrl);
     uni.setStorageSync(CACHE_KEY, tempPath);
     return tempPath;
   } catch (e) {
-    console.warn('[share-card] 离屏 canvas 生成失败，使用 fallback:', e.message);
-    // 降级：直接返回小程序码图片（至少用户能看到码）
-    return qrUrl;
+    console.warn('[share-card] 离屏 canvas 生成失败，尝试 fallback:', e.message);
+    // 如果云函数码加载失败，用静态码再试一次
+    if (qrUrl !== FALLBACK_QR) {
+      try {
+        const tempPath = await renderShareCard(FALLBACK_QR);
+        uni.setStorageSync(CACHE_KEY, tempPath);
+        return tempPath;
+      } catch (e2) {
+        console.warn('[share-card] fallback 也失败:', e2.message);
+      }
+    }
+    // 终极降级：直接返回小程序码图片（至少用户能看到码）
+    return FALLBACK_QR;
   }
 }
 
@@ -101,10 +111,21 @@ function renderShareCard(qrUrl) {
     ctx.font = '15px sans-serif';
     ctx.fillText('你的AI段位是什么？', W / 2, 58);
 
-    // ─── 小程序码（居中偏左，右侧留给文案） ───
-    // 先绘制码的图片
+    // ─── 小程序码（居中偏左，右侧留给文案） ──
+    // 带超时保护的图片加载
+    let resolved = false;
+    const IMG_TIMEOUT = 8000;
+
     const qrImg = canvas.createImage();
+    const timer = setTimeout(() => {
+      if (!resolved) { resolved = true; reject(new Error('小程序码加载超时')); }
+    }, IMG_TIMEOUT);
+
     qrImg.onload = () => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timer);
+
       const qrSize = 130;
       const qrX = 20;
       const qrY = 100;
@@ -137,14 +158,15 @@ function renderShareCard(qrUrl) {
 
       // ─── 导出 ───
       canvas.toTempFilePath({
-        success: (res) => resolve(res.tempFilePath),
+        success: (res2) => resolve(res2.tempFilePath),
         fail: (err) => reject(new Error('导出失败: ' + (err.errMsg || 'unknown'))),
       });
     };
 
-    qrImg.onerror = () => reject(new Error('小程序码图片加载失败'));
+    qrImg.onerror = () => {
+      if (!resolved) { resolved = true; clearTimeout(timer); reject(new Error('小程序码图片加载失败')); }
+    };
 
-    // 设置 src 必须在 onload 之后（部分基础库行为）
     qrImg.src = qrUrl;
   });
 }
