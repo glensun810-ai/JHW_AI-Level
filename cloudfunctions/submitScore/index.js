@@ -60,16 +60,22 @@ const DIM_INDEX = {
 // 基于题目实际 dimension 字段计算雷达图（修复：不再按数组位置硬编码）
 function calcRadarData(qScores, questions) {
   const clamp = (v) => Math.max(0, Math.min(100, v));
-  const dimScores = [0, 0, 0, 0, 0]; // 5 维度
+  const dimScores = [0, 0, 0, 0, 0];
   const dimCounts = [0, 0, 0, 0, 0];
+  let usedDimensionField = false;
 
   for (let i = 0; i < qScores.length; i++) {
-    const q = questions[i];
-    const dim = (q && q.dimension) ? (DIM_INDEX[q.dimension] ?? -1) : -1;
-    if (dim >= 0) {
-      dimScores[dim] += qScores[i] * 10;
-      dimCounts[dim]++;
+    let dim = -1;
+    if (questions && questions[i] && questions[i].dimension) {
+      dim = DIM_INDEX[questions[i].dimension] ?? -1;
+      if (dim >= 0) usedDimensionField = true;
     }
+    // 降级：无 questions 或 questions 无 dimension 时按数组索引映射
+    if (dim < 0) {
+      dim = i % 5;
+    }
+    dimScores[dim] += qScores[i] * 10;
+    dimCounts[dim]++;
   }
 
   return [
