@@ -156,8 +156,11 @@ function renderShareCard(qrUrl) {
       ctx.textAlign = 'center';
       ctx.fillText('进化湾 · 追踪你的AI进化之路', W / 2, H - 22);
 
-      // ─── 导出 ───
-      canvas.toTempFilePath({
+      // ─── 导出（用 wx.canvasToTempFilePath 而非实例方法，兼容性更好）───
+      wx.canvasToTempFilePath({
+        canvas,
+        x: 0, y: 0, width: W, height: H,
+        destWidth: W * 2, destHeight: H * 2,
         success: (res2) => resolve(res2.tempFilePath),
         fail: (err) => reject(new Error('导出失败: ' + (err.errMsg || 'unknown'))),
       });
