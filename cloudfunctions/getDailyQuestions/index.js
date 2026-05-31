@@ -400,6 +400,47 @@ exports.main = async (event, context) => {
       }
     }
 
+    // Step 6.5 (Phase 5 Q0-2): 维度平衡 — 确保每套题 5 维度各至少 1 题
+    const DIMENSIONS = ['info_awareness', 'tool_usage', 'content_discern', 'era_mindset', 'think_depth'];
+    const dimTargetPerSet = Math.max(1, Math.floor(questionCount / 5)); // 5题→1, 10题→2
+    const dimCount = {};
+    for (const d of DIMENSIONS) dimCount[d] = selectedQuestions.filter(q => q.dimension === d).length;
+
+    for (const dim of DIMENSIONS) {
+      const need = dimTargetPerSet - (dimCount[dim] || 0);
+      if (need <= 0) continue;
+
+      // 找到维度多余的题目来替换
+      const excessDims = DIMENSIONS.filter(d => (dimCount[d] || 0) > dimTargetPerSet);
+      // 从 available 中找该维度的候选
+      const selectedIds = new Set(selectedQuestions.map(q => q._id));
+      const dimCandidates = availableQuestions.filter(
+        q => q.dimension === dim && !selectedIds.has(q._id)
+      );
+      if (dimCandidates.length === 0) {
+        console.warn(`[getDailyQuestions] 维度「${dim}」无可用候选，跳过平衡`);
+        continue;
+      }
+
+      for (let n = 0; n < Math.min(need, dimCandidates.length); n++) {
+        // 找到一个多余维度的题目位置来替换
+        let swapIdx = -1;
+        for (const ed of excessDims) {
+          swapIdx = selectedQuestions.findIndex(q => q.dimension === ed);
+          if (swapIdx >= 0) { dimCount[ed]--; break; }
+        }
+        if (swapIdx < 0) {
+          // 没有多余维度的题，直接替换最后一题
+          swapIdx = selectedQuestions.length - 1;
+        }
+        const replacement = dimCandidates[n];
+        const oldDim = selectedQuestions[swapIdx].dimension;
+        selectedQuestions[swapIdx] = replacement;
+        dimCount[dim] = (dimCount[dim] || 0) + 1;
+        console.log(`[getDailyQuestions] 维度平衡: ${oldDim}→${dim} "${replacement.stem.slice(0, 30)}..."`);
+      }
+    }
+
     // Step 7: 特殊保护规则
 
     // 6a. 隐私安全题每周至少出现一次（周一确保包含）

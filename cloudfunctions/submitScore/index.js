@@ -48,44 +48,64 @@ function getPersona(radarValues) {
   return { name: '均衡的进化者', emoji: '⚖️', description: PERSONAS[8].description, rarity: 5 };
 }
 
-function calcRadarData(qScores) {
-  const clamp = (v) => Math.max(0, Math.min(100, v));
+// Phase 5 Q0-1: 维度名→数组索引映射
+const DIM_INDEX = {
+  'info_awareness': 0,
+  'tool_usage': 1,
+  'content_discern': 2,
+  'era_mindset': 3,
+  'think_depth': 4,
+};
 
-  const infoAwareness  = qScores[0] * 10;
-  const toolUsage      = Math.round((qScores[1] * 10 + qScores[2] * 5) / 1.5);
-  const contentDiscern = qScores[2] * 10;
-  const eraMindset     = qScores[3] * 10;
-  const thinkDepth     = qScores[4] * 10;
+// 基于题目实际 dimension 字段计算雷达图（修复：不再按数组位置硬编码）
+function calcRadarData(qScores, questions) {
+  const clamp = (v) => Math.max(0, Math.min(100, v));
+  const dimScores = [0, 0, 0, 0, 0]; // 5 维度
+  const dimCounts = [0, 0, 0, 0, 0];
+
+  for (let i = 0; i < qScores.length; i++) {
+    const q = questions[i];
+    const dim = (q && q.dimension) ? (DIM_INDEX[q.dimension] ?? -1) : -1;
+    if (dim >= 0) {
+      dimScores[dim] += qScores[i] * 10;
+      dimCounts[dim]++;
+    }
+  }
 
   return [
-    clamp(infoAwareness),
-    clamp(toolUsage),
-    clamp(contentDiscern),
-    clamp(eraMindset),
-    clamp(thinkDepth),
+    clamp(dimCounts[0] > 0 ? dimScores[0] / dimCounts[0] : 0),
+    clamp(dimCounts[1] > 0 ? dimScores[1] / dimCounts[1] : 0),
+    clamp(dimCounts[2] > 0 ? dimScores[2] / dimCounts[2] : 0),
+    clamp(dimCounts[3] > 0 ? dimScores[3] / dimCounts[3] : 0),
+    clamp(dimCounts[4] > 0 ? dimScores[4] / dimCounts[4] : 0),
   ];
 }
 
 // 从 test_record answers 中按维度聚合分数
-function calcDimensionScores(answers) {
-  const dimMap = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
-  const dimCnt = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
-  // dimension mapping: 0=info_awareness, 1=tool_usage, 2=content_discern, 3=era_mindset, 4=think_depth
-  // 从 question 的 dimension 字段推断，但 answers 只有 score 和 questionId
-  // 使用简化映射：按顺序分布到各维度
-  const answerScores = answers.map(a => a.score || 0);
-  // 将答案分数按维度循环分配（5 题模式：每维度 1 题；10 题模式：每维度 2 题）
-  for (let i = 0; i < answerScores.length; i++) {
-    const dim = i % 5;
-    dimMap[dim] += answerScores[i];
-    dimCnt[dim]++;
+// 优先使用题目实际 dimension；无 questions 时降级为按数组索引（兼容历史数据+好友匹配）
+function calcDimensionScores(answers, questions) {
+  const dimScores = [0, 0, 0, 0, 0];
+  const dimCounts = [0, 0, 0, 0, 0];
+
+  for (let i = 0; i < answers.length; i++) {
+    let dim = -1;
+    if (questions && questions[i] && questions[i].dimension) {
+      dim = DIM_INDEX[questions[i].dimension] ?? -1;
+    }
+    // 降级：无 questions 时按数组索引映射（保持向后兼容）
+    if (dim < 0) {
+      dim = i % 5;
+    }
+    dimScores[dim] += (answers[i].score || 0);
+    dimCounts[dim]++;
   }
+
   return [
-    dimCnt[0] > 0 ? dimMap[0] / dimCnt[0] : 0,
-    dimCnt[1] > 0 ? dimMap[1] / dimCnt[1] : 0,
-    dimCnt[2] > 0 ? dimMap[2] / dimCnt[2] : 0,
-    dimCnt[3] > 0 ? dimMap[3] / dimCnt[3] : 0,
-    dimCnt[4] > 0 ? dimMap[4] / dimCnt[4] : 0,
+    dimCounts[0] > 0 ? dimScores[0] / dimCounts[0] : 0,
+    dimCounts[1] > 0 ? dimScores[1] / dimCounts[1] : 0,
+    dimCounts[2] > 0 ? dimScores[2] / dimCounts[2] : 0,
+    dimCounts[3] > 0 ? dimScores[3] / dimCounts[3] : 0,
+    dimCounts[4] > 0 ? dimScores[4] / dimCounts[4] : 0,
   ];
 }
 
@@ -352,7 +372,7 @@ exports.main = async (event, context) => {
     const displayScore = isDeepMode ? totalScore : tierScore;
 
     // 雷达图数据 + AI人格画像
-    const radarValues = calcRadarData(qScores);
+    const radarValues = calcRadarData(qScores, orderedQuestions);
     const persona = getPersona(radarValues);
 
     // 查询用户当前数据（提前查询，供知识卡去重用）
@@ -1172,7 +1192,7 @@ async function handleGetLastResult(openid) {
     const tierScore = Math.min(50, Math.max(5, record.totalScore));
     const tier = getTier(tierScore);
     const nextTier = getNextTier(tierScore);
-    const radarValues = calcRadarData(qScores);
+    const radarValues = calcRadarData(qScores, orderedQuestions);
     const persona = getPersona(radarValues);
 
     // 近似 percentile
