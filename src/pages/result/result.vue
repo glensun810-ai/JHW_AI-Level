@@ -565,7 +565,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
+import { onShareAppMessage, onShareTimeline, onLoad } from '@dcloudio/uni-app';
 import TierBadge from '@/components/TierBadge/TierBadge.vue';
 import RadarChart from '@/components/RadarChart/RadarChart.vue';
 import ReversalReveal from '@/components/ReversalReveal/ReversalReveal.vue';
@@ -1104,12 +1104,22 @@ async function autoCollectNewCards() {
   }
 }
 
+// Phase 4: onLoad 捕获 URL 参数（uni-app 官方推荐方式）
+let _reviewMode = false;
+onLoad((options) => {
+  _reviewMode = (options && options.mode) === 'review';
+});
+
 onMounted(() => {
   // Phase 4: 检查是否为回顾模式
-  const pages = getCurrentPages();
-  const page = pages[pages.length - 1];
-  const options = (page && page.$page) ? page.$page.options : (page.options || {});
-  const isReviewMode = options.mode === 'review';
+  // 优先使用 onLoad 捕获的参数，fallback 到 page.options
+  let isReviewMode = _reviewMode;
+  if (!isReviewMode) {
+    const pages = getCurrentPages();
+    const page = pages[pages.length - 1];
+    const opts = (page && page.options) || {};
+    isReviewMode = opts.mode === 'review';
+  }
 
   if (quizStore.lastResult && !isReviewMode) {
     // 新鲜测试结果 — 正常动画流程
