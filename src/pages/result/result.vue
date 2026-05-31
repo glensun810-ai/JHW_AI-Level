@@ -2016,8 +2016,7 @@ onShareTimeline(() => {
     flex-direction: column;
     align-items: center;
     padding: 32rpx 32rpx 160rpx;
-    word-break: break-all;
-    overflow-wrap: break-word;
+    overflow-wrap: break-word;  // 仅在长单词/URL溢出时断行，不破坏正常文字排版
   }
 
   &__section {

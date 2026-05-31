@@ -622,11 +622,15 @@ onShareTimeline(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 14rpx 0;
-    font-size: 24rpx;
+    padding: 14rpx 4rpx;
+    font-size: 22rpx;
     color: $color-text-muted;
     position: relative;
     transition: color 0.2s;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    min-width: 0;
 
     &--active {
       color: $color-accent;
@@ -648,6 +652,8 @@ onShareTimeline(() => {
   &__list {
     flex: 1;
     padding: 16rpx 28rpx;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
 
   &__loading {

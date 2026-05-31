@@ -303,7 +303,9 @@ onShareTimeline(() => {
 .page-checkin {
   min-height: 100vh;
   background: $color-bg-primary;
-  padding: 32rpx;
+  padding: 32rpx 32rpx calc(100rpx + env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  box-sizing: border-box;
 
   // ====== 连续天数 ======
   &__hero {

@@ -219,7 +219,7 @@ async function renderTierCard(canvas, ctx, data) {
   }
 
   // ─── ⑥ AI 商数（大数字 + 下方标签 + 参照系） ───
-  const scoreY = 415 + topShift;
+  const scoreY = 435 + topShift;
   ctx.fillStyle = theme.text;
   ctx.font = 'bold 88px sans-serif';
   ctx.textAlign = 'center';
@@ -231,14 +231,14 @@ async function renderTierCard(canvas, ctx, data) {
 
   ctx.fillStyle = theme.subtitle;
   ctx.font = '24px sans-serif';
-  ctx.fillText('AI商数', W / 2, 455 + topShift);
+  ctx.fillText('AI商数', W / 2, 488 + topShift);
 
   ctx.fillStyle = theme.subtitle;
   ctx.font = '20px sans-serif';
-  ctx.fillText('均值约105 · 超越全国 ' + percentile + '% 的用户', W / 2, 478 + topShift);
+  ctx.fillText('均值约105 · 超越全国 ' + percentile + '% 的用户', W / 2, 520 + topShift);
 
   // ─── ⑦ 段位进度面板 600×105 ───
-  const progPanelY = 520 + topShift;
+  const progPanelY = 570 + topShift;
   const progPanelW = 600;
   const progPanelH = 105;
   const progPanelX = (W - progPanelW) / 2;
@@ -307,10 +307,10 @@ async function renderTierCard(canvas, ctx, data) {
     friendRankBottom = friendY + pillH;
   }
 
-  // ─── ⑨ 小程序码面板 670×175 ───
-  const qrPanelY = friendRankBottom + 24;
+  // ─── ⑨ 小程序码面板 670×200 ───
+  const qrPanelY = friendRankBottom + 40;
   const qrPanelW = 670;
-  const qrPanelH = 175;
+  const qrPanelH = 200;
   const qrPanelX = (W - qrPanelW) / 2;
   drawRoundRect(ctx, qrPanelX, qrPanelY, qrPanelW, qrPanelH, 16);
   ctx.fillStyle = 'rgba(255,255,255,0.03)';
@@ -322,18 +322,18 @@ async function renderTierCard(canvas, ctx, data) {
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 26px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('扫码测测你的 AI 段位', W / 2, qrPanelY + 32);
+  ctx.fillText('扫码测测你的 AI 段位', W / 2, qrPanelY + 36);
 
   const qrSize = 140;
   const qrX = (W - qrSize) / 2;
-  const qrY = qrPanelY + 42;
+  const qrY = qrPanelY + 52;
   await drawMiniCode(canvas, ctx, qrX, qrY, qrSize, miniCodeUrl, 14);
 
   // 长按提示（面板下方）
   ctx.fillStyle = theme.subtitle;
   ctx.font = '18px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('长按识别小程序码', W / 2, qrPanelY + qrPanelH + 18);
+  ctx.fillText('长按识别小程序码', W / 2, qrPanelY + qrPanelH + 22);
 
   // ─── ⑩ 页脚 ───
   ctx.fillStyle = theme.subtitle;
@@ -453,7 +453,7 @@ async function renderPersonaCard(canvas, ctx, data) {
   ctx.font = 'bold 52px sans-serif';
   ctx.shadowColor = 'rgba(124,58,237,0.4)';
   ctx.shadowBlur = 16;
-  ctx.fillText(personaName, W / 2, 320 + topShift);
+  ctx.fillText(personaName, W / 2, 345 + topShift);
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
 
@@ -463,10 +463,10 @@ async function renderPersonaCard(canvas, ctx, data) {
   ctx.textAlign = 'center';
   const descLines = wrapText(ctx, personaDesc, W - 120, 38, 4);
   descLines.forEach((line, i) => {
-    ctx.fillText(line, W / 2, 380 + topShift + i * 40);
+    ctx.fillText(line, W / 2, 415 + topShift + i * 44);
   });
 
-  const descBottom = 380 + topShift + descLines.length * 40;
+  const descBottom = 415 + topShift + descLines.length * 44;
 
   // ─── 特质卡片 ───
   const cardY = descBottom + 40;
