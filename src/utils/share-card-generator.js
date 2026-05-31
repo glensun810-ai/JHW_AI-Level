@@ -11,8 +11,8 @@ import { callCloudFunction } from './api.js';
 // 静态小程序码 fallback（云函数生成失败时使用）
 const FALLBACK_QR = '/static/jhw-xcx.jpg';
 
-// 缓存 key
-const CACHE_KEY = '__share_card_image__';
+// 缓存 key（v2: 新版二维码）
+const CACHE_KEY = '__share_card_image_v2__';
 
 /**
  * 生成默认分享卡片并返回临时文件路径
