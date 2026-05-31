@@ -584,6 +584,7 @@ onShow(() => {
   loadTierProgress();
   loadWeeklyRank();
   loadReturningUserData(); // Phase 4: 回访用户段位展示
+  preloadInviteStatus(); // 刷新邀请解锁状态
 });
 
 // Phase 1: 加载挑战数据
@@ -657,7 +658,6 @@ function animateNumber(target) {
 
 // 预加载邀请解锁状态，减少 handleStart 中的云函数等待
 async function preloadInviteStatus() {
-  // Phase 2: 先加载邀请统计数据（用于 banner 展示）
   try {
     const statsRes = await fetchInviteStats();
     if (statsRes.code === 0 && statsRes.data) {
@@ -670,14 +670,14 @@ async function preloadInviteStatus() {
   inviteStatsLoaded.value = true;
 
   if (!hasUsedFreeTestToday()) {
-    inviteUnlockCached.value = false; // 免费次数可用，无需邀请解锁
+    inviteUnlockCached.value = false;
     return;
   }
-  try {
-    const res = await callCloudFunction('submitScore', { action: 'claimInviteUnlock' }, { retry: false });
-    inviteUnlockCached.value = !!(res.code === 0 && res.data && res.data.available);
-  } catch (e) {
-    inviteUnlockCached.value = false;
+  // 仅检查可用次数，不实际消费（消费在 handleStart 点击时进行）
+  if (inviteStats.value.inviteUnlocks > 0) {
+    inviteUnlockCached.value = true;
+  } else {
+    inviteUnlockCached.value = null; // null = 需要实时查询
   }
 }
 
@@ -697,11 +697,19 @@ async function handleStart() {
   }
 
   // ② 邀请解锁（优先 — 社交裂变）
-  // 预加载缓存命中 → 即时解锁，免云函数等待
+  // 缓存命中 → 乐观启动 + 后台核销
   if (inviteUnlockCached.value === true) {
     trackInviteUnlock(1);
-    uni.showToast({ title: '已使用邀请解锁次数！', icon: 'success' });
     inviteUnlockCached.value = false;
+    // 后台核销（不阻塞启动）
+    callCloudFunction('submitScore', { action: 'claimInviteUnlock' }, { retry: false })
+      .then(res => {
+        if (res.code === 0 && res.data?.available) {
+          uni.showToast({ title: '已使用邀请解锁次数！', icon: 'success' });
+        } else {
+          uni.showToast({ title: '解锁次数不足，本次为免费额度', icon: 'none' });
+        }
+      }).catch(() => {});
     startQuiz();
     return;
   }
