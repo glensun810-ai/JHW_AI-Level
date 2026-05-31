@@ -221,7 +221,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
+import { onShareAppMessage, onShareTimeline, onShow } from '@dcloudio/uni-app';
 import { fetchFriendRank, fetchTierDistribution, fetchWeeklyStats, updatePrivacy, getUserOpenidSync, fetchKFactorBadge } from '@/utils/api.js';
 import { generateGroupRankShareImage } from '@/utils/canvas-renderer.js';
 import { TIERS, toAIQuotient } from '@/utils/tier.js';
@@ -321,6 +321,18 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearInterval(countdownTimer);
+});
+
+// Tab 页面返回时刷新当前活跃榜单（用户可能在别处更新了头像昵称）
+onShow(() => {
+  if (activeTab.value === 'friend') loadFriendRank();
+  else if (activeTab.value === 'star') loadStarRank();
+  else if (activeTab.value === 'weekly') loadWeeklyRising();
+  else if (activeTab.value === 'group') loadGroupRank();
+  // national tab 数据相对静态，onMounted 已加载
+  updateCountdown();
+  // 刷新隐私状态
+  privacyHidden.value = !!uni.getStorageSync('privacy_hidden');
 });
 
 function updateCountdown() {
@@ -533,6 +545,8 @@ onShareTimeline(() => {
   background: $color-bg-primary;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;   // 防止横向溢出
+  padding-bottom: calc(80rpx + env(safe-area-inset-bottom));  // 底部 tab bar 补偿
 
   // ====== 今日结算倒计时 ======
   &__countdown-bar {
@@ -647,7 +661,7 @@ onShareTimeline(() => {
     display: flex;
     flex-direction: column;
     gap: 8rpx;
-    padding-bottom: 40rpx;
+    padding-bottom: 48rpx;
   }
 
   &__item {
