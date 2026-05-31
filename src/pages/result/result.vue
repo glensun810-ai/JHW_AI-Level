@@ -2019,6 +2019,22 @@ onShareTimeline(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative;  // 为光晕提供定位上下文
+  }
+
+  // 首屏段位区背景光晕 — 增强截图视觉深度
+  &__section:first-child::before {
+    content: '';
+    position: absolute;
+    top: -60rpx;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 500rpx;
+    height: 380rpx;
+    background: radial-gradient(ellipse at center, rgba(124, 58, 237, 0.12) 0%, rgba(245, 158, 11, 0.04) 50%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
   }
 
   &__section-title {
@@ -2111,18 +2127,23 @@ onShareTimeline(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4rpx;
-    margin-top: 10rpx;
+    gap: 6rpx;
+    margin-top: 24rpx;
+    padding: 20rpx 32rpx;
+    background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.08) 0%, transparent 70%);
+    border-radius: 20rpx;
 
     &-tier {
-      font-size: 32rpx;
+      font-size: 40rpx;
       font-weight: bold;
       color: #fff;
+      text-shadow: 0 0 24rpx rgba(245, 158, 11, 0.3);
     }
 
     &-persona {
-      font-size: 26rpx;
-      color: $color-text-secondary;
+      font-size: 28rpx;
+      color: #c0a0ff;
+      font-weight: 500;
     }
   }
 
