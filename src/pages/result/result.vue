@@ -1305,7 +1305,24 @@ async function loadReview() {
   try {
     const res = await fetchWeeklyStats();
     if (res.code === 0 && res.data) {
-      if (res.data.review) reviewData.value = res.data.review;
+      if (res.data.review) {
+        reviewData.value = res.data.review;
+      } else if (isFirstTimeTest.value) {
+        // SD-7 fix: 首次测试无历史时构造欢迎回顾
+        const tierName = result.value.tier || '神秘段位';
+        const tierEmoji = result.value.tierEmoji || '✨';
+        reviewData.value = {
+          history: [{
+            date: '今天',
+            tier: tierName,
+            emoji: tierEmoji,
+            score: result.value.totalScore || 0,
+          }],
+          change: 'same',
+          changeDetail: '你的 AI 进化之旅从这里开始！明天再来测，看看段位变化',
+          totalTests: 1,
+        };
+      }
       if (res.data.collectedCards) collectedCards.value = res.data.collectedCards;
       if (res.data.nickname) userProfile.value.nickname = res.data.nickname;
       if (res.data.avatar) userProfile.value.avatar = res.data.avatar;

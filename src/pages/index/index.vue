@@ -823,8 +823,12 @@ function handleDeepStart() {
   btnShrink.value = true;
   setTimeout(() => { showOverlay.value = true; }, 300);
   setTimeout(() => {
+    let quizUrl = '/pages/quiz/quiz';
+    if (challengeMode.value && challengeData.value) {
+      quizUrl += '?challengeId=' + encodeURIComponent(challengeData.value._id);
+    }
     uni.navigateTo({
-      url: '/pages/quiz/quiz',
+      url: quizUrl,
       fail: () => {
         transitioning.value = false;
         btnShrink.value = false;
