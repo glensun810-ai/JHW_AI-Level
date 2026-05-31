@@ -1059,7 +1059,8 @@ onMounted(async () => {
   color: #ffcc80;
   margin-bottom: 16rpx;
   line-height: 1.5;
-  word-break: break-all;
+  white-space: normal;
+  word-break: normal;
   overflow-wrap: break-word;
 }
 
@@ -1069,7 +1070,8 @@ onMounted(async () => {
   color: #b0bec5;
   margin-bottom: 24rpx;
   line-height: 1.7;
-  word-break: break-all;
+  white-space: normal;
+  word-break: normal;
   overflow-wrap: break-word;
 }
 
@@ -1094,7 +1096,8 @@ onMounted(async () => {
   font-size: 24rpx;
   color: #cfd8dc;
   line-height: 1.6;
-  word-break: break-all;
+  white-space: normal;
+  word-break: normal;
   overflow-wrap: break-word;
 }
 

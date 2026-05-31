@@ -79,10 +79,14 @@ onMounted(() => {
 
   &__body {
     position: relative;
+    width: 100%;
+    max-width: 100%;
     padding: 24rpx 28rpx;
     background: rgba(255,255,255,0.04);
     border-radius: 12rpx;
     border-left: 4rpx solid;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   &__quote-mark {
@@ -99,11 +103,15 @@ onMounted(() => {
   }
 
   &__text {
+    width: 100%;
+    max-width: 100%;
     font-size: 28rpx;
     color: $color-text-primary;
     line-height: 1.7;
-    word-break: break-all;
+    white-space: normal;
+    word-break: normal;
     overflow-wrap: break-word;
+    box-sizing: border-box;
   }
 
   &__byline {

@@ -136,37 +136,52 @@ defineExpose({ check });
 
   &__body {
     flex: 1;
+    width: 100%;
+    max-width: 100%;
     padding: 0 32rpx 16rpx;
     max-height: 60vh;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 
   &__section-title {
     display: block;
+    width: 100%;
+    max-width: 100%;
     font-size: 28rpx;
     font-weight: bold;
     color: $color-gold;
     margin-top: 20rpx;
     margin-bottom: 10rpx;
+    box-sizing: border-box;
   }
 
   &__text {
     display: block;
+    width: 100%;
+    max-width: 100%;
     font-size: 24rpx;
     color: $color-text-secondary;
     line-height: 1.7;
     margin-bottom: 8rpx;
-    word-break: break-all;
+    white-space: normal;
+    word-break: normal;
     overflow-wrap: break-word;
+    box-sizing: border-box;
   }
 
   &__bullet {
     display: block;
+    width: 100%;
+    max-width: 100%;
     font-size: 24rpx;
     color: $color-text-secondary;
     line-height: 1.7;
     padding-left: 8rpx;
-    word-break: break-all;
+    white-space: normal;
+    word-break: normal;
     overflow-wrap: break-word;
+    box-sizing: border-box;
   }
 
   &__footer {
