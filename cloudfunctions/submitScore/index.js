@@ -349,6 +349,24 @@ exports.main = async (event, context) => {
       questions.find(q => q._id === id)
     );
 
+    // Phase 5 Q1-3: 查询用户每题历史遇到次数（多版本 commentary 选择依据）
+    let questionEncounterCounts = {};
+    try {
+      const { data: pastRecords } = await db.collection('test_records')
+        .where({ _openid: OPENID })
+        .field({ answers: true })
+        .orderBy('createdAt', 'desc')
+        .limit(30)
+        .get();
+      for (const rec of (pastRecords || [])) {
+        for (const ans of (rec.answers || [])) {
+          if (ans.questionId) {
+            questionEncounterCounts[ans.questionId] = (questionEncounterCounts[ans.questionId] || 0) + 1;
+          }
+        }
+      }
+    } catch (e) { /* 降级：全部用首版 commentary */ }
+
     // 独立计算总分（不信任前端传值）
     const qScores = [];
     const commentary = [];
@@ -360,7 +378,17 @@ exports.main = async (event, context) => {
       const score = q.scores[idx] || 0;
       qScores.push(score);
       totalScore += score;
-      commentary.push(q.commentary ? q.commentary[idx] : '');
+
+      // Phase 5 Q1-3: 多版本 commentary 选择
+      const rawComment = q.commentary ? q.commentary[idx] : '';
+      if (Array.isArray(rawComment)) {
+        // 多版本格式: ["首次", "二次", "三次"]
+        const encounterCount = questionEncounterCounts[q._id] || 0;
+        const versionIdx = Math.min(encounterCount, rawComment.length - 1);
+        commentary.push(rawComment[versionIdx] || rawComment[0] || '');
+      } else {
+        commentary.push(rawComment || '');
+      }
     });
 
     // 段位映射（深度模式：100分制 → 映射到50分制，统一存储）
@@ -1184,7 +1212,8 @@ async function handleGetLastResult(openid) {
       const q = orderedQuestions[i];
       if (q) {
         qScores.push(ans.score);
-        commentary.push(q.commentary ? q.commentary[ans.selectedIndex] : '');
+        const rawComment = q.commentary ? q.commentary[ans.selectedIndex] : '';
+        commentary.push(Array.isArray(rawComment) ? (rawComment[0] || '') : (rawComment || ''));
       }
     });
 

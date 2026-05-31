@@ -234,6 +234,39 @@ exports.main = async (event, context) => {
     const diffConfig = getDifficultyConfig(effectiveTier);
     console.log(`[getDailyQuestions] userTier=${effectiveTier} diffConfig=${JSON.stringify(diffConfig)}`);
 
+    // Phase 5 Q0-5: 动态难度调整 — 根据最近 3 次测试趋势自动升降档
+    let adjustedDiffConfig = { ...diffConfig };
+    try {
+      const { data: recentTests } = await db.collection('test_records')
+        .where({ _openid: OPENID })
+        .orderBy('createdAt', 'desc')
+        .field({ totalScore: true })
+        .limit(3)
+        .get();
+      if (recentTests.length >= 2) {
+        const scores = recentTests.map(r => r.totalScore);
+        const trend = scores[0] - scores[scores.length - 1]; // 最新-最老
+        const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+
+        const TIER_ORDER = ['萌新', '探索者', '实践者', '协作者', '驾驭者', '炼金术士', '觉醒者', '无界'];
+        const tierIdx = TIER_ORDER.indexOf(effectiveTier);
+
+        if (trend < -5 && avg < 15 && tierIdx > 0) {
+          // 分数持续下降 + 均分偏低 → 降档（模拟"退段"感受）
+          const downgradeTier = TIER_ORDER[Math.max(0, tierIdx - 1)];
+          adjustedDiffConfig = getDifficultyConfig(downgradeTier);
+          console.log(`[getDailyQuestions] ⚠ 难度退档: ${effectiveTier}→${downgradeTier} (trend=${trend} avg=${avg.toFixed(1)})`);
+        } else if (trend > 8 && tierIdx < TIER_ORDER.length - 1) {
+          // 分数持续上升 → 轻微升档
+          const upgradeTier = TIER_ORDER[Math.min(TIER_ORDER.length - 1, tierIdx + 1)];
+          adjustedDiffConfig = getDifficultyConfig(upgradeTier);
+          console.log(`[getDailyQuestions] ↑ 难度升档: ${effectiveTier}→${upgradeTier} (trend=${trend} avg=${avg.toFixed(1)})`);
+        }
+      }
+    } catch (e) {
+      console.warn('[getDailyQuestions] 动态难度查询失败，使用默认配置:', e.message);
+    }
+
     const dayOfWeek = new Date(date).getDay();
     const primaryTheme = DAY_THEME_MAP[dayOfWeek] || 'comprehensive';
     const baseQuota = DAY_QUOTA_MAP[dayOfWeek] || { tech: 1, workplace: 1, fun: 1, life: 1, comprehensive: 1 };
@@ -377,7 +410,7 @@ exports.main = async (event, context) => {
         console.warn(`[getDailyQuestions] 主题「${theme}」无可用题目`);
         continue;
       }
-      const picked = selectWithDifficultyBalance(pool, count, `${seed}-${theme}`, diffConfig);
+      const picked = selectWithDifficultyBalance(pool, count, `${seed}-${theme}`, adjustedDiffConfig);
       selectedQuestions.push(...picked);
     }
 
