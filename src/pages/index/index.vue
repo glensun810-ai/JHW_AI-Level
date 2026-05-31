@@ -334,14 +334,7 @@ function handleDailyStart() {
   btnShrink.value = true;
   setTimeout(() => { showOverlay.value = true; }, 300);
   setTimeout(() => {
-    uni.navigateTo({
-      url: '/pages/quiz/quiz?mode=daily',
-      fail: () => {
-        transitioning.value = false;
-        btnShrink.value = false;
-        showOverlay.value = false;
-      },
-    });
+    navigateToQuiz('mode=daily');
   }, 500);
 }
 
@@ -782,6 +775,38 @@ async function handleStart() {
   }
 }
 
+// 统一导航到答题页（带失败重试 + 用户提示）
+function navigateToQuiz(params = '') {
+  const quizUrl = '/pages/quiz/quiz' + (params ? ('?' + params) : '');
+  const doNav = (isRetry) => {
+    uni.navigateTo({
+      url: quizUrl,
+      success: () => {
+        // 导航成功，状态在 onShow 中重置
+      },
+      fail: (err) => {
+        console.warn('[index] navigateTo quiz 失败:', err?.errMsg || 'unknown');
+        if (!isRetry) {
+          // 重试一次（等待页面生命周期完成）
+          setTimeout(() => doNav(true), 300);
+        } else {
+          // 重试仍失败，降级为 reLaunch
+          uni.reLaunch({
+            url: quizUrl,
+            fail: () => {
+              uni.showToast({ title: '启动失败，请重试', icon: 'none' });
+              transitioning.value = false;
+              btnShrink.value = false;
+              showOverlay.value = false;
+            },
+          });
+        }
+      },
+    });
+  };
+  doNav(false);
+}
+
 function startQuiz() {
   // Phase 5: CTA 入口音效
   createSoundEngine().play('cta_press');
@@ -794,19 +819,9 @@ function startQuiz() {
   btnShrink.value = true;
   setTimeout(() => { showOverlay.value = true; }, 300);
   setTimeout(() => {
-    let quizUrl = '/pages/quiz/quiz';
-    // Phase 1: 挑战模式传递 challengeId
-    if (challengeMode.value && challengeData.value) {
-      quizUrl += '?challengeId=' + encodeURIComponent(challengeData.value._id);
-    }
-    uni.navigateTo({
-      url: quizUrl,
-      fail: () => {
-        transitioning.value = false;
-        btnShrink.value = false;
-        showOverlay.value = false;
-      },
-    });
+    const params = (challengeMode.value && challengeData.value)
+      ? 'challengeId=' + encodeURIComponent(challengeData.value._id) : '';
+    navigateToQuiz(params);
   }, 500);
 }
 
@@ -823,18 +838,9 @@ function handleDeepStart() {
   btnShrink.value = true;
   setTimeout(() => { showOverlay.value = true; }, 300);
   setTimeout(() => {
-    let quizUrl = '/pages/quiz/quiz';
-    if (challengeMode.value && challengeData.value) {
-      quizUrl += '?challengeId=' + encodeURIComponent(challengeData.value._id);
-    }
-    uni.navigateTo({
-      url: quizUrl,
-      fail: () => {
-        transitioning.value = false;
-        btnShrink.value = false;
-        showOverlay.value = false;
-      },
-    });
+    const params = (challengeMode.value && challengeData.value)
+      ? 'challengeId=' + encodeURIComponent(challengeData.value._id) : '';
+    navigateToQuiz(params);
   }, 500);
 }
 

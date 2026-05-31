@@ -1845,7 +1845,12 @@ function retryQuiz() {
   quizStoreHook.reset();
 
   // 直接进答题页，无需走首页广告门控（setIndex 递增确保题目不重复）
-  uni.reLaunch({ url: '/pages/quiz/quiz?retry=1' });
+  uni.reLaunch({
+    url: '/pages/quiz/quiz?retry=1',
+    fail: () => {
+      uni.showToast({ title: '启动失败，请重试', icon: 'none' });
+    },
+  });
 }
 
 // P1-E: 首次用户"明天继续进化" — 建立 habit loop
