@@ -87,7 +87,10 @@
 
     <!-- 空状态 -->
     <view v-else class="page-checkin__empty">
-      <text>本周暂无晋升记录，加油打卡提升段位！</text>
+      <text class="page-checkin__empty-icon">🏆</text>
+      <text class="page-checkin__empty-title">本周暂无晋升记录</text>
+      <text class="page-checkin__empty-desc">加油打卡提升段位，或邀请好友来上榜</text>
+      <button class="page-checkin__empty-btn" open-type="share">📤 邀请好友</button>
     </view>
   </view>
 </template>
@@ -544,10 +547,24 @@ onShareTimeline(() => {
 
   &__empty {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 12rpx;
     padding-top: 60rpx;
     color: $color-text-muted;
     font-size: 26rpx;
+    text-align: center;
+
+    &-icon { font-size: 56rpx; }
+    &-title { font-size: 28rpx; color: #fff; font-weight: 600; }
+    &-desc { font-size: 24rpx; color: $color-text-muted; }
+    &-btn {
+      margin-top: 12rpx;
+      padding: 18rpx 40rpx;
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      border-radius: 32rpx;
+      font-size: 26rpx; color: #fff; font-weight: 600; border: none;
+    }
   }
 }
 
