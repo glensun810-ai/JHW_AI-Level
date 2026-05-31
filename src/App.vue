@@ -124,6 +124,23 @@ export default {
           }).catch(() => { /* 静默 */ });
         }
       }
+
+      // Phase 7: QR 码扫码归因（scene 参数编码分享者 openid）
+      if (q.scene && q.scene.startsWith('u_')) {
+        const inviterOpenid = q.scene.substring(2);
+        if (inviterOpenid && !q.from_uid) { // 避免重复覆盖已有的 from_uid
+          this.globalData.shareFromUid = inviterOpenid;
+          trackShareCardClick({ from_uid: inviterOpenid, share_channel: 'qrcode' });
+          getUserOpenid().then(myUid => {
+            if (myUid && inviterOpenid !== myUid) {
+              callCloudFunction('submitScore', {
+                action: 'recordInvite',
+                inviterUid: inviterOpenid,
+              }, { retry: false }).catch(() => {});
+            }
+          }).catch(() => {});
+        }
+      }
       // 群聊进入：保存 shareTicket 用于群排行/群挑战
       if (options.shareTicket) {
         this.globalData.shareTicket = options.shareTicket;
