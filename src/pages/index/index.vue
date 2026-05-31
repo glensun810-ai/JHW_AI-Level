@@ -41,8 +41,29 @@
 
     <!-- ====== 首屏可见区 ====== -->
     <view class="page-index__hero" :class="{ 'page-index__hero--shrink': btnShrink }">
-      <text class="page-index__title">你的AI段位</text>
-      <text class="page-index__subtitle">AI时代，你处在哪个段位？</text>
+      <text v-if="!showReturningHero" class="page-index__title">你的AI段位</text>
+      <text v-if="!showReturningHero" class="page-index__subtitle">AI时代，你处在哪个段位？</text>
+
+      <!-- Phase 4: 回访用户段位卡片（始终可见，不消耗额度） -->
+      <view v-if="showReturningHero" class="page-index__returning-card">
+        <image
+          v-if="returningTierBadge"
+          class="page-index__returning-badge"
+          :src="returningTierBadge"
+          mode="aspectFit"
+        />
+        <text class="page-index__returning-tier">{{ returningTierEmoji }} {{ returningTierName }}</text>
+        <text class="page-index__returning-aiq">AI商数 {{ returningAIQ }}</text>
+        <text class="page-index__returning-pct">超越全国 {{ returningPercentile }}% 用户</text>
+        <view class="page-index__returning-actions">
+          <button class="page-index__returning-btn page-index__returning-btn--view" @click="viewMyResult">
+            📋 查看我的结果
+          </button>
+          <button class="page-index__returning-btn page-index__returning-btn--share" open-type="share" @click="trackShareClick('home', 'returning_hero')">
+            📤 分享段位卡
+          </button>
+        </view>
+      </view>
 
       <!-- A3: AI实时评价 -->
       <view class="page-index__ai-eval">
@@ -206,12 +227,13 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { onShareAppMessage, onShareTimeline, onShow } from '@dcloudio/uni-app';
 import ParticleBg from '@/components/ParticleBg/ParticleBg.vue';
 import PrivacyModal from '@/components/PrivacyModal/PrivacyModal.vue';
-import { fetchTierDistribution, fetchFriendRank, preloadDailyQuestions, fetchWeeklyStats, fetchWeeklyLeaderboard, getUserOpenid, getUserOpenidSync, callCloudFunction, fetchChallenge, fetchInviteStats } from '@/utils/api.js';
+import { fetchTierDistribution, fetchFriendRank, preloadDailyQuestions, fetchWeeklyStats, fetchWeeklyLeaderboard, getUserOpenid, getUserOpenidSync, callCloudFunction, fetchChallenge, fetchInviteStats, fetchLastResult } from '@/utils/api.js';
 import { trackPageViewHome, trackHomeHesitate, trackInviteUnlock, trackTestStart, trackShareClick, trackInviteSent } from '@/utils/analytics.js';
 import { hasUsedFreeTestToday, markFreeTestUsed, showRewardedAd } from '@/utils/ad.js';
 import { useExperienceStore } from '@/store/experience.js';
 import { useQuizStore } from '@/store/quiz.js';
 import { TIERS, pointsToNextTier, getNextTier, getTier, toAIQuotient } from '@/utils/tier.js';
+import { TIER_BADGE_IMAGES } from '@/utils/constants.js';
 
 const particleRef = ref(null);
 const privacyRef = ref(null);
@@ -237,6 +259,13 @@ const inviteStatsLoaded = ref(false);
 // Phase 3: 本周排名
 const myWeeklyRank = ref(null);
 const weeklyTotalParticipants = ref(0);
+// Phase 4: 回访用户段位展示（分享零门槛）
+const showReturningHero = ref(false);
+const returningTierName = ref('');
+const returningTierEmoji = ref('');
+const returningAIQ = ref(0);
+const returningPercentile = ref(0);
+const returningTierBadge = ref('');
 let t5 = null, t10 = null, ctaTimer = null;
 
 // F1: CTA 按钮文案轮换
@@ -394,6 +423,62 @@ function goToWeeklyRank() {
   getApp().globalData.rankDefaultTab = 'weekly';
 }
 
+// Phase 4: 加载回访用户段位数据（三级降级：localStorage → cloud → 无）
+async function loadReturningUserData() {
+  try {
+    // Priority 1: 完整 localStorage 数据
+    const savedResult = uni.getStorageSync('last_result_data');
+    if (savedResult && savedResult.tier) {
+      applyReturningData(savedResult);
+      return;
+    }
+
+    // Priority 2: 降级数据（last_tier_name + last_score）
+    const lastTier = uni.getStorageSync('last_tier_name');
+    const lastScore = Number(uni.getStorageSync('last_score') || 0);
+    if (lastTier && lastScore > 0) {
+      const tierObj = TIERS.find(t => t.name === lastTier);
+      returningTierName.value = lastTier;
+      returningTierEmoji.value = tierObj ? tierObj.emoji : '';
+      returningAIQ.value = Math.round((lastScore / 50) * 80 + 70);
+      returningTierBadge.value = tierObj ? TIER_BADGE_IMAGES[tierObj.name] || '' : '';
+      showReturningHero.value = true;
+      return;
+    }
+
+    // Priority 3: 云端兜底
+    const res = await fetchLastResult();
+    if (res.code === 0 && res.data) {
+      applyReturningData(res.data);
+    }
+  } catch (e) {
+    console.warn('[index] loadReturningUserData 失败:', e);
+  }
+}
+
+function applyReturningData(data) {
+  returningTierName.value = data.tier || '';
+  returningTierEmoji.value = data.tierEmoji || '';
+  returningAIQ.value = data.totalScore
+    ? Math.round((data.totalScore / 50) * 80 + 70)
+    : 0;
+  returningPercentile.value = data.percentile || 0;
+  const tierObj = TIERS.find(t => t.name === data.tier);
+  returningTierBadge.value = tierObj ? TIER_BADGE_IMAGES[tierObj.name] || '' : '';
+  showReturningHero.value = true;
+  // 更新 CTA 文案
+  ctaText.value = '再测一次，看段位变了没';
+}
+
+function viewMyResult() {
+  uni.navigateTo({
+    url: '/pages/result/result?mode=review',
+    fail: () => {
+      uni.showToast({ title: '页面跳转失败', icon: 'none' });
+    },
+  });
+}
+
 onMounted(async () => {
   // 隐私政策检查（首次启动弹窗）
   if (privacyRef.value) privacyRef.value.check();
@@ -464,6 +549,7 @@ onMounted(async () => {
   loadTierProgress(); // 回访用户段位进度（静默）
   preloadInviteStatus(); // 预加载邀请解锁状态
   loadWeeklyRank(); // Phase 3: 静默加载本周排名
+  loadReturningUserData(); // Phase 4: 回访用户段位展示
 
   // 埋点：首页浏览
   trackPageViewHome({
@@ -491,6 +577,7 @@ onShow(() => {
   // 刷新免费测试状态（storage 可能已被其他页面修改）
   loadTierProgress();
   loadWeeklyRank();
+  loadReturningUserData(); // Phase 4: 回访用户段位展示
 });
 
 // Phase 1: 加载挑战数据
@@ -724,16 +811,36 @@ function handleDeepStart() {
 onShareAppMessage(() => {
   trackShareClick('home', 'share');
   const uid = getUserOpenidSync();
+  // Phase 4: 回访用户个性化分享文案
+  const tierName = returningTierName.value;
+  const tierEmoji = returningTierEmoji.value;
+  const aiq = returningAIQ.value;
+  let title;
+  if (tierName && aiq > 0) {
+    const copies = [
+      `我是「${tierName}」${tierEmoji}，AI商数 ${aiq}！测测你是什么段位？`,
+      `${tierEmoji} ${tierName} · AI商数${aiq} — 我在进化湾等你来战！`,
+      `测出AI段位：${tierName} ${tierEmoji}！你也来测测看？`,
+    ];
+    title = copies[Math.floor(Math.random() * copies.length)];
+  } else {
+    title = '测测你的AI段位！我在进化湾等你';
+  }
   return {
-    title: '测测你的AI段位！我在进化湾等你',
+    title,
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
     imageUrl: getApp().globalData.defaultShareImage || '/static/images/default-share.png',
   };
 });
 
 onShareTimeline(() => {
+  const tierName = returningTierName.value;
+  const aiq = returningAIQ.value;
+  const title = tierName && aiq > 0
+    ? `我是AI「${tierName}」· AI商数${aiq}！你也来测测你的AI段位？`
+    : '你的AI段位是什么？3秒揭晓 →';
   return {
-    title: '你的AI段位是什么？3秒揭晓 →',
+    title,
     query: '',
   };
 });
@@ -895,6 +1002,73 @@ onShareTimeline(() => {
 
   &__subtitle {
     font-size: 28rpx; color: rgba(255, 255, 255, 0.45); margin-top: 16rpx;
+  }
+
+  // Phase 4: 回访用户段位卡片
+  &__returning-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    margin-top: 20rpx;
+    padding: 28rpx 24rpx;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(124, 58, 237, 0.08));
+    border: 1rpx solid rgba(245, 158, 11, 0.2);
+    border-radius: 24rpx;
+    animation: fade-in 0.5s ease-out both;
+  }
+
+  &__returning-badge {
+    width: 100rpx;
+    height: 100rpx;
+    border-radius: 50%;
+    margin-bottom: 4rpx;
+  }
+
+  &__returning-tier {
+    font-size: 40rpx;
+    font-weight: bold;
+    color: #fff;
+  }
+
+  &__returning-aiq {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #f59e0b;
+    text-shadow: 0 0 16rpx rgba(245, 158, 11, 0.3);
+  }
+
+  &__returning-pct {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 8rpx;
+  }
+
+  &__returning-actions {
+    display: flex;
+    gap: 16rpx;
+    margin-top: 12rpx;
+  }
+
+  &__returning-btn {
+    padding: 16rpx 28rpx;
+    border-radius: 32rpx;
+    font-size: 26rpx;
+    font-weight: 600;
+    border: none;
+    line-height: 1.4;
+
+    &--view {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1rpx solid rgba(255, 255, 255, 0.15);
+    }
+
+    &--share {
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      color: #fff;
+      box-shadow: 0 4rpx 16rpx rgba(124, 58, 237, 0.3);
+    }
   }
 
   // 新用户简化引导

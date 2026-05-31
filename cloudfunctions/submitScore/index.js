@@ -284,6 +284,11 @@ exports.main = async (event, context) => {
       return await handleDecryptGroupInfo(OPENID, event.encryptedData, event.iv, event.code);
     }
 
+    // Phase 4: getLastResult — 获取最近一次测试结果（回顾模式 / 回访首页）
+    if (event.action === 'getLastResult') {
+      return await handleGetLastResult(OPENID);
+    }
+
     const { questionSetId, answers } = event;
     if (!answers || !Array.isArray(answers) || (answers.length !== 5 && answers.length !== 10)) {
       return { code: 400, message: '参数错误：answers 必须为5或10个元素的数组', data: null };
@@ -1116,5 +1121,108 @@ async function completeInviteReward(inviterOpenid, inviteeOpenid, inviteeTier, i
     console.log(`[submitScore] invite completed: ${inviterOpenid.slice(0, 8)}... rewarded +1 unlock`);
   } catch (e) {
     console.log('[submitScore] completeInviteReward 失败:', e.message);
+  }
+}
+
+// Phase 4: 获取最近一次测试完整结果（回访首页 + 结果页回顾模式）
+async function handleGetLastResult(openid) {
+  try {
+    const { data: records } = await db.collection('test_records')
+      .where({ _openid: openid })
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
+
+    if (records.length === 0) {
+      return { code: 404, message: '暂无测试记录', data: null };
+    }
+
+    const record = records[0];
+
+    // 关联查题目数据，重建 commentary
+    const questionIds = record.answers.map(a => a.questionId);
+    const { data: questions } = await db.collection('questions')
+      .where({ _id: _.in(questionIds) })
+      .get();
+
+    const orderedQuestions = questionIds.map(id => questions.find(q => q._id === id));
+    const qScores = [];
+    const commentary = [];
+    record.answers.forEach((ans, i) => {
+      const q = orderedQuestions[i];
+      if (q) {
+        qScores.push(ans.score);
+        commentary.push(q.commentary ? q.commentary[ans.selectedIndex] : '');
+      }
+    });
+
+    // 复用已有函数重建结果
+    const tierScore = Math.min(50, Math.max(5, record.totalScore));
+    const tier = getTier(tierScore);
+    const nextTier = getNextTier(tierScore);
+    const radarValues = calcRadarData(qScores);
+    const persona = getPersona(radarValues);
+
+    // 近似 percentile
+    const { total: totalUsers } = await db.collection('users')
+      .where({ highestScore: _.gt(0) }).count();
+    const { total: lowerCount } = await db.collection('users')
+      .where({ highestScore: _.lt(tierScore).and(_.gt(0)) }).count();
+    const percentile = totalUsers > 0
+      ? Math.max(1, 100 - Math.floor((lowerCount / totalUsers) * 100))
+      : 0;
+
+    // 维度信息
+    const dimNames = ['信息感知', '工具应用', '内容辨别', '时代心态', '思维深度'];
+    const maxVal = Math.max(...radarValues);
+    const minVal = Math.min(...radarValues);
+    const strongestDimension = { name: dimNames[radarValues.indexOf(maxVal)], value: maxVal };
+    const weakestDimension = { name: dimNames[radarValues.indexOf(minVal)], value: minVal };
+
+    // streak 信息
+    const { data: users } = await db.collection('users')
+      .where({ _openid: openid })
+      .field({ consecutiveDays: true, streakBest: true })
+      .get();
+    const user = users[0] || {};
+
+    return {
+      code: 0,
+      data: {
+        totalScore: record.totalScore,
+        rawScore: record.totalScore,
+        isDeepMode: record.answers.length === 10,
+        tier: tier.name,
+        tierEmoji: tier.emoji,
+        percentile,
+        nextTier: nextTier ? nextTier.name : null,
+        pointsToNext: nextTier ? nextTier.min - tierScore : 0,
+        isNewHighest: false,
+        prevTier: record.prevTier || null,
+        tierChanged: false,
+        isFirstTime: false,
+        isDuplicate: false,
+        isReview: true,
+        radarData: {
+          dimensions: dimNames,
+          values: radarValues,
+        },
+        persona,
+        commentary,
+        tierCommentary: getRandomCommentary(tier.name),
+        evolutionTip: getEvolutionTip(tier.name, TIERS.findIndex(t => t.name === tier.name)),
+        strongestDimension,
+        weakestDimension,
+        streak: {
+          consecutiveDays: user.consecutiveDays || 0,
+          streakBest: user.streakBest || 0,
+          milestoneHit: false,
+          streakBroken: false,
+        },
+      },
+    };
+  } catch (e) {
+    console.error('[submitScore] handleGetLastResult 异常:', e.message);
+    return { code: 500, message: '服务器内部错误', data: null };
   }
 }

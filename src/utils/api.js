@@ -209,6 +209,13 @@ export function fetchKFactorBadge() {
   return callCloudFunction('getDashboardData', { lite: true });
 }
 
+/**
+ * Phase 4: 获取最近一次测试完整结果（回访展示 + 回顾模式）
+ */
+export function fetchLastResult() {
+  return callCloudFunction('submitScore', { action: 'getLastResult' });
+}
+
 // 当前用户 openid 缓存
 let cachedOpenid = null;
 

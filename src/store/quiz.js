@@ -166,6 +166,18 @@ export const useQuizStore = defineStore('quiz', () => {
         emoji: q.emoji,
         _parsedOptions: q._parsedOptions,
       }));
+      // Phase 4: 持久化完整结果数据，供回访用户查看 + 分享（不依赖额度）
+      try {
+        uni.setStorageSync('last_result_data', { ...res.data, _savedAt: Date.now() });
+        uni.setStorageSync('last_questions_data', lastQuestions.value);
+        uni.setStorageSync('last_answers_data', lastAnswers.value.map(a => ({
+          questionId: a.questionId,
+          selectedIndex: a.selectedIndex,
+          score: a.score,
+        })));
+      } catch (e) {
+        console.warn('[quiz] 持久化结果失败:', e);
+      }
       // 进化值：非重复提交时发放
       if (!res.data.isDuplicate) {
         const expStore = useExperienceStore();

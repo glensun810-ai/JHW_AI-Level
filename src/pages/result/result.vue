@@ -504,10 +504,10 @@
       </view>
     </scroll-view>
 
-    <!-- 粘性操作栏：2c后始终可见 -->
-    <view v-if="stage === 'revealing' && stageNum >= 2" class="page-result__sticky-bar">
+    <!-- 粘性操作栏：回顾模式立即显示，普通模式 stage>=2 后显示 -->
+    <view v-if="stage === 'revealing' && (stageNum >= 2 || isReviewModeFlag)" class="page-result__sticky-bar">
       <button class="page-result__sticky-btn page-result__sticky-btn--retry" @click="retryQuiz">
-        再测一次
+        {{ isReviewModeFlag ? '再测一次' : '再测一次' }}
       </button>
       <button class="page-result__sticky-btn page-result__sticky-btn--share" open-type="share" @click="trackShareClick('sticky')">
         {{ stickyShareText }}
@@ -578,7 +578,7 @@ import { REVERSAL_FAKE_TIERS } from '@/utils/constants.js';
 import { getTierColor, getTierIndex, TIERS, toAIQuotient } from '@/utils/tier.js';
 import { getShareTitle } from '@/utils/share-helper.js';
 import { generateSquareShareImage, generateGroupRankShareImage } from '@/utils/canvas-renderer.js';
-import { fetchFriendRank, fetchGroupRank, fetchWeeklyStats, updateProfile, submitFeedback as submitFeedbackApi, getUserOpenidSync, callCloudFunction, requestSubscribeMessage, fetchInviteStats } from '@/utils/api.js';
+import { fetchFriendRank, fetchGroupRank, fetchWeeklyStats, updateProfile, submitFeedback as submitFeedbackApi, getUserOpenidSync, callCloudFunction, requestSubscribeMessage, fetchInviteStats, fetchLastResult } from '@/utils/api.js';
 import { trackResultView, trackShareClick, trackShareSuccess, trackChallenge, trackQuickFeedback, trackReversalStart, trackReversalEnd, trackResultLinger, trackTestRetry, trackInviteSent, getABVariant } from '@/utils/analytics.js';
 import { useQuizStore } from '@/store/quiz.js';
 import { useExperienceStore } from '@/store/experience.js';
@@ -1099,17 +1099,23 @@ async function autoCollectNewCards() {
 }
 
 onMounted(() => {
-  if (quizStore.lastResult) {
-    // 防止页面重新挂载时重复播放动画
-    if (result.value && result.value.totalScore) return;
+  // Phase 4: 检查是否为回顾模式
+  const pages = getCurrentPages();
+  const page = pages[pages.length - 1];
+  const options = (page && page.$page) ? page.$page.options : (page.options || {});
+  const isReviewMode = options.mode === 'review';
 
+  if (quizStore.lastResult && !isReviewMode) {
+    // 新鲜测试结果 — 正常动画流程
+    if (result.value && result.value.totalScore) return;
     result.value = quizStore.lastResult;
     if (quizStore.lastQuestions) {
       questions.value = quizStore.lastQuestions;
     }
-    // 保留 store 数据以防页面重新挂载时丢失
-    // 数据会在下次开始新测试时由 store.reset() 清空
     startSequence();
+  } else if (isReviewMode || quizStore.lastResult) {
+    // 回顾模式 或 store 中仍有数据 → 加载回顾数据
+    loadReviewData(isReviewMode);
   } else {
     uni.redirectTo({ url: '/pages/index/index' });
     return;
@@ -1129,6 +1135,93 @@ onBeforeUnmount(() => {
   stageTimers.forEach(id => clearTimeout(id));
   stageTimers.length = 0;
 });
+
+// Phase 4: 回顾模式 — 从 localStorage 或云端加载历史结果
+let isReviewModeFlag = false;
+async function loadReviewData(isReviewMode) {
+  isReviewModeFlag = isReviewMode;
+  uni.showLoading({ title: '加载中...', mask: true });
+
+  try {
+    let reviewResult = null;
+    let reviewQuestions = null;
+    let reviewAnswers = null;
+
+    // Priority 1: localStorage 完整数据
+    const savedResult = uni.getStorageSync('last_result_data');
+    if (savedResult && savedResult.tier) {
+      reviewResult = savedResult;
+      reviewQuestions = uni.getStorageSync('last_questions_data');
+      reviewAnswers = uni.getStorageSync('last_answers_data');
+    }
+
+    // Priority 1b: quizStore 内存数据（非 review 模式进入但 store 中有数据）
+    if (!reviewResult && quizStore.lastResult) {
+      reviewResult = quizStore.lastResult;
+      reviewQuestions = quizStore.lastQuestions;
+      reviewAnswers = quizStore.lastAnswers;
+    }
+
+    // Priority 2: 云端兜底
+    if (!reviewResult || !reviewResult.tier) {
+      const cloudRes = await fetchLastResult();
+      if (cloudRes.code === 0 && cloudRes.data) {
+        reviewResult = cloudRes.data;
+      }
+    }
+
+    if (!reviewResult || !reviewResult.tier) {
+      uni.hideLoading();
+      uni.showToast({ title: '暂无测试记录，请先完成测试', icon: 'none' });
+      setTimeout(() => {
+        uni.redirectTo({ url: '/pages/index/index' });
+      }, 1500);
+      return;
+    }
+
+    // 设置结果数据
+    result.value = reviewResult;
+    if (reviewQuestions) {
+      questions.value = reviewQuestions;
+    }
+    if (reviewAnswers && reviewAnswers.length > 0) {
+      quizStore.lastAnswers = reviewAnswers;
+    }
+
+    // 跳过开场动画，直接展示完整结果
+    isFirstTimeTest.value = false;
+    stage.value = 'revealing';
+    stageNum.value = 2; // 触发所有内容显示
+    displayScore.value = reviewResult.totalScore
+      ? Math.round((reviewResult.totalScore / 50) * 80 + 70)
+      : 0;
+
+    uni.hideLoading();
+
+    // 延迟预生成段位卡（等 DOM 就绪）
+    setTimeout(() => {
+      showXpAnimation();
+      if (tierCardRef.value && !generatedCardUrl.value) {
+        tierCardRef.value.generate(false);
+      }
+      if (personaCardRef.value && !personaCardUrl.value) {
+        personaCardRef.value.generate(false);
+      }
+    }, 300);
+
+    // 更新持久化
+    uni.setStorageSync('last_tier_name', reviewResult.tier || '');
+    uni.setStorageSync('last_score', reviewResult.totalScore || 0);
+    trackResultView(reviewResult.tier, tierIndex.value, false);
+  } catch (e) {
+    uni.hideLoading();
+    console.error('[result] loadReviewData 失败:', e);
+    uni.showToast({ title: '加载失败，请重试', icon: 'none' });
+    setTimeout(() => {
+      uni.redirectTo({ url: '/pages/index/index' });
+    }, 1500);
+  }
+}
 
 async function loadMiniCode() {
   try {
@@ -1600,6 +1693,13 @@ async function saveBadgeToAlbum() {
 const pendingChallengeShareId = ref(''); // Phase 1: 刚创建的挑战ID，供分享使用
 function onChallengeSent({ targetOpenid, challengeId }) { trackChallenge(targetOpenid); pendingChallengeShareId.value = challengeId || ''; uni.showToast({ title: '挑战已发送！', icon: 'success' }); }
 function retryQuiz() {
+  // Phase 4: 回顾模式下，先回首页走门控流程
+  if (isReviewModeFlag) {
+    uni.removeStorageSync('quiz_breakpoint');
+    uni.redirectTo({ url: '/pages/index/index' });
+    return;
+  }
+
   const timeSinceLast = resultRevealTime ? Date.now() - resultRevealTime : 0;
   trackTestRetry(result.value.tier, timeSinceLast, 'free');
   uni.removeStorageSync('quiz_breakpoint');
