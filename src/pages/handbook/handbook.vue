@@ -1059,6 +1059,8 @@ onMounted(async () => {
   color: #ffcc80;
   margin-bottom: 16rpx;
   line-height: 1.5;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .page-handbook__detail-body {
@@ -1067,6 +1069,8 @@ onMounted(async () => {
   color: #b0bec5;
   margin-bottom: 24rpx;
   line-height: 1.7;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .page-handbook__detail-tip,
@@ -1090,6 +1094,8 @@ onMounted(async () => {
   font-size: 24rpx;
   color: #cfd8dc;
   line-height: 1.6;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .page-handbook__detail-actions {

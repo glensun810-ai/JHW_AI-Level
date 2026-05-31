@@ -2016,6 +2016,8 @@ onShareTimeline(() => {
     flex-direction: column;
     align-items: center;
     padding: 32rpx 32rpx 160rpx;
+    word-break: break-all;
+    overflow-wrap: break-word;
   }
 
   &__section {

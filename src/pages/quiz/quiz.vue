@@ -728,6 +728,8 @@ onShareTimeline(() => {
     color: $color-text-primary;
     line-height: 1.6;
     font-weight: 500;
+    word-break: break-all;
+    overflow-wrap: break-word;
   }
 
   &__options {
@@ -755,6 +757,8 @@ onShareTimeline(() => {
     font-size: 26rpx;
     color: $color-text-secondary;
     line-height: 1.5;
+    word-break: break-all;
+    overflow-wrap: break-word;
     animation: comment-fade-in 0.25s ease-out;
   }
 

@@ -155,6 +155,8 @@ defineExpose({ check });
     color: $color-text-secondary;
     line-height: 1.7;
     margin-bottom: 8rpx;
+    word-break: break-all;
+    overflow-wrap: break-word;
   }
 
   &__bullet {
@@ -163,6 +165,8 @@ defineExpose({ check });
     color: $color-text-secondary;
     line-height: 1.7;
     padding-left: 8rpx;
+    word-break: break-all;
+    overflow-wrap: break-word;
   }
 
   &__footer {

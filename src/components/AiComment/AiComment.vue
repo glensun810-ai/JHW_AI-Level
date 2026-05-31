@@ -102,6 +102,8 @@ onMounted(() => {
     font-size: 28rpx;
     color: $color-text-primary;
     line-height: 1.7;
+    word-break: break-all;
+    overflow-wrap: break-word;
   }
 
   &__byline {
