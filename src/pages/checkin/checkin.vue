@@ -99,6 +99,7 @@ import CheckInCalendar from '@/components/CheckInCalendar/CheckInCalendar.vue';
 import { doCheckIn as checkIn, fetchWeeklyStats, getUserOpenidSync, requestSubscribeMessage } from '@/utils/api.js';
 import { trackCheckIn, trackPageView } from '@/utils/analytics.js';
 import { useExperienceStore } from '@/store/experience.js';
+import { createSoundEngine } from '@/utils/sound-engine.js';
 
 const consecutiveDays = ref(0);
 const checkedToday = ref(false);
@@ -206,6 +207,8 @@ async function handleCheckIn() {
   consecutiveDays.value = newStreak;
   checkedToday.value = true;
   justChecked.value = true;
+  // Phase 5: 签到打卡音效
+  createSoundEngine().play('checkin_stamp');
   checkedDates.value = [...checkedDates.value, today];
   uni.setStorageSync('checkin_date', today);
   uni.setStorageSync('checkin_streak', newStreak);
@@ -216,6 +219,11 @@ async function handleCheckIn() {
     rewardIcon.value = special.icon;
     rewardText.value = special.text;
     showReward.value = true;
+    // Phase 5: 里程碑日特殊音效
+    const milestoneDays = [3, 7, 14, 21, 30, 50, 80, 100];
+    if (milestoneDays.includes(newStreak)) {
+      setTimeout(() => createSoundEngine().play('checkin_milestone', { days: newStreak }), 300);
+    }
     setTimeout(() => { showReward.value = false; }, 2500);
   } else {
     uni.showToast({ title: `签到成功！已连续 ${newStreak} 天`, icon: 'success' });

@@ -122,6 +122,7 @@ import { onShareAppMessage, onShareTimeline } from '@dcloudio/uni-app';
 import ProgressBar from '@/components/ProgressBar/ProgressBar.vue';
 import OptionCard from '@/components/OptionCard/OptionCard.vue';
 import { useQuizStore } from '@/store/quiz.js';
+import { createSoundEngine } from '@/utils/sound-engine.js';
 import { useExperienceStore } from '@/store/experience.js';
 import { trackQuestionAnswer, trackTestAbandon, trackTestComplete, trackTestStart, trackInviteConversion } from '@/utils/analytics.js';
 import { hasUsedFreeTestToday, markFreeTestUsed } from '@/utils/ad.js';
@@ -356,6 +357,13 @@ function handleSelect(idx) {
   const result = store.selectAnswer(idx);
   if (!result) return;
 
+  // Phase 5: 选项音效（高分=上行，低分=中性）
+  if (result.score >= 7) {
+    createSoundEngine().play('quiz_select_high');
+  } else {
+    createSoundEngine().play('quiz_select_low');
+  }
+
   // 埋点
   trackQuestionAnswer(
     currentQuestion.value._id,
@@ -405,6 +413,8 @@ function handleSelect(idx) {
           name: store.runningTier.name,
         };
         showMidSurprise.value = true;
+        // Phase 5: 趋势预测卡悬念音效
+        createSoundEngine().play('quiz_surprise');
         setTimeout(() => { showMidSurprise.value = false; }, 2000);
       }, 400);
     }
@@ -419,6 +429,8 @@ function giveAnswerFeedback(fb) {
 }
 
 function goNext() {
+  // Phase 5: 进入下一题音效
+  createSoundEngine().play('quiz_next');
   if (store.isLastQuestion) {
     quizState.value = 'submitting';
     selectedComment.value = '';

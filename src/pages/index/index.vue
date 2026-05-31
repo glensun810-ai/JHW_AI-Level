@@ -234,6 +234,7 @@ import { useExperienceStore } from '@/store/experience.js';
 import { useQuizStore } from '@/store/quiz.js';
 import { TIERS, pointsToNextTier, getNextTier, getTier, toAIQuotient } from '@/utils/tier.js';
 import { TIER_BADGE_IMAGES } from '@/utils/constants.js';
+import { createSoundEngine } from '@/utils/sound-engine.js';
 
 const particleRef = ref(null);
 const privacyRef = ref(null);
@@ -551,6 +552,11 @@ onMounted(async () => {
   loadWeeklyRank(); // Phase 3: 静默加载本周排名
   loadReturningUserData(); // Phase 4: 回访用户段位展示
 
+  // Phase 5: 挑战/反转 Banner 到达音效
+  if (showReversalBanner.value || (friendName.value && !showReversalBanner.value)) {
+    setTimeout(() => createSoundEngine().play('home_arrive'), 600);
+  }
+
   // 埋点：首页浏览
   trackPageViewHome({
     source: options.friend_name ? 'share' : 'direct',
@@ -761,6 +767,8 @@ async function handleStart() {
 }
 
 function startQuiz() {
+  // Phase 5: CTA 入口音效
+  createSoundEngine().play('cta_press');
   quizStore.reset();
   quizStore.setDeepMode(false);
   uni.removeStorageSync('quiz_breakpoint'); // 清除旧断点，确保全新开始
@@ -788,6 +796,8 @@ function startQuiz() {
 
 function handleDeepStart() {
   if (transitioning.value) return;
+  // Phase 5: 深度模式入口音效
+  createSoundEngine().play('cta_press');
   quizStore.reset();
   quizStore.setDeepMode(true);
   uni.removeStorageSync('quiz_breakpoint');

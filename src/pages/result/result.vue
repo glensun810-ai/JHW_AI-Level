@@ -582,6 +582,7 @@ import { fetchFriendRank, fetchGroupRank, fetchWeeklyStats, updateProfile, submi
 import { trackResultView, trackShareClick, trackShareSuccess, trackChallenge, trackQuickFeedback, trackReversalStart, trackReversalEnd, trackResultLinger, trackTestRetry, trackInviteSent, getABVariant } from '@/utils/analytics.js';
 import { useQuizStore } from '@/store/quiz.js';
 import { useExperienceStore } from '@/store/experience.js';
+import { createSoundEngine } from '@/utils/sound-engine.js';
 import { hasUsedFreeTestToday } from '@/utils/ad.js';
 
 const tierCardRef = ref(null);
@@ -1089,9 +1090,14 @@ function goToHandbook() {
 async function autoCollectNewCards() {
   const newCards = newCardsCollected.value;
   if (!newCards || newCards.length === 0) return;
+  const soundEng = createSoundEngine();
+  let cardIdx = 0;
   for (const card of newCards) {
     if (collectedCards.value.includes(card.id)) continue;
     collectedCards.value = [...collectedCards.value, card.id];
+    // Phase 5: 知识卡收集音效（每张卡间隔 150ms）
+    setTimeout(() => soundEng.play('knowledge_card'), cardIdx * 150);
+    cardIdx++;
     try {
       await callCloudFunction('getWeeklyStats', { action: 'collectCard', cardId: card.id }, { retry: false });
     } catch (e) { /* 静默 */ }
@@ -1490,6 +1496,10 @@ function startSequence() {
       uni.setStorageSync('last_tier_name', result.value.tier);
       uni.setStorageSync('last_score', result.value.totalScore);
       trackReversalStart(fakeTier.value, result.value.tier);
+      // Phase 5: 反转音效同步（与 ReversalReveal 组件 phase 时间线对齐）
+      const soundEng = createSoundEngine();
+      setTimeout(() => soundEng.play('reversal_fake'), 200);
+      setTimeout(() => soundEng.play('reversal_explosion'), 800);
       trackResultView(result.value.tier, tierIndex.value, isFirstTime);
     } else {
       stage.value = 'revealing';
@@ -1499,6 +1509,8 @@ function startSequence() {
       scheduleStages();
       // 触觉反馈：段位揭晓时轻震
       if (wx && wx.vibrateShort) wx.vibrateShort({ type: 'medium' });
+      // Phase 5: 段位揭晓签名音效
+      createSoundEngine().play('tier_reveal');
       // 立即预生成分享卡片（不等动画），避免快速分享时拿到默认图
       if (tierCardRef.value && !generatedCardUrl.value) tierCardRef.value.generate(false);
       if (personaCardRef.value && !personaCardUrl.value) personaCardRef.value.generate(false);
@@ -1525,6 +1537,8 @@ function onReversalDone() {
   scheduleStages();
   // 触觉反馈：反转揭晓时重震
   if (wx && wx.vibrateShort) wx.vibrateShort({ type: 'heavy' });
+  // Phase 5: 反转真段位音效
+  createSoundEngine().play('reversal_real');
   stageTimers.push(
     setTimeout(() => { showScreenshotHint.value = true; }, 1000),
     setTimeout(() => { showScreenshotHint.value = false; }, 4500),
@@ -1547,6 +1561,7 @@ function showXpAnimation() {
 }
 
 function scheduleStages() {
+  const soundEng = createSoundEngine();
   stageTimers.push(
     setTimeout(() => { stageNum.value = 2; }, 1500),
     setTimeout(() => { stageNum.value = 3; }, 3500),
@@ -1554,10 +1569,26 @@ function scheduleStages() {
     setTimeout(() => { stageNum.value = 5; }, 6500),
     setTimeout(() => { autoCollectNewCards(); }, 1700),
     setTimeout(() => { showSubscribePrompt.value = true; }, 5300),
+    // Phase 5: 阶段音效
+    setTimeout(() => { soundEng.play('result_percentile', { percentile: result.value?.percentile || 50 }); }, 1600),
+    setTimeout(() => {
+      if (result.value?.pointsToNext && result.value.pointsToNext <= 3 && result.value.pointsToNext > 0) {
+        soundEng.play('near_miss');
+      }
+    }, 1900),
+    setTimeout(() => {
+      const streak = result.value?.streak;
+      if (streak && (streak.milestoneHit || (streak.consecutiveDays >= 3 && streak.consecutiveDays % 3 === 0))) {
+        soundEng.play('streak_milestone');
+      }
+    }, 2100),
+    setTimeout(() => { soundEng.play('result_whisper'); }, 5100),
   );
 }
 
 function animateScore() {
+  // Phase 5: 分数滚动音效
+  createSoundEngine().play('score_counter');
   const raw = result.value.totalScore;
   const target = Math.round((raw / 50) * 80 + 70);
   let current = 0;
