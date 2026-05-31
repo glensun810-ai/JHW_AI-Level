@@ -171,7 +171,8 @@ async function renderTierCard(canvas, ctx, data) {
     ctx.fillStyle = '#ffffff';
     ctx.font = '22px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(userNickname + ' 的AI段位', W / 2, 150);
+    const displayName = userNickname.length > 12 ? userNickname.slice(0, 12) + '...' : userNickname;
+    ctx.fillText(displayName + ' 的AI段位', W / 2, 150);
   }
 
   const topShift = avatarDrawn ? 90 : 0;
@@ -432,7 +433,8 @@ async function renderPersonaCard(canvas, ctx, data) {
     ctx.fillStyle = '#ffffff';
     ctx.font = '22px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(userNickname + ' 的AI人格', W / 2, avatarCY + 42);
+    const displayName = userNickname.length > 12 ? userNickname.slice(0, 12) + '...' : userNickname;
+    ctx.fillText(displayName + ' 的AI人格', W / 2, avatarCY + 42);
   }
 
   const topShift = avatarDrawn ? 54 : 0;
@@ -627,7 +629,8 @@ async function renderReversalCard(canvas, ctx, data) {
     ctx.fillStyle = '#ffffff';
     ctx.font = '22px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(userNickname + ' 的反转时刻', W / 2, avatarCY + 42);
+    const displayName = userNickname.length > 12 ? userNickname.slice(0, 12) + '...' : userNickname;
+    ctx.fillText(displayName + ' 的反转时刻', W / 2, avatarCY + 42);
   }
 
   const topShift = avatarDrawn ? 54 : 0;
@@ -835,10 +838,14 @@ async function renderSquareShare(canvas, ctx, data) {
       ctx.fillText(line, W / 2, midY + 100 + i * 34);
     });
   } else if (commentary) {
-    const shortCommentary = commentary.length > 60 ? commentary.slice(0, 60) + '...' : commentary;
-    ctx.fillText('"' + shortCommentary + '"', W / 2, midY + 100);
-    ctx.font = '18px sans-serif';
-    ctx.fillText('—— AI 锐评', W / 2, midY + 130);
+    const cmtLines = wrapText(ctx, '"' + commentary + '"', W - 160, 30, 3);
+    cmtLines.forEach((line, i) => {
+      ctx.fillText(line, W / 2, midY + 100 + i * 34);
+    });
+    if (cmtLines.length <= 2) {
+      ctx.font = '18px sans-serif';
+      ctx.fillText('—— AI 锐评', W / 2, midY + 100 + cmtLines.length * 34 + 10);
+    }
   }
 
   // ─── 下 1/3: 小程序码 + 引导文案 ───
