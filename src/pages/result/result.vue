@@ -371,37 +371,36 @@
 
             <!-- 好友排行内容 -->
             <template v-if="activeRankTab === 'friend'">
-              <view v-if="friendMatchText" class="page-result__friend-match">
-                <text class="page-result__friend-match-emoji">🧬</text>
-                <text class="page-result__friend-match-text">{{ friendMatchText }}</text>
-              </view>
-              <view v-if="friendComparisonText" class="page-result__friend-compare">
-                <text class="page-result__friend-compare-text">{{ friendComparisonText }}</text>
-                <button
-                  v-if="showFriendChallengeBtn"
-                  class="page-result__friend-compare-btn"
-                  @click="challengeFriend"
-                >不服来战</button>
+              <view v-if="friendInsightText" class="page-result__friend-insight">
+                <text class="page-result__friend-insight-icon">{{ friendInsightIcon }}</text>
+                <text class="page-result__friend-insight-text">{{ friendInsightText }}</text>
               </view>
               <view v-if="friendLoaded" class="page-result__friend-list">
                 <view v-for="(f, i) in topFriends" :key="f.openid || i" class="page-result__friend-item" :class="{ 'page-result__friend-item--me': f.isMe }">
-                  <text class="page-result__friend-rank">#{{ i + 1 }}</text>
+                  <text class="page-result__friend-rank" :class="{ 'page-result__friend-rank--top': i < 3 }">{{ i + 1 }}</text>
                   <image class="page-result__friend-avatar" :src="f.avatar || defaultAvatar" mode="aspectFill" />
-                  <text class="page-result__friend-name">{{ f.nickname || '匿名用户' }}</text>
-                  <text class="page-result__friend-tier">{{ f.tier || '?' }}</text>
+                  <view class="page-result__friend-info">
+                    <text class="page-result__friend-name">{{ f.nickname || '匿名用户' }}</text>
+                    <text class="page-result__friend-tier">{{ f.tier || '?' }}</text>
+                  </view>
+                  <text class="page-result__friend-score">{{ toAIQ(f.score || f.highestScore) }}</text>
                 </view>
                 <view v-if="topFriends.length === 0" class="page-result__friend-empty">
-                  <text v-if="globalTestCount > 0">已有 {{ globalTestCount }}+ 人完成 AI 段位测试</text>
-                  <text v-else>暂无好友数据</text>
-                  <button class="page-result__friend-share-btn" open-type="share">分享给好友，看看他们的段位</button>
+                  <text class="page-result__friend-empty-icon">👥</text>
+                  <text class="page-result__friend-empty-title">暂无好友数据</text>
+                  <text class="page-result__friend-empty-desc">分享给好友，看看他们的AI段位</text>
+                  <button class="page-result__friend-empty-btn" open-type="share">📤 邀请好友来测</button>
                 </view>
                 <view v-if="myRankInFriends && myRankInFriends > 3" class="page-result__friend-my-rank">
                   <text class="page-result__friend-my-rank-dot">···</text>
                   <view class="page-result__friend-item page-result__friend-item--me">
-                    <text class="page-result__friend-rank">#{{ myRankInFriends }}</text>
+                    <text class="page-result__friend-rank">{{ myRankInFriends }}</text>
                     <image class="page-result__friend-avatar" :src="myAvatar || defaultAvatar" mode="aspectFill" />
-                    <text class="page-result__friend-name">我</text>
-                    <text class="page-result__friend-tier">{{ result.tier }}</text>
+                    <view class="page-result__friend-info">
+                      <text class="page-result__friend-name">我</text>
+                      <text class="page-result__friend-tier">{{ result.tier }}</text>
+                    </view>
+                    <text class="page-result__friend-score">{{ toAIQ(result.totalScore) }}</text>
                   </view>
                 </view>
               </view>
@@ -414,17 +413,22 @@
             <template v-if="activeRankTab === 'group'">
               <view v-if="groupRankLoaded" class="page-result__friend-list">
                 <view v-for="(m, i) in groupRankings" :key="m._openid || i" class="page-result__friend-item" :class="{ 'page-result__friend-item--me': m._openid === myOpenid }">
-                  <text class="page-result__friend-rank">#{{ i + 1 }}</text>
+                  <text class="page-result__friend-rank" :class="{ 'page-result__friend-rank--top': i < 3 }">{{ i + 1 }}</text>
                   <image class="page-result__friend-avatar" :src="m.avatar || defaultAvatar" mode="aspectFill" />
-                  <text class="page-result__friend-name">{{ m.nickname || '匿名用户' }}</text>
-                  <text class="page-result__friend-tier">{{ m.currentTier || '?' }}</text>
+                  <view class="page-result__friend-info">
+                    <text class="page-result__friend-name">{{ m.nickname || '匿名用户' }}</text>
+                    <text class="page-result__friend-tier">{{ m.currentTier || '?' }}</text>
+                  </view>
+                  <text class="page-result__friend-score">{{ toAIQ(m.highestScore) }}</text>
                 </view>
                 <view v-if="groupRankings.length > 0" class="page-result__group-share-card">
                   <button class="page-result__group-share-btn" @click="generateGroupRankImage">📊 生成群排行图</button>
                 </view>
                 <view v-if="groupRankings.length === 0" class="page-result__friend-empty">
-                  <text>暂无群友数据</text>
-                  <button class="page-result__friend-share-btn" open-type="share">分享到群，看看大家的段位</button>
+                  <text class="page-result__friend-empty-icon">👥</text>
+                  <text class="page-result__friend-empty-title">暂无群友数据</text>
+                  <text class="page-result__friend-empty-desc">分享到微信群，看看群友的段位</text>
+                  <button class="page-result__friend-empty-btn" open-type="share">📤 分享到群</button>
                 </view>
               </view>
               <view v-else class="page-result__friend-loading">
@@ -773,43 +777,38 @@ const friendRankData = computed(() => {
   return { rank, total: topFriends.value.length + 1 };
 });
 
-const friendMatchText = computed(() => {
+// Phase 6: 统一好友洞察（匹配度 + 排名对比二合一）
+const friendInsightIcon = computed(() => {
   const fm = result.value.friendMatch;
-  if (!fm || !fm.nickname) return '';
-  const pct = fm.matchPercent || 0;
-  let vibe = '';
-  if (pct >= 90) vibe = '灵魂共鸣';
-  else if (pct >= 75) vibe = '高度契合';
-  else if (pct >= 60) vibe = '志趣相投';
-  else if (pct >= 40) vibe = '求同存异';
-  else vibe = '截然不同';
-  return `你与 @${fm.nickname} 的 AI 人格匹配度：${pct}%（${vibe}）`;
+  if (fm && fm.matchPercent >= 75) return '🧬';
+  if (friendRankData.value?.rank === 1) return '🏆';
+  if (friendRankData.value?.rank && friendRankData.value.rank <= 3) return '🥉';
+  if (friendRankData.value) return '📊';
+  return '';
+});
+const friendInsightText = computed(() => {
+  const fm = result.value.friendMatch;
+  const rankData = friendRankData.value;
+  if (!rankData && (!fm || !fm.nickname)) return '';
+
+  // 人格匹配优先
+  if (fm && fm.nickname && fm.matchPercent >= 75) {
+    return `与 @${fm.nickname} AI人格 ${fm.matchPercent}% 契合`;
+  }
+  // 排名信息
+  if (rankData?.rank === 1) return '🏆 你在好友中排名第 1！';
+  if (rankData?.rank && rankData.rank <= 3) return `好友排名第 ${rankData.rank} 位`;
+  if (rankData) return `好友排名第 ${rankData.rank} / ${rankData.total} 位`;
+  // 匹配度兜底
+  if (fm && fm.nickname) return `与 @${fm.nickname} 匹配度 ${fm.matchPercent || 0}%`;
+  return '';
 });
 
-const friendComparisonText = computed(() => {
-  const data = friendRankData.value;
-  if (!data) return '';
-  if (data.rank === 1) return '你暂时领先所有好友！快去炫耀一下 →';
-
-  const firstPlace = topFriends.value[0];
-  if (!firstPlace) return '';
-  const myTierIdx = tierIndex.value;
-  const firstPlaceTierIdx = getTierIndex(firstPlace.score);
-
-  if (myTierIdx >= firstPlaceTierIdx - 1 && firstPlace.score - result.value.totalScore <= 5) {
-    return `@${firstPlace.nickname || '好友'} 比你高一段 🤏 差一点点，不服来战？`;
-  }
-
-  const sameTierAhead = topFriends.value.find(
-    f => getTierIndex(f.score) === myTierIdx && f.score > result.value.totalScore
-  );
-  if (sameTierAhead) {
-    const aiqGap = toAIQuotient(sameTierAhead.score) - toAIQuotient(result.value.totalScore);
-    return `@${sameTierAhead.nickname || '好友'} 跟你同段位但高 ${aiqGap} 点AI商数 ⚡ 差一点点！`;
-  }
-
-  return `你目前排在好友榜第 ${data.rank} 名，再测一次说不定就上去了`;
-});
+// AIQ 格式化辅助
+function formatAIQ(rawScore) {
+  if (!rawScore || rawScore === 0) return '—';
+  return toAIQuotient(rawScore);
+}
 
 const showFriendChallengeBtn = computed(() => {
   if (topFriends.value.length === 0) return false;
@@ -2588,62 +2587,23 @@ onShareTimeline(() => {
     }
   }
 
-  &__friend-match {
+  &__friend-insight {
     width: 100%;
-    margin-bottom: 12rpx;
-    padding: 14rpx 20rpx;
-    background: rgba(124, 58, 237, 0.08);
+    margin-bottom: 20rpx;
+    padding: 16rpx 24rpx;
+    background: rgba(124, 58, 237, 0.06);
     border-radius: 12rpx;
-    border: 1rpx solid rgba(124, 58, 237, 0.15);
+    border: 1rpx solid rgba(124, 58, 237, 0.1);
     display: flex;
     align-items: center;
-    gap: 10rpx;
-    animation: fade-in 0.4s ease-out both;
+    gap: 12rpx;
 
-    &-emoji {
-      font-size: 32rpx;
-      flex-shrink: 0;
-    }
-
+    &-icon { font-size: 32rpx; flex-shrink: 0; }
     &-text {
       flex: 1;
       font-size: 24rpx;
       color: #c4b5fd;
       line-height: 1.5;
-    }
-  }
-
-  &__friend-compare {
-    width: 100%;
-    margin-bottom: 16rpx;
-    padding: 14rpx 20rpx;
-    background: rgba(245, 158, 11, 0.08);
-    border-radius: 12rpx;
-    border: 1rpx solid rgba(245, 158, 11, 0.15);
-    display: flex;
-    align-items: center;
-    gap: 16rpx;
-    animation: fade-in 0.4s ease-out both;
-
-    &-text {
-      flex: 1;
-      font-size: 24rpx;
-      color: $color-gold;
-      line-height: 1.5;
-    }
-
-    &-btn {
-      flex-shrink: 0;
-      padding: 10rpx 24rpx;
-      background: linear-gradient(135deg, #f59e0b, #f97316);
-      border-radius: 20rpx;
-      font-size: 22rpx;
-      font-weight: 600;
-      color: #fff;
-      border: none;
-      min-height: 88rpx;
-      display: flex;
-      align-items: center;
     }
   }
 
@@ -2657,7 +2617,7 @@ onShareTimeline(() => {
     display: flex;
     align-items: center;
     gap: 14rpx;
-    padding: 14rpx 18rpx;
+    padding: 16rpx 20rpx;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 12rpx;
 
@@ -2668,10 +2628,14 @@ onShareTimeline(() => {
   }
 
   &__friend-rank {
-    font-size: 26rpx;
+    font-size: 28rpx;
     font-weight: bold;
-    color: $color-gold;
-    width: 50rpx;
+    color: $color-text-muted;
+    width: 48rpx;
+    text-align: center;
+    flex-shrink: 0;
+
+    &--top { color: $color-gold; }
   }
 
   &__friend-avatar {
@@ -2679,10 +2643,17 @@ onShareTimeline(() => {
     height: 52rpx;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+  }
+
+  &__friend-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
 
   &__friend-name {
-    flex: 1;
     font-size: 26rpx;
     color: $color-text-primary;
     overflow: hidden;
@@ -2691,37 +2662,48 @@ onShareTimeline(() => {
   }
 
   &__friend-tier {
-    font-size: 24rpx;
+    font-size: 22rpx;
     color: $color-accent;
     font-weight: 500;
+    margin-top: 2rpx;
   }
 
-  &__friend-empty,
+  &__friend-score {
+    font-size: 26rpx;
+    font-weight: bold;
+    color: $color-gold;
+    flex-shrink: 0;
+  }
+
+  &__friend-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12rpx;
+    padding: 48rpx 28rpx;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 16rpx;
+
+    &-icon { font-size: 56rpx; margin-bottom: 4rpx; }
+    &-title { font-size: 28rpx; color: #fff; font-weight: 600; }
+    &-desc { font-size: 24rpx; color: $color-text-muted; }
+    &-btn {
+      margin-top: 8rpx;
+      padding: 20rpx 48rpx;
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      border-radius: 36rpx;
+      font-size: 28rpx; color: #fff; font-weight: 600; border: none;
+    }
+  }
+
   &__friend-loading {
-    padding: 28rpx;
+    padding: 48rpx 28rpx;
     text-align: center;
     font-size: 24rpx;
     color: $color-text-muted;
     background: rgba(255, 255, 255, 0.02);
     border-radius: 12rpx;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16rpx;
-  }
-
-  &__friend-share-btn {
-    padding: 24rpx 40rpx;
-    background: linear-gradient(135deg, #00c8ff, #7c3aed);
-    border-radius: 44rpx;
-    font-size: 28rpx;
-    color: #fff;
-    border: none;
-    font-weight: 500;
-    min-height: 88rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 
   &__friend-my-rank {
