@@ -500,17 +500,59 @@
           </view>
         </view>
 
-        <view style="height: 60rpx" />
+        <view style="height: 160rpx" />
       </view>
     </scroll-view>
+
+    <!-- Phase 6: 分享操作面板 -->
+    <view v-if="showSharePanel" class="page-result__share-overlay" @click="showSharePanel = false">
+      <view class="page-result__share-panel" @click.stop>
+        <view class="page-result__share-panel-handle" />
+        <text class="page-result__share-panel-title">分享进化成果</text>
+
+        <view class="page-result__share-options">
+          <button class="page-result__share-option" open-type="share" @click="showSharePanel = false">
+            <text class="page-result__share-option-icon">💬</text>
+            <text class="page-result__share-option-label">分享给好友</text>
+            <text class="page-result__share-option-hint">发送给微信好友或群聊</text>
+          </button>
+
+          <view class="page-result__share-option" @click="shareToMoments">
+            <text class="page-result__share-option-icon">🌐</text>
+            <text class="page-result__share-option-label">分享到朋友圈</text>
+            <text class="page-result__share-option-hint">保存图片后发到朋友圈</text>
+          </view>
+
+          <view class="page-result__share-option" @click="copyShareLink">
+            <text class="page-result__share-option-icon">🔗</text>
+            <text class="page-result__share-option-label">复制链接</text>
+            <text class="page-result__share-option-hint">复制小程序路径，发给朋友</text>
+          </view>
+
+          <view class="page-result__share-option" @click="saveAndClosePanel('tier')">
+            <text class="page-result__share-option-icon">🏆</text>
+            <text class="page-result__share-option-label">保存段位卡</text>
+            <text class="page-result__share-option-hint">高质量段位卡，可发朋友圈</text>
+          </view>
+
+          <view class="page-result__share-option" @click="saveAndClosePanel('square')">
+            <text class="page-result__share-option-icon">🖼️</text>
+            <text class="page-result__share-option-label">保存朋友圈图</text>
+            <text class="page-result__share-option-hint">1:1方形图，适合朋友圈</text>
+          </view>
+        </view>
+
+        <view class="page-result__share-cancel" @click="showSharePanel = false">取消</view>
+      </view>
+    </view>
 
     <!-- 粘性操作栏：回顾模式立即显示，普通模式 stage>=2 后显示 -->
     <view v-if="stage === 'revealing' && (stageNum >= 2 || isReviewModeFlag)" class="page-result__sticky-bar">
       <button class="page-result__sticky-btn page-result__sticky-btn--retry" @click="retryQuiz">
         {{ isReviewModeFlag ? '再测一次' : '再测一次' }}
       </button>
-      <button class="page-result__sticky-btn page-result__sticky-btn--share" open-type="share" @click="trackShareClick('sticky')">
-        {{ stickyShareText }}
+      <button class="page-result__sticky-btn page-result__sticky-btn--share" @click="openSharePanel">
+        📤 分享
       </button>
       <button class="page-result__sticky-btn page-result__sticky-btn--home" @click="goHome">
         🏠
@@ -609,6 +651,7 @@ const showJourneyCard = ref(false);
 const showSubscribePrompt = ref(false);
 const showAnswerReview = ref(false);
 const showEvolutionJourney = ref(false);
+const showSharePanel = ref(false); // Phase 6: 分享操作面板
 // 用户头像昵称（非阻断式授权，默认匿名）
 const userProfile = ref({ nickname: '', avatar: '' });
 const showProfilePrompt = ref(false);
@@ -1614,6 +1657,40 @@ function animateScore() {
   }, duration / (target / step));
 }
 
+// Phase 6: 分享操作面板
+function openSharePanel() {
+  trackShareClick('sticky');
+  showSharePanel.value = true;
+}
+
+function saveAndClosePanel(type) {
+  showSharePanel.value = false;
+  if (type === 'tier') saveTierCard();
+  else if (type === 'square') saveSquareShare();
+}
+
+function shareToMoments() {
+  showSharePanel.value = false;
+  // 生成朋友圈方形图并引导发布
+  uni.showToast({ title: '正在生成朋友圈图…', icon: 'loading' });
+  saveSquareShare();
+}
+
+function copyShareLink() {
+  showSharePanel.value = false;
+  const uid = getUserOpenidSync();
+  const path = uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index';
+  wx.setClipboardData({
+    data: `来进化湾测测你的AI段位！👉 ${path}`,
+    success: () => {
+      uni.showToast({ title: '链接已复制，去粘贴给好友吧', icon: 'success', duration: 2000 });
+    },
+    fail: () => {
+      uni.showToast({ title: '复制失败，请重试', icon: 'none' });
+    },
+  });
+}
+
 function saveTierCard() { if (tierCardRef.value) tierCardRef.value.generate(); }
 
 async function saveSquareShare() {
@@ -1934,7 +2011,7 @@ onShareTimeline(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 32rpx 32rpx 0;
+    padding: 32rpx 32rpx 160rpx;
   }
 
   &__section {
@@ -3797,6 +3874,72 @@ onShareTimeline(() => {
 @keyframes legend-border-glow {
   0%, 100% { border-color: rgba(124, 58, 237, 0.3); }
   50% { border-color: rgba(245, 158, 11, 0.5); }
+}
+
+// ── Phase 6: 分享操作面板 ──
+.page-result__share-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: fade-in 0.2s ease-out;
+}
+.page-result__share-panel {
+  width: 100%;
+  background: linear-gradient(180deg, #1a1a2e, #0d1b2a);
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 20rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
+  animation: share-panel-up 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+@keyframes share-panel-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.page-result__share-panel-handle {
+  width: 64rpx; height: 8rpx;
+  background: rgba(255,255,255,0.2);
+  border-radius: 4rpx;
+  margin: 0 auto 20rpx;
+}
+.page-result__share-panel-title {
+  display: block; text-align: center;
+  font-size: 30rpx; font-weight: bold; color: #fff;
+  margin-bottom: 24rpx;
+}
+.page-result__share-options {
+  display: flex; flex-direction: column; gap: 8rpx;
+}
+.page-result__share-option {
+  display: flex; align-items: center; gap: 16rpx;
+  padding: 22rpx 24rpx;
+  background: rgba(255,255,255,0.04);
+  border-radius: 16rpx;
+  border: 1rpx solid rgba(255,255,255,0.06);
+  transition: background 0.15s;
+  width: 100%; text-align: left; border: none;
+  &::after { border: none; }
+  &:active { background: rgba(255,255,255,0.08); }
+}
+.page-result__share-option-icon {
+  font-size: 36rpx; flex-shrink: 0; width: 52rpx; text-align: center;
+}
+.page-result__share-option-label {
+  font-size: 28rpx; color: #fff; font-weight: 500;
+}
+.page-result__share-option-hint {
+  font-size: 22rpx; color: rgba(255,255,255,0.35);
+  margin-left: auto;
+}
+.page-result__share-cancel {
+  margin-top: 24rpx;
+  padding: 22rpx;
+  text-align: center;
+  background: rgba(255,255,255,0.06);
+  border-radius: 16rpx;
+  font-size: 28rpx; color: rgba(255,255,255,0.5);
+  &:active { background: rgba(255,255,255,0.1); }
 }
 
 // ── 粘性分享栏 ──
