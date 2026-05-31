@@ -79,7 +79,7 @@
                 </view>
               </template>
             </view>
-            <button class="page-result__mind-read-share" open-type="share" @click="trackShareClick('mindread')">
+            <button class="page-result__mind-read-share" open-type="share" @click="shareContext = 'mindread'; trackShareClick('mindread')">
               📤 分享这个洞察
             </button>
           </view>
@@ -656,6 +656,7 @@ const showSubscribePrompt = ref(false);
 const showAnswerReview = ref(false);
 const showEvolutionJourney = ref(false);
 const showSharePanel = ref(false); // Phase 6: 分享操作面板
+const shareContext = ref(''); // FD-3: 分享上下文 ('mindread'/'persona'/'tier')
 // 用户头像昵称（非阻断式授权，默认匿名）
 const userProfile = ref({ nickname: '', avatar: '' });
 const showProfilePrompt = ref(false);
@@ -1909,8 +1910,16 @@ onShareAppMessage(() => {
   try { expStore.addExp('share_action'); } catch (e) { /* */ }
 
   let title;
+  // FD-3: 读心术洞察专属分享文案
+  if (shareContext.value === 'mindread' && mindReadingInsight.value) {
+    const m = mindReadingInsight.value;
+    title = m.type === 'perfect'
+      ? `AI说我在「${m.highlight}」上满分💯 你也来测测？`
+      : `AI洞察：${m.trait || '我有隐藏特质'} 🧠 想看看你的吗？`;
+    shareContext.value = ''; // 一次性消费
+  }
   // "差一点就晋升"戏剧化分享 — 优先级最高
-  if (aiqPointsToNext.value > 0 && aiqPointsToNext.value <= 2 && result.value.nextTier) {
+  else if (aiqPointsToNext.value > 0 && aiqPointsToNext.value <= 2 && result.value.nextTier) {
     const diffOneCopies = [
       `就差一点点！我离${result.value.nextTier}只差临门一脚…你测测看？`,
       `差一点我就是${result.value.nextTier}了！你也来试试运气？`,

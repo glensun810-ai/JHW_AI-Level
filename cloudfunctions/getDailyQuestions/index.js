@@ -342,11 +342,15 @@ exports.main = async (event, context) => {
       return { code: 400, message: `题库不足（至少需要 ${questionCount} 题），请联系运营补充`, data: null };
     }
 
-    // 按 qualityScore 降序排列（高评分题优先，无评分的题排在中间）
+    // 按 qualityScore 降序排列（高评分优先，低评分沉底，无评分居中）
+    // FD-8: 低质量题目自动沉底，仅在题荒时被选中
     allQuestions.sort((a, b) => {
       const scoreA = a.qualityScore != null ? a.qualityScore : 0.5;
       const scoreB = b.qualityScore != null ? b.qualityScore : 0.5;
-      return scoreB - scoreA;
+      // 已评分且 < 0.3 的低质题排到最后（权重减半）
+      const weightA = (a.qualityScore != null && a.qualityScore < 0.3) ? scoreA * 0.5 : scoreA;
+      const weightB = (b.qualityScore != null && b.qualityScore < 0.3) ? scoreB * 0.5 : scoreB;
+      return weightB - weightA;
     });
 
     // Step 4: 过滤已做题（保留至少 10 题的缓冲，防止某天无题可选）

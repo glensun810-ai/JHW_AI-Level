@@ -59,7 +59,10 @@
     </view>
 
     <view v-else class="page-challenge__no-pending">
-      <text>暂无待处理挑战</text>
+      <text class="page-challenge__no-pending-icon">⚔️</text>
+      <text class="page-challenge__no-pending-text">暂无可应战的挑战</text>
+      <text class="page-challenge__no-pending-hint">分享给好友，邀他们来挑战你</text>
+      <button class="page-challenge__share-btn" open-type="share">📤 发起挑战</button>
     </view>
     </template>
   </view>
@@ -311,10 +314,23 @@ onShareTimeline(() => {
 
   &__no-pending {
     display: flex;
-    justify-content: center;
-    padding-top: 40rpx;
-    color: $color-text-muted;
-    font-size: 26rpx;
+    flex-direction: column;
+    align-items: center;
+    gap: 12rpx;
+    padding: 60rpx 28rpx;
+    text-align: center;
+
+    &-icon { font-size: 56rpx; }
+    &-text { font-size: 28rpx; color: #fff; font-weight: 600; }
+    &-hint { font-size: 24rpx; color: $color-text-muted; }
+  }
+
+  &__share-btn {
+    margin-top: 12rpx;
+    padding: 18rpx 40rpx;
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    border-radius: 32rpx;
+    font-size: 26rpx; color: #fff; font-weight: 600; border: none;
   }
 }
 </style>
