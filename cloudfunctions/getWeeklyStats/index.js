@@ -159,12 +159,24 @@ exports.main = async (event, context) => {
     }
 
     // 获取小程序码（供分享卡片 + 段位长图使用）
-    // v1.2: 固定 cloudPath，自动覆盖旧文件，客户端缓存结果
+    // Phase 7: 支持个人二维码（传入 openid 时生成含分享者 ID 的码）
     if (action === 'getMiniCode') {
       try {
-        const cachePath = 'qrcodes/share_default.png';
+        const targetOpenid = event.openid || '';
+        let scene, cachePath;
+
+        if (targetOpenid) {
+          // 个人二维码：scene 编码分享者 openid（最长 32 字符）
+          scene = 'u_' + targetOpenid.substring(0, 28);
+          cachePath = `qrcodes/uid_${targetOpenid.substring(0, 8)}.png`;
+        } else {
+          // 通用二维码（向后兼容）
+          scene = 'share';
+          cachePath = 'qrcodes/share_default.png';
+        }
+
         const qrRes = await cloud.openapi.wxacode.getUnlimited({
-          scene: 'share',
+          scene,
           page: 'pages/index/index',
           width: 280,
           autoColor: false,
@@ -175,7 +187,6 @@ exports.main = async (event, context) => {
           cloudPath: cachePath,
           fileContent: qrRes.buffer,
         });
-        // fileID 格式: cloud://env.xxx/qrcodes/share_default.png
         // 小程序端 canvas.createImage 支持 cloud:// 协议
         return { code: 0, data: { miniCodeUrl: uploadRes.fileID } };
       } catch (e) {

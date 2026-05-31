@@ -5,19 +5,21 @@
     <view v-if="showOverlay" class="page-index__overlay" />
 
 
-    <!-- 帮朋友测 Banner（个性化：显示好友段位+对比动机） -->
+    <!-- Phase 7: 被邀请欢迎卡（含奖励信息） -->
     <view v-if="friendName && !showReversalBanner" class="page-index__friend-banner" @click="handleStart">
       <template v-if="friendTier">
-        <text class="page-index__friend-banner-challenge">
-          <text class="page-index__friend-banner-tier">{{ friendTierEmoji }} {{ friendTier }}</text>
-        </text>
-        <text class="page-index__friend-banner-name">@{{ friendName }}</text> 邀你来战
-        <text class="page-index__friend-banner-vs">你能超过 TA 吗？⚡</text>
+        <view class="page-index__friend-banner-gift">🎁 @{{ friendName }} 邀请你来测AI段位</view>
+        <text class="page-index__friend-banner-friendtier">{{ friendTierEmoji }} {{ friendName }} 的段位：{{ friendTier }}</text>
+        <view class="page-index__friend-banner-bonus">
+          <text>✨ 被邀请用户首次测试额外 +10 XP</text>
+          <text>📊 测完看看你能不能超过 {{ friendName }}</text>
+        </view>
       </template>
       <template v-else>
-        <text class="page-index__friend-banner-text">
-          <text class="page-index__friend-banner-name">@{{ friendName }}</text> 邀你来测AI段位
-        </text>
+        <view class="page-index__friend-banner-gift">🎁 @{{ friendName }} 邀请你来测AI段位</view>
+        <view class="page-index__friend-banner-bonus">
+          <text>✨ 被邀请用户首次测试额外 +10 XP</text>
+        </view>
       </template>
     </view>
 
@@ -690,6 +692,12 @@ async function handleStart() {
     return;
   }
 
+  // Phase 7: 被邀请用户首次测试 — 零摩擦入口，不拦门控
+  if (friendName.value && isFirstVisit.value) {
+    startQuiz();
+    return;
+  }
+
   // ① 每日免费测试
   if (!hasUsedFreeTestToday()) {
     startQuiz();
@@ -828,6 +836,8 @@ function handleDeepStart() {
 
 onShareAppMessage(() => {
   trackShareClick('home', 'share');
+  // Phase 7: 分享即时奖励
+  try { useExperienceStore().addExp('share_action'); } catch (e) { /* */ }
   const uid = getUserOpenidSync();
   // Phase 4: 回访用户个性化分享文案
   const tierName = returningTierName.value;
@@ -914,6 +924,32 @@ onShareTimeline(() => {
       color: $color-accent;
       font-weight: 600;
       animation: pulse-vs 1.8s ease-in-out infinite;
+    }
+
+    // Phase 7: 被邀请欢迎卡新增样式
+    &-gift {
+      font-size: 28rpx;
+      color: #f59e0b;
+      font-weight: bold;
+      margin-bottom: 6rpx;
+    }
+
+    &-friendtier {
+      display: block;
+      font-size: 26rpx;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 8rpx;
+    }
+
+    &-bonus {
+      display: flex;
+      flex-direction: column;
+      gap: 4rpx;
+      padding-top: 8rpx;
+      border-top: 1rpx solid rgba(255,255,255,0.1);
+      font-size: 22rpx;
+      color: rgba(255,255,255,0.55);
+      text-align: center;
     }
   }
 

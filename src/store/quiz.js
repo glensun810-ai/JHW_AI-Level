@@ -185,6 +185,10 @@ export const useQuizStore = defineStore('quiz', () => {
         if (res.data.isNewHighest) {
           expStore.addExp('record');
         }
+        // Phase 7: 被邀请用户首次测试额外 XP
+        if (fromUid && res.data.isFirstTime) {
+          expStore.addExp('invited_bonus');
+        }
       }
     } else if (res.code === 500 || res.code === -1) {
       // 网络错误：保留备份供重试，但仍尝试跳转结果页（lastResult 可能已由前次提交设置）

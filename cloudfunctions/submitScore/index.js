@@ -673,6 +673,16 @@ exports.main = async (event, context) => {
 
         // 邀请解锁：被邀请人完成测试 → 邀请人获得奖励
         await completeInviteReward(event.fromUid, OPENID, tier.name, isDeepMode);
+
+        // Phase 7: 被邀请者也获得 +1 免费测试机会（双端奖励）
+        try {
+          await db.collection('users').where({ _openid: OPENID }).update({
+            data: { inviteUnlocks: _.inc(1), updatedAt: new Date() },
+          });
+          console.log(`[submitScore] 被邀请者奖励: ${OPENID.slice(0,8)}... +1 inviteUnlock`);
+        } catch (e) {
+          console.log('[submitScore] 被邀请者奖励写入失败:', e.message);
+        }
       } catch (e) {
         console.log('[submitScore] share_log/friendship/invite 更新失败:', e.message);
       }

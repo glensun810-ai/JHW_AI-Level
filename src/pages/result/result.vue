@@ -1284,7 +1284,9 @@ async function loadReviewData(isReviewMode) {
 
 async function loadMiniCode() {
   try {
-    const res = await callCloudFunction('getWeeklyStats', { action: 'getMiniCode' }, { retry: false });
+    // Phase 7: 传入 openid 生成个人二维码（scene 编码分享者 ID）
+    const uid = getUserOpenidSync();
+    const res = await callCloudFunction('getWeeklyStats', { action: 'getMiniCode', openid: uid }, { retry: false });
     if (res.code === 0 && res.data && res.data.miniCodeUrl) {
       miniCodeUrl.value = res.data.miniCodeUrl;
     }
@@ -1887,6 +1889,8 @@ onShareAppMessage(() => {
   const variant = getABVariant();
   const style = variant === 'A' ? 'showoff' : 'selfmock';
   trackShareClick(tierName, style);
+  // Phase 7: 分享即时奖励
+  try { expStore.addExp('share_action'); } catch (e) { /* */ }
 
   let title;
   // "差一点就晋升"戏剧化分享 — 优先级最高

@@ -4,24 +4,28 @@ import { callCloudFunction } from '@/utils/api.js';
 
 // 经验值规则 — v0.9 进化值双轨制
 const EXP_RULES = {
-  test: 10,        // 完成测试
-  record: 20,      // 超越历史最高分
-  checkin: 5,      // 每日签到
-  share: 15,       // 分享被点击
-  invite: 50,      // 邀请好友进入
-  challenge_win: 30, // 挑战获胜
-  knowledge: 5,    // 阅读知识卡 >5s 或点"有帮助"
+  test: 10,           // 完成测试
+  record: 20,         // 超越历史最高分
+  checkin: 5,         // 每日签到
+  share: 15,          // 分享被点击
+  share_action: 10,   // Phase 7: 分享动作本身（即时奖励）
+  invite: 50,         // 邀请好友进入
+  invited_bonus: 10,  // Phase 7: 被邀请用户首次测试额外 XP
+  challenge_win: 30,  // 挑战获胜
+  knowledge: 5,       // 阅读知识卡 >5s 或点"有帮助"
 };
 
 // 每日获取上限（防刷）
 const DAILY_LIMITS = {
-  test: 1,        // 每天仅首次测试给 XP
-  record: 1,      // 每天仅首次破纪录给 XP
-  checkin: 1,     // 每天仅签到一次
-  share: 3,       // 每天最多 3 次分享 XP
-  knowledge: 5,   // 每天最多 5 张知识卡 XP
-  invite: 5,      // 每天最多 5 次邀请 XP
-  challenge_win: 10, // 每天最多 10 次挑战获胜 XP
+  test: 1,            // 每天仅首次测试给 XP
+  record: 1,          // 每天仅首次破纪录给 XP
+  checkin: 1,         // 每天仅签到一次
+  share: 3,           // 每天最多 3 次分享 XP
+  share_action: 5,    // Phase 7: 每天最多 5 次分享动作 XP
+  knowledge: 5,       // 每天最多 5 张知识卡 XP
+  invite: 5,          // 每天最多 5 次邀请 XP
+  invited_bonus: 1,   // Phase 7: 被邀请首次测试一次
+  challenge_win: 10,  // 每天最多 10 次挑战获胜 XP
 };
 
 // 进化等级阈值 — v0.9 50 级体系

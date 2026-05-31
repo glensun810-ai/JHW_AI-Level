@@ -24,6 +24,23 @@ export default {
       console.error('请在微信开发者工具中运行');
     }
 
+    // Phase 7: 解析小程序码 scene 参数，实现 QR 码扫码归因
+    try {
+      const launchOpts = wx.getLaunchOptionsSync();
+      if (launchOpts.query && launchOpts.query.scene) {
+        const scene = decodeURIComponent(launchOpts.query.scene);
+        if (scene.startsWith('u_')) {
+          const inviterOpenid = scene.substring(2);
+          this.globalData.shareFromUid = inviterOpenid;
+          // 异步记录邀请关系（复用与聊天分享相同的逻辑）
+          callCloudFunction('submitScore', {
+            action: 'recordInvite',
+            inviterUid: inviterOpenid,
+          }, { retry: false }).catch(() => {});
+        }
+      }
+    } catch (e) { /* 静默 */ }
+
     // 启用带 shareTicket 的分享（群排行/群挑战需要）
     if (typeof wx !== 'undefined' && wx.showShareMenu) {
       wx.showShareMenu({ withShareTicket: true });
