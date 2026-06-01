@@ -7,6 +7,7 @@
         <text class="page-checkin__streak-unit">天</text>
       </view>
       <text class="page-checkin__streak-label">已连续签到</text>
+      <text class="page-checkin__brand">进化湾 · 每日签到</text>
     </view>
 
     <!-- 签到按钮 -->
@@ -362,6 +363,14 @@ onShareTimeline(() => {
     margin-top: 16rpx;
     font-size: 28rpx;
     color: $color-text-secondary;
+  }
+
+  &__brand {
+    display: block;
+    margin-top: 8rpx;
+    font-size: 20rpx;
+    color: rgba(255, 255, 255, 0.15);
+    text-align: center;
   }
 
   // ====== 签到按钮 ======

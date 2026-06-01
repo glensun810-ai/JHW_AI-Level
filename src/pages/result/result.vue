@@ -513,6 +513,8 @@
           </view>
         </view>
 
+        <!-- 品牌标识（截图可见） -->
+        <text class="page-result__brand-foot">进化湾 · AI段位测评</text>
         <view style="height: 160rpx" />
       </view>
     </scroll-view>
@@ -2109,6 +2111,15 @@ onShareTimeline(() => {
     border-radius: 50%;
     pointer-events: none;
     z-index: 0;
+  }
+
+  &__brand-foot {
+    display: block;
+    width: 100%;
+    text-align: center;
+    font-size: 20rpx;
+    color: rgba(255, 255, 255, 0.2);
+    padding: 16rpx 0 0;
   }
 
   &__section-title {

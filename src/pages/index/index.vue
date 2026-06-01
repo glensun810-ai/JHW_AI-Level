@@ -43,7 +43,7 @@
 
     <!-- ====== 首屏可见区 ====== -->
     <view class="page-index__hero" :class="{ 'page-index__hero--shrink': btnShrink }">
-      <text v-if="!showReturningHero" class="page-index__title">你的AI段位</text>
+      <text v-if="!showReturningHero" class="page-index__title">进化湾 · AI段位测评</text>
       <text v-if="!showReturningHero" class="page-index__subtitle">AI时代，你处在哪个段位？</text>
 
       <!-- Phase 4: 回访用户段位卡片（始终可见，不消耗额度） -->

@@ -1,5 +1,7 @@
 <template>
   <view class="page-rank">
+    <!-- 品牌标题（截图可见） -->
+    <text class="page-rank__brand-title">进化湾 · 段位排行</text>
     <!-- 今日结算倒计时 -->
     <view class="page-rank__countdown-bar">
       <text class="page-rank__countdown-text">距离今日段位榜结算还剩 {{ countdownText }}</text>
@@ -547,6 +549,15 @@ onShareTimeline(() => {
   flex-direction: column;
   overflow-x: hidden;   // 防止横向溢出
   padding-bottom: calc(80rpx + env(safe-area-inset-bottom));  // 底部 tab bar 补偿
+
+  &__brand-title {
+    display: block;
+    text-align: center;
+    font-size: 22rpx;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.2);
+    padding: 16rpx 0 2rpx;
+  }
 
   // ====== 今日结算倒计时 ======
   &__countdown-bar {
