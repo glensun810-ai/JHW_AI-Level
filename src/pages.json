@@ -87,6 +87,12 @@
     "borderStyle": "black",
     "list": [
       {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/icons/home.png",
+        "selectedIconPath": "static/icons/home-active.png"
+      },
+      {
         "pagePath": "pages/rank/rank",
         "text": "排行榜",
         "iconPath": "static/icons/rank.png",

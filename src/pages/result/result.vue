@@ -1,5 +1,14 @@
 <template>
   <view class="page-result">
+    <!-- 快速导航栏（阶段1+显示） -->
+    <view v-if="stage === 'revealing'" class="page-result__topnav">
+      <text class="page-result__topnav-title">进化湾</text>
+      <view class="page-result__topnav-actions">
+        <text class="page-result__topnav-link" @click="goHome">🏠 首页</text>
+        <text class="page-result__topnav-link" @click="goToRank">📊 排行</text>
+      </view>
+    </view>
+
     <!-- 阶段0：评估中 -->
     <view v-if="stage === 'evaluating'" class="page-result__evaluating">
       <view class="page-result__ripple" />
@@ -1176,7 +1185,7 @@ onMounted(() => {
     // 回顾模式 或 store 中仍有数据 → 加载回顾数据
     loadReviewData(isReviewMode);
   } else {
-    uni.redirectTo({ url: '/pages/index/index' });
+    uni.switchTab({ url: '/pages/index/index' });
     return;
   }
 
@@ -1233,7 +1242,7 @@ async function loadReviewData(isReviewMode) {
       uni.hideLoading();
       uni.showToast({ title: '暂无测试记录，请先完成测试', icon: 'none' });
       setTimeout(() => {
-        uni.redirectTo({ url: '/pages/index/index' });
+        uni.switchTab({ url: '/pages/index/index' });
       }, 1500);
       return;
     }
@@ -1277,7 +1286,7 @@ async function loadReviewData(isReviewMode) {
     console.error('[result] loadReviewData 失败:', e);
     uni.showToast({ title: '加载失败，请重试', icon: 'none' });
     setTimeout(() => {
-      uni.redirectTo({ url: '/pages/index/index' });
+      uni.switchTab({ url: '/pages/index/index' });
     }, 1500);
   }
 }
@@ -1799,7 +1808,8 @@ function counterChallenge() {
     uni.showToast({ title: '网络异常，请稍后重试', icon: 'none' });
   });
 }
-function goHome() { uni.redirectTo({ url: '/pages/index/index' }); }
+function goHome() { uni.switchTab({ url: '/pages/index/index' }); }
+function goToRank() { uni.switchTab({ url: '/pages/rank/rank' }); }
 
 async function saveBadgeToAlbum() {
   // 确保有一张已生成的段位卡（静默生成，不弹预览）
@@ -1845,7 +1855,7 @@ function retryQuiz() {
   // Phase 4: 回顾模式下，先回首页走门控流程
   if (isReviewModeFlag) {
     uni.removeStorageSync('quiz_breakpoint');
-    uni.redirectTo({ url: '/pages/index/index' });
+    uni.switchTab({ url: '/pages/index/index' });
     return;
   }
 
@@ -2049,8 +2059,20 @@ onShareTimeline(() => {
     animation: text-blink 1.5s ease-in-out infinite;
   }
 
+  &__topnav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16rpx 32rpx;
+    background: rgba(10, 10, 20, 0.9);
+    z-index: 50;
+    &-title { font-size: 28rpx; color: #fff; font-weight: bold; }
+    &-actions { display: flex; gap: 24rpx; }
+    &-link { font-size: 24rpx; color: $color-accent; }
+  }
+
   &__scroll {
-    height: 100vh;
+    height: calc(100vh - 80rpx);
     overflow-x: hidden;
   }
 
@@ -4030,6 +4052,10 @@ onShareTimeline(() => {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+@keyframes share-btn-glow {
+  0%, 100% { box-shadow: 0 4rpx 20rpx rgba(124, 58, 237, 0.4); }
+  50% { box-shadow: 0 4rpx 32rpx rgba(245, 158, 11, 0.6); }
+}
 
 @keyframes milestone-pop {
   0% { transform: scale(0.8); opacity: 0; }
@@ -4045,6 +4071,12 @@ onShareTimeline(() => {
   font-weight: bold;
   color: #fff;
   border: none;
+  &--share {
+    flex: 1.2;
+    background: linear-gradient(135deg, #7c3aed, #f59e0b);
+    box-shadow: 0 4rpx 20rpx rgba(124, 58, 237, 0.4);
+    animation: share-btn-glow 2s ease-in-out infinite;
+  }
   text-align: center;
 
   &:active { transform: scale(0.97); }

@@ -215,10 +215,14 @@
         </view>
       </view>
 
-      <!-- v0.9: 深度定段入口 (Lv.5+ 解锁) -->
+      <!-- v0.9: 深度定段入口 -->
       <view v-if="expStore.unlocks.deepMode" class="page-index__deep-entry" @click="handleDeepStart">
-        <text class="page-index__deep-entry-text">深度定段 · 10题版</text>
+        <text class="page-index__deep-entry-text">🔬 深度定段 · 10题版</text>
         <text class="page-index__deep-entry-hint">满分100 · 仅自己可见</text>
+      </view>
+      <view v-else class="page-index__deep-entry page-index__deep-entry--locked">
+        <text class="page-index__deep-entry-text">🔒 深度定段 · 10题版</text>
+        <text class="page-index__deep-entry-hint">Lv.5 解锁 · 当前 Lv.{{ expStore.level }}</text>
       </view>
     </view>
   </view>
@@ -1586,6 +1590,13 @@ onShareTimeline(() => {
     border: 1rpx solid rgba(124, 58, 237, 0.2);
     border-radius: 16rpx;
     transition: background 0.2s, transform 0.2s;
+
+    &--locked {
+      opacity: 0.5;
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.08);
+      &:active { transform: none; background: rgba(255, 255, 255, 0.03); }
+    }
 
     &:active {
       background: rgba(124, 58, 237, 0.15);

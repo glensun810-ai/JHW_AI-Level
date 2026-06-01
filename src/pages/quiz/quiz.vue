@@ -16,6 +16,7 @@
       />
       <text v-if="store.deepMode" class="page-quiz__deep-badge">深度定段</text>
       <text v-if="store.dailyMode" class="page-quiz__deep-badge">每日一题</text>
+      <text class="page-quiz__home-btn" @click="goHome">🏠</text>
     </view>
 
     <!-- 加载中 -->
@@ -458,6 +459,7 @@ function onProgressComplete() {
 }
 
 // ── 返回上一题 / 退出 ──
+function goHome() { uni.switchTab({ url: '/pages/index/index' }); }
 function goBack() {
   // 第一题 → 退出（同之前逻辑）
   if (currentIndex.value <= 0) {
@@ -607,6 +609,13 @@ onShareTimeline(() => {
     border: 1rpx solid rgba(124, 58, 237, 0.15);
     flex-shrink: 0;
     margin-left: auto;
+  }
+
+  &__home-btn {
+    font-size: 32rpx;
+    padding: 4rpx 8rpx;
+    margin-left: 12rpx;
+    flex-shrink: 0;
   }
 
   &__loading {
