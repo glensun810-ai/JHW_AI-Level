@@ -2182,6 +2182,8 @@ onShareTimeline(() => {
     gap: 6rpx;
     margin-top: 24rpx;
     padding: 20rpx 32rpx;
+    max-width: 100%;
+    box-sizing: border-box;
     background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.08) 0%, transparent 70%);
     border-radius: 20rpx;
 
@@ -2610,6 +2612,8 @@ onShareTimeline(() => {
 
   &__friend-rank {
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     margin-top: 32rpx;
   }
 
@@ -3829,11 +3833,15 @@ onShareTimeline(() => {
 // ── AI 读心术 ──
 .page-result__mind-read {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   margin-top: 28rpx;
 }
 
 .page-result__mind-read-card {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 28rpx 24rpx;
   border-radius: 20rpx;
   display: flex;

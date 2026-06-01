@@ -147,6 +147,8 @@ function openTool() {
 <style scoped lang="scss">
 .growth {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   margin-top: 32rpx;
   padding: 28rpx;
   background: rgba(124, 58, 237, 0.08);
