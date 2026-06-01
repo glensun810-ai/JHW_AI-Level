@@ -414,7 +414,7 @@ exports.main = async (event, context) => {
     const tier = getTier(clampedTierScore);
     const nextTier = getNextTier(clampedTierScore);
     const pointsToNext = nextTier ? nextTier.min - clampedTierScore : 0;
-    const displayScore = isDeepMode ? totalScore : tierScore;
+    const displayScore = tierScore; // 始终归一化到 0-50，AIQ 公式方可正确映射
 
     // 雷达图数据 + AI人格画像
     const radarValues = calcRadarData(qScores, orderedQuestions);
@@ -1234,8 +1234,11 @@ async function handleGetLastResult(openid) {
       }
     });
 
-    // 复用已有函数重建结果
-    const tierScore = Math.min(50, Math.max(5, record.totalScore));
+    // 复用已有函数重建结果（深度模式归一化到 0-50）
+    const isDeepMode = record.answers.length === 10;
+    const tierScore = isDeepMode
+      ? Math.min(50, Math.max(5, Math.round(record.totalScore / 2)))
+      : Math.min(50, Math.max(5, record.totalScore));
     const tier = getTier(tierScore);
     const nextTier = getNextTier(tierScore);
     const radarValues = calcRadarData(qScores, orderedQuestions);
