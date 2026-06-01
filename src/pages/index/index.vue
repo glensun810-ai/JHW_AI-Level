@@ -113,10 +113,16 @@
       <!-- CTA 按钮 -->
       <button
         class="page-index__cta"
-        :class="{ 'page-index__cta--urgent': isUrgent }"
+        :class="{ 'page-index__cta--urgent': isUrgent, 'page-index__cta--no-free': freeTestRemaining === 0 }"
         :disabled="transitioning"
         @click="handleStart"
-      >{{ ctaText }}</button>
+      >
+        <template v-if="freeTestRemaining > 0">{{ ctaText }}（剩{{ freeTestRemaining }}次）</template>
+        <template v-else>📤 邀请好友，解锁免费次数</template>
+      </button>
+
+      <!-- 免费次数提示 -->
+      <text v-if="freeTestRemaining === 0" class="page-index__cta-hint">今日免费次数已用完 · 分享即可获得新次数</text>
 
       <!-- CTA下方轻量社交证明 -->
       <view class="page-index__proof">
@@ -853,8 +859,9 @@ function handleDeepStart() {
 
 onShareAppMessage(() => {
   trackShareClick('home', 'share');
-  // Phase 7: 分享即时奖励
+  // Phase 8: 分享即时奖励（XP + 免费次数）
   try { useExperienceStore().addExp('share_action'); } catch (e) { /* */ }
+  callCloudFunction('submitScore', { action: 'rewardShare' }, { retry: false }).catch(() => {});
   const uid = getUserOpenidSync();
   // Phase 4: 回访用户个性化分享文案
   const tierName = returningTierName.value;
@@ -1400,6 +1407,19 @@ onShareTimeline(() => {
     animation: breathe 1.5s ease-in-out infinite;
     will-change: transform;
     &--urgent { animation: breathe-fast 0.8s ease-in-out infinite; will-change: transform; }
+    &--no-free {
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      font-size: 28rpx;
+      width: 480rpx;
+    }
+  }
+
+  &__cta-hint {
+    display: block;
+    text-align: center;
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 12rpx;
   }
 
   &__hint {

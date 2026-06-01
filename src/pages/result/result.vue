@@ -1935,8 +1935,9 @@ onShareAppMessage(() => {
   const variant = getABVariant();
   const style = variant === 'A' ? 'showoff' : 'selfmock';
   trackShareClick(tierName, style);
-  // Phase 7: 分享即时奖励
+  // Phase 8: 分享即时奖励（XP + 免费次数）
   try { expStore.addExp('share_action'); } catch (e) { /* */ }
+  callCloudFunction('submitScore', { action: 'rewardShare' }, { retry: false }).catch(() => {});
 
   let title;
   // FD-3: 读心术洞察专属分享文案

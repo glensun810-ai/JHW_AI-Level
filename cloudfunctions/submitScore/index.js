@@ -300,6 +300,11 @@ exports.main = async (event, context) => {
       return await handleClaimInviteUnlock(OPENID);
     }
 
+    // Phase 8: rewardShare — 分享即奖励，不等待好友完成测试
+    if (event.action === 'rewardShare') {
+      return await handleRewardShare(OPENID);
+    }
+
     // ── updateSubscribe：回写订阅消息状态 ──
     if (event.action === 'updateSubscribe') {
       return await handleUpdateSubscribe(OPENID, event.subscriptions);
@@ -889,6 +894,51 @@ async function handleRecordInvite(inviteeOpenid, inviterOpenid) {
   } catch (e) {
     console.log('[submitScore] handleRecordInvite 失败:', e.message);
     return { code: 500, message: '记录邀请失败', data: null };
+  }
+}
+
+// Phase 8: 分享即奖励 — 每天最多 3 次，无需等待好友完成测试
+async function handleRewardShare(openid) {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: users } = await db.collection('users').where({ _openid: openid }).get();
+    if (users.length === 0) {
+      // 新用户先创建记录
+      await db.collection('users').add({
+        data: {
+          _openid: openid,
+          inviteUnlocks: 1,
+          shareRewardDate: today,
+          shareRewardCount: 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+      return { code: 0, data: { available: true, inviteUnlocks: 1 } };
+    }
+
+    const user = users[0];
+    const lastDate = user.shareRewardDate || '';
+    const todayCount = lastDate === today ? (user.shareRewardCount || 0) : 0;
+
+    // 每天最多 3 次分享奖励
+    if (todayCount >= 3) {
+      return { code: 0, data: { available: false, inviteUnlocks: user.inviteUnlocks || 0, message: '今日分享奖励已达上限' } };
+    }
+
+    await db.collection('users').where({ _openid: openid }).update({
+      data: {
+        inviteUnlocks: _.inc(1),
+        shareRewardDate: today,
+        shareRewardCount: todayCount + 1,
+        updatedAt: new Date(),
+      },
+    });
+
+    return { code: 0, data: { available: true, inviteUnlocks: (user.inviteUnlocks || 0) + 1 } };
+  } catch (e) {
+    console.log('[submitScore] handleRewardShare 失败:', e.message);
+    return { code: 500, data: { available: false } };
   }
 }
 
