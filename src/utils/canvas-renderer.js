@@ -219,7 +219,7 @@ async function renderTierCard(canvas, ctx, data) {
   }
 
   // ─── ⑥ AI 商数（大数字 + 下方标签 + 参照系） ───
-  const scoreY = 435 + topShift;
+  const scoreY = 420 + topShift;
   ctx.fillStyle = theme.text;
   ctx.font = 'bold 88px sans-serif';
   ctx.textAlign = 'center';
@@ -231,14 +231,14 @@ async function renderTierCard(canvas, ctx, data) {
 
   ctx.fillStyle = theme.subtitle;
   ctx.font = '24px sans-serif';
-  ctx.fillText('AI商数', W / 2, 488 + topShift);
+  ctx.fillText('AI商数', W / 2, 470 + topShift);
 
   ctx.fillStyle = theme.subtitle;
   ctx.font = '20px sans-serif';
-  ctx.fillText('均值约105 · 超越全国 ' + percentile + '% 的用户', W / 2, 520 + topShift);
+  ctx.fillText('均值约105 · 超越全国 ' + percentile + '% 的用户', W / 2, 500 + topShift);
 
   // ─── ⑦ 段位进度面板 600×105 ───
-  const progPanelY = 570 + topShift;
+  const progPanelY = 545 + topShift;
   const progPanelW = 600;
   const progPanelH = 105;
   const progPanelX = (W - progPanelW) / 2;
@@ -293,9 +293,9 @@ async function renderTierCard(canvas, ctx, data) {
   // ─── ⑧ 好友排名 pill ───
   let friendRankBottom = progPanelY + progPanelH;
   if (friendRank) {
-    const friendY = progPanelY + progPanelH + 24;
+    const friendY = progPanelY + progPanelH + 18;
     const pillW = 320;
-    const pillH = 44;
+    const pillH = 40;
     const pillX = (W - pillW) / 2;
     drawRoundRect(ctx, pillX, friendY, pillW, pillH, 22);
     ctx.fillStyle = 'rgba(255,255,255,0.06)';
@@ -303,14 +303,14 @@ async function renderTierCard(canvas, ctx, data) {
     ctx.fillStyle = theme.accent;
     ctx.font = 'bold 24px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`\u{1F3C6} 好友排名第 ${friendRank.rank} / ${friendRank.total} 位`, W / 2, friendY + 30);
+    ctx.fillText(`\u{1F3C6} 好友排名第 ${friendRank.rank} / ${friendRank.total} 位`, W / 2, friendY + 28);
     friendRankBottom = friendY + pillH;
   }
 
-  // ─── ⑨ 小程序码面板 670×200 ───
-  const qrPanelY = friendRankBottom + 40;
+  // ─── ⑨ 小程序码面板 670×180 ───
+  const qrPanelY = friendRankBottom + 20;
   const qrPanelW = 670;
-  const qrPanelH = 200;
+  const qrPanelH = 180;
   const qrPanelX = (W - qrPanelW) / 2;
   drawRoundRect(ctx, qrPanelX, qrPanelY, qrPanelW, qrPanelH, 16);
   ctx.fillStyle = 'rgba(255,255,255,0.03)';
@@ -322,26 +322,20 @@ async function renderTierCard(canvas, ctx, data) {
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 26px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('扫码测测你的 AI 段位', W / 2, qrPanelY + 36);
+  ctx.fillText('扫码测测你的 AI 段位', W / 2, qrPanelY + 33);
 
   const qrSize = 140;
   const qrX = (W - qrSize) / 2;
-  const qrY = qrPanelY + 52;
+  const qrY = qrPanelY + 38;
   await drawMiniCode(canvas, ctx, qrX, qrY, qrSize, miniCodeUrl, 14);
 
-  // 长按提示（面板下方）
+  // 长按提示（面板内底部）
   ctx.fillStyle = theme.subtitle;
   ctx.font = '18px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('长按识别小程序码', W / 2, qrPanelY + qrPanelH + 22);
+  ctx.fillText('长按识别小程序码', W / 2, qrPanelY + qrPanelH - 6);
 
-  // ─── ⑩ 页脚 ───
-  ctx.fillStyle = theme.subtitle;
-  ctx.font = '16px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.globalAlpha = 0.4;
-  ctx.fillText('进化湾', W / 2, H - 22);
-  ctx.globalAlpha = 1.0;
+  // 页脚已由 QR 面板中的品牌文案替代
 }
 
 // ── 人格卡渲染函数 ──
@@ -742,7 +736,7 @@ async function renderSquareShare(canvas, ctx, data) {
   }
 
   // ─── 上 1/3: 段位徽章 + 人格标签 ───
-  const topSectionH = Math.round(H * 0.34);
+  const topSectionH = Math.round(H * 0.30);
 
   // 品牌标识
   ctx.fillStyle = theme.subtitle;
@@ -819,8 +813,8 @@ async function renderSquareShare(canvas, ctx, data) {
   ctx.fillText(personaEmoji + ' ' + personaName, W / 2, 305 + topShift);
 
   // ─── 中 1/3: 知识星收集 + 一句话亮点 ───
-  const midY = topSectionH + 30 + topShift;
-  drawRoundRect(ctx, 60, midY, W - 120, 200, 16);
+  const midY = topSectionH + 20 + topShift;
+  drawRoundRect(ctx, 60, midY, W - 120, 180, 16);
   ctx.fillStyle = 'rgba(255,255,255,0.04)';
   ctx.fill();
 
@@ -849,7 +843,7 @@ async function renderSquareShare(canvas, ctx, data) {
   }
 
   // ─── 下 1/3: 小程序码 + 引导文案 ───
-  const bottomY = midY + 230;
+  const bottomY = midY + 190;
   ctx.fillStyle = theme.subtitle;
   ctx.font = '26px sans-serif';
   ctx.textAlign = 'center';
@@ -863,7 +857,7 @@ async function renderSquareShare(canvas, ctx, data) {
 
   ctx.fillStyle = theme.subtitle;
   ctx.font = '20px sans-serif';
-  ctx.fillText('长按识别 · 看看你的AI段位排第几', W / 2, qrY + qrSize + 30);
+  ctx.fillText('长按识别 · 看看你的AI段位排第几', W / 2, qrY + qrSize + 24);
 }
 
 // ── 渲染入口：优先使用离屏 Canvas，降级到 DOM Canvas ──
