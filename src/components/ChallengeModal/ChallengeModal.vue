@@ -3,7 +3,7 @@
     <view class="challenge-modal__panel" @click.stop>
       <!-- 头部 -->
       <view class="challenge-modal__header">
-        <text class="challenge-modal__title">⚔️ 挑战好友</text>
+        <text class="challenge-modal__title">⚔️挑战好友</text>
         <text class="challenge-modal__close" @click="close">×</text>
       </view>
 

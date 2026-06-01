@@ -4,8 +4,8 @@
     <view v-if="stage === 'revealing'" class="page-result__topnav">
       <text class="page-result__topnav-title">进化湾</text>
       <view class="page-result__topnav-actions">
-        <text class="page-result__topnav-link" @click="goHome">🏠 首页</text>
-        <text class="page-result__topnav-link" @click="goToRank">📊 排行</text>
+        <text class="page-result__topnav-link" @click="goHome">🏠首页</text>
+        <text class="page-result__topnav-link" @click="goToRank">📊排行</text>
       </view>
     </view>
 
@@ -89,7 +89,7 @@
               </template>
             </view>
             <button class="page-result__mind-read-share" open-type="share" @click="shareContext = 'mindread'; trackShareClick('mindread')">
-              📤 分享这个洞察
+              📤分享这个洞察
             </button>
           </view>
 
@@ -103,7 +103,7 @@
           <view v-if="challengeResult" class="page-result__battle page-result__fade-in">
             <view class="page-result__battle-header">
               <text class="page-result__battle-icon">{{ battleResultIcon }}</text>
-              <text class="page-result__battle-title">⚔️ 段位对决</text>
+              <text class="page-result__battle-title">⚔️段位对决</text>
             </view>
             <view class="page-result__battle-vs">
               <view class="page-result__battle-player" :class="{ 'page-result__battle-player--winner': challengeResult.result === 'challenger_win' }">
@@ -125,10 +125,10 @@
             <text class="page-result__battle-verdict">{{ battleVerdict }}</text>
             <view class="page-result__battle-actions">
               <button class="page-result__battle-share" open-type="share" @click="trackShareClick('battle')">
-                📤 分享对决结果
+                📤分享对决结果
               </button>
               <button class="page-result__battle-counter" @click="counterChallenge">
-                ⚔️ 回敬挑战
+                ⚔️回敬挑战
               </button>
             </view>
           </view>
@@ -279,7 +279,7 @@
           <view class="page-result__actions-block page-result__actions-block--early">
             <view class="page-result__actions">
               <button class="page-result__btn-challenge" @click="challengeFriend">挑战好友</button>
-              <button class="page-result__btn-invite" open-type="share" @click="trackInviteSentFromResult">📤 邀请好友解锁更多测试</button>
+              <button class="page-result__btn-invite" open-type="share" @click="trackInviteSentFromResult">📤邀请好友解锁更多测试</button>
               <view class="page-result__save-row">
                 <button class="page-result__btn-poster" @click="saveTierCard">保存段位卡</button>
                 <button class="page-result__btn-moments" @click="saveSquareShare">保存朋友圈图</button>
@@ -398,7 +398,7 @@
                   <text class="page-result__friend-empty-icon">👥</text>
                   <text class="page-result__friend-empty-title">暂无好友数据</text>
                   <text class="page-result__friend-empty-desc">分享给好友，看看他们的AI段位</text>
-                  <button class="page-result__friend-empty-btn" open-type="share">📤 邀请好友来测</button>
+                  <button class="page-result__friend-empty-btn" open-type="share">📤邀请好友来测</button>
                 </view>
                 <view v-if="myRankInFriends && myRankInFriends > 3" class="page-result__friend-my-rank">
                   <text class="page-result__friend-my-rank-dot">···</text>
@@ -431,13 +431,13 @@
                   <text class="page-result__friend-score">{{ toAIQ(m.highestScore) }}</text>
                 </view>
                 <view v-if="groupRankings.length > 0" class="page-result__group-share-card">
-                  <button class="page-result__group-share-btn" @click="generateGroupRankImage">📊 生成群排行图</button>
+                  <button class="page-result__group-share-btn" @click="generateGroupRankImage">📊生成群排行图</button>
                 </view>
                 <view v-if="groupRankings.length === 0" class="page-result__friend-empty">
                   <text class="page-result__friend-empty-icon">👥</text>
                   <text class="page-result__friend-empty-title">暂无群友数据</text>
                   <text class="page-result__friend-empty-desc">分享到微信群，看看群友的段位</text>
-                  <button class="page-result__friend-empty-btn" open-type="share">📤 分享到群</button>
+                  <button class="page-result__friend-empty-btn" open-type="share">📤分享到群</button>
                 </view>
               </view>
               <view v-else class="page-result__friend-loading">
@@ -567,7 +567,7 @@
         {{ isReviewModeFlag ? '再测一次' : '再测一次' }}
       </button>
       <button class="page-result__sticky-btn page-result__sticky-btn--share" @click="openSharePanel">
-        📤 分享
+        📤分享
       </button>
       <button class="page-result__sticky-btn page-result__sticky-btn--home" @click="goHome">
         🏠
