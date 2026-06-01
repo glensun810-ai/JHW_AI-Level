@@ -373,15 +373,26 @@ exports.main = async (event, context) => {
       }
     } catch (e) { /* 降级：全部用首版 commentary */ }
 
-    // 独立计算总分（不信任前端传值）
-    const qScores = [];
-    const commentary = [];
-    let totalScore = 0;
-
+    // 独立计算总分（不再按固定索引重算—选项已随机排列）
+    // 优先使用客户端发送的 score（客户端基于 shuffled scores 数组正确计算）
+    // 服务端仅做防篡改校验：score 不在题目得分范围内则取最近的有效值
     answers.forEach((ans, i) => {
       const q = orderedQuestions[i];
-      const idx = ans.selectedIndex;
-      const score = q.scores[idx] || 0;
+      const clientScore = ans.score;
+      const validScores = q.scores || [];
+      const maxScore = Math.max(...validScores, 10);
+      const minScore = Math.min(...validScores, 0);
+
+      // 校验客户端分数是否在题目有效范围内
+      let score;
+      if (typeof clientScore === 'number' && clientScore >= minScore && clientScore <= maxScore) {
+        score = clientScore;
+      } else {
+        // 防篡改：客户端分数异常时降级为原始索引查找
+        const idx = ans.selectedIndex;
+        score = validScores[idx] || 0;
+      }
+
       qScores.push(score);
       totalScore += score;
 

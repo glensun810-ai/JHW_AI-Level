@@ -1678,7 +1678,7 @@ function animateScore() {
 
 // Phase 6: 分享操作面板
 function openSharePanel() {
-  trackShareClick('sticky');
+  try { trackShareClick('sticky'); } catch (e) { /* */ }
   showSharePanel.value = true;
 }
 
@@ -1761,7 +1761,10 @@ function onCardGenerated(imagePath) { generatedCardUrl.value = imagePath; }
 function onPersonaCardGenerated(imagePath) { personaCardUrl.value = imagePath; }
 function onCardSaved(imagePath) { trackShareSuccess(result.value.tier, 'save'); expStore.addExp('share'); }
 function onCardShared({ tierName, shareStyle, channel }) { trackShareSuccess(tierName, channel); expStore.addExp('share'); }
-function challengeFriend() { showChallengeModal.value = true; }
+function challengeFriend() {
+  try { trackChallenge(result.value.tier, tierIndex.value); } catch (e) { /* */ }
+  showChallengeModal.value = true;
+}
 // P0-3: 回敬挑战（挑战结果场景下，被挑战者发起反挑战）
 function counterChallenge() {
   const cr = challengeResult.value;
@@ -2039,6 +2042,7 @@ onShareTimeline(() => {
 
   &__scroll {
     height: 100vh;
+    overflow-x: hidden;
   }
 
   &__content {
@@ -2046,7 +2050,11 @@ onShareTimeline(() => {
     flex-direction: column;
     align-items: center;
     padding: 32rpx 32rpx 160rpx;
-    overflow-wrap: break-word;  // 仅在长单词/URL溢出时断行，不破坏正常文字排版
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-wrap: break-word;
   }
 
   &__section {
