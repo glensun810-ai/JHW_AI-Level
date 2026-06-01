@@ -13,18 +13,26 @@ export function isAdAvailable() {
   return !!AD_UNIT_ID;
 }
 
-// ── 免费测试状态（storage key: free_test_date / free_test_used）──
+// ── 免费测试状态（每天 3 次）──
+const FREE_TESTS_PER_DAY = 3;
+
+export function getFreeTestsRemaining() {
+  const today = new Date().toISOString().slice(0, 10);
+  const storedDate = uni.getStorageSync('free_test_date');
+  if (storedDate !== today) return FREE_TESTS_PER_DAY; // 新的一天，重置
+  const used = Number(uni.getStorageSync('free_test_count') || 0);
+  return Math.max(0, FREE_TESTS_PER_DAY - used);
+}
 
 export function hasUsedFreeTestToday() {
-  const today = new Date().toISOString().slice(0, 10);
-  return uni.getStorageSync('free_test_date') === today
-    && uni.getStorageSync('free_test_used') === true;
+  return getFreeTestsRemaining() <= 0;
 }
 
 export function markFreeTestUsed() {
   const today = new Date().toISOString().slice(0, 10);
   uni.setStorageSync('free_test_date', today);
-  uni.setStorageSync('free_test_used', true);
+  const used = Number(uni.getStorageSync('free_test_count') || 0);
+  uni.setStorageSync('free_test_count', used + 1);
 }
 
 // ── 广告观看状态（storage key: ad_watched_date / ad_watched_today）──

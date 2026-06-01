@@ -524,7 +524,7 @@
           <view class="page-result__share-option" @click="shareToMoments">
             <text class="page-result__share-option-icon">🌐</text>
             <text class="page-result__share-option-label">分享到朋友圈</text>
-            <text class="page-result__share-option-hint">保存图片后发到朋友圈</text>
+            <text class="page-result__share-option-hint">保存图片 → 朋友圈发布</text>
           </view>
 
           <view class="page-result__share-option" @click="copyShareLink">
@@ -1688,11 +1688,20 @@ function saveAndClosePanel(type) {
   else if (type === 'square') saveSquareShare();
 }
 
-function shareToMoments() {
+async function shareToMoments() {
   showSharePanel.value = false;
-  // 生成朋友圈方形图并引导发布
   uni.showToast({ title: '正在生成朋友圈图…', icon: 'loading' });
-  saveSquareShare();
+  // saveSquareShare 保存图片后自动弹窗引导
+  await saveSquareShare();
+  // 微信无直接发朋友圈API，图片已保存，引导用户手动发布
+  setTimeout(() => {
+    uni.showModal({
+      title: '图片已保存至相册',
+      content: '打开微信朋友圈 → 选择相册 → 选取此图片即可发布',
+      confirmText: '我知道了',
+      showCancel: false,
+    });
+  }, 1500);
 }
 
 function copyShareLink() {
@@ -3963,21 +3972,23 @@ onShareTimeline(() => {
   padding: 22rpx 24rpx;
   background: rgba(255,255,255,0.04);
   border-radius: 16rpx;
-  border: 1rpx solid rgba(255,255,255,0.06);
   transition: background 0.15s;
-  width: 100%; text-align: left; border: none;
-  &::after { border: none; }
+  width: 100%; max-width: 100%; text-align: left;
+  box-sizing: border-box; overflow: hidden;
+  border: 1rpx solid rgba(255,255,255,0.06) !important;
+  &::after { border: none !important; }
   &:active { background: rgba(255,255,255,0.08); }
 }
 .page-result__share-option-icon {
   font-size: 36rpx; flex-shrink: 0; width: 52rpx; text-align: center;
 }
 .page-result__share-option-label {
-  font-size: 28rpx; color: #fff; font-weight: 500;
+  font-size: 28rpx; color: #fff; font-weight: 500; flex-shrink: 0;
 }
 .page-result__share-option-hint {
   font-size: 22rpx; color: rgba(255,255,255,0.35);
-  margin-left: auto;
+  margin-left: auto; flex-shrink: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .page-result__share-cancel {
   margin-top: 24rpx;

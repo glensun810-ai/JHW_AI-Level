@@ -789,10 +789,10 @@ async function renderSquareShare(canvas, ctx, data) {
 
   // 段位名 + emoji
   ctx.fillStyle = theme.text;
-  ctx.font = 'bold 72px sans-serif';
+  ctx.font = 'bold 64px sans-serif';
   ctx.shadowColor = theme.glow;
   ctx.shadowBlur = 20;
-  ctx.fillText(tierEmoji + ' ' + tierName, W / 2, 140 + topShift);
+  ctx.fillText(tierEmoji + ' ' + tierName, W / 2, 135 + topShift);
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
 
@@ -800,15 +800,15 @@ async function renderSquareShare(canvas, ctx, data) {
   const aiQuotientSquare = Math.round((totalScore / 50) * 80 + 70);
   ctx.fillStyle = theme.text;
   ctx.font = 'bold 56px sans-serif';
-  ctx.fillText(aiQuotientSquare + ' AI商数', W / 2, 200 + topShift);
+  ctx.fillText(aiQuotientSquare + ' AI商数', W / 2, 210 + topShift);
 
   // 超越百分比
   ctx.fillStyle = theme.subtitle;
   ctx.font = '22px sans-serif';
-  ctx.fillText('超越全国 ' + percentile + '% 的用户', W / 2, 235 + topShift);
+  ctx.fillText('超越全国 ' + percentile + '% 的用户', W / 2, 250 + topShift);
 
   // 人格标签
-  drawRoundRect(ctx, W / 2 - 140, 255 + topShift, 280, 42, 21);
+  drawRoundRect(ctx, W / 2 - 140, 275 + topShift, 280, 44, 22);
   ctx.fillStyle = 'rgba(124,58,237,0.12)';
   ctx.fill();
   ctx.strokeStyle = 'rgba(167,139,250,0.25)';
@@ -816,10 +816,10 @@ async function renderSquareShare(canvas, ctx, data) {
   ctx.stroke();
   ctx.fillStyle = '#a78bfa';
   ctx.font = 'bold 22px sans-serif';
-  ctx.fillText(personaEmoji + ' ' + personaName, W / 2, 283 + topShift);
+  ctx.fillText(personaEmoji + ' ' + personaName, W / 2, 305 + topShift);
 
   // ─── 中 1/3: 知识星收集 + 一句话亮点 ───
-  const midY = topSectionH + 10 + topShift;
+  const midY = topSectionH + 30 + topShift;
   drawRoundRect(ctx, 60, midY, W - 120, 200, 16);
   ctx.fillStyle = 'rgba(255,255,255,0.04)';
   ctx.fill();
