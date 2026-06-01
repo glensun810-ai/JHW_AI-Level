@@ -695,6 +695,7 @@ async function handleStart() {
 
   // ① 每日免费测试
   if (!hasUsedFreeTestToday()) {
+    getApp().globalData.gatePath = 'free';
     startQuiz();
     return;
   }

@@ -511,11 +511,11 @@ async function submitAndGo() {
       store.answers,
     );
 
-    const wasFree = !hasUsedFreeTestToday();
+    const wasFree = getApp().globalData.gatePath === 'free' && !hasUsedFreeTestToday();
     const res = await store.submitTest(challengeId.value);
 
     if (res.code === 0 && res.data) {
-      if (wasFree) markFreeTestUsed();
+      if (wasFree) { markFreeTestUsed(); getApp().globalData.gatePath = ''; }
       // 邀请转化追踪
       const inviterUid = getApp().globalData.shareFromUid || '';
       if (inviterUid) {
