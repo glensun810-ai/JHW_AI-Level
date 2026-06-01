@@ -149,30 +149,45 @@ const REWARD_SPECIAL = {
 onMounted(async () => {
   trackPageView('checkin');
   const today = new Date().toISOString().slice(0, 10);
-  const storedDate = uni.getStorageSync('checkin_date');
-  checkedToday.value = storedDate === today;
 
-  // 从服务端同步签到数据
+  // 优先从 localStorage 恢复（离线可用，不受云端波动影响）
+  const localStreak = Number(uni.getStorageSync('checkin_streak') || 0);
+  const localDates = uni.getStorageSync('checkin_dates');
+  checkedToday.value = uni.getStorageSync('checkin_date') === today;
+  consecutiveDays.value = localStreak;
+  checkedDates.value = localDates ? JSON.parse(localDates) : buildLocalCheckedDates(localStreak);
+
+  // 从服务端同步签到数据（仅作补充，不覆盖本地有效数据）
   try {
     const res = await fetchWeeklyStats();
     if (res.code === 0 && res.data) {
+      // 取本地和云端中较大的连续天数
+      const cloudStreak = res.data.consecutiveDays || 0;
+      if (cloudStreak > consecutiveDays.value) {
+        consecutiveDays.value = cloudStreak;
+      }
+      // 云端 checkedDates 优先（完整记录）
+      if (res.data.checkedDates && res.data.checkedDates.length > 0) {
+        checkedDates.value = res.data.checkedDates;
+        uni.setStorageSync('checkin_dates', JSON.stringify(res.data.checkedDates));
+      }
       checkedToday.value = res.data.checkedToday || checkedToday.value;
-      consecutiveDays.value = res.data.consecutiveDays || uni.getStorageSync('checkin_streak') || 0;
-      checkedDates.value = res.data.checkedDates || loadLocalCheckedDates();
       weeklyRising.value = res.data.weeklyRising || [];
     }
   } catch (e) {
-    consecutiveDays.value = uni.getStorageSync('checkin_streak') || 0;
-    checkedDates.value = loadLocalCheckedDates();
+    // 云端不可用时降级到本地数据（已有值不变）
+    console.warn('[checkin] 云端同步失败，使用本地数据');
   }
 
-  uni.setStorageSync('checkin_streak', consecutiveDays.value);
+  // 持久化当前连续天数（仅当比已存储值更大时更新）
+  if (consecutiveDays.value > localStreak) {
+    uni.setStorageSync('checkin_streak', consecutiveDays.value);
+  }
 });
 
-function loadLocalCheckedDates() {
+function buildLocalCheckedDates(streak) {
   const dates = [];
   const today = new Date();
-  const streak = consecutiveDays.value;
   for (let i = 0; i < streak; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
@@ -215,6 +230,7 @@ async function handleCheckIn() {
   checkedDates.value = [...checkedDates.value, today];
   uni.setStorageSync('checkin_date', today);
   uni.setStorageSync('checkin_streak', newStreak);
+  uni.setStorageSync('checkin_dates', JSON.stringify(checkedDates.value));
 
   // 奖励动画
   const special = REWARD_SPECIAL[newStreak];
