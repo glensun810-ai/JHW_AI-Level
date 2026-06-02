@@ -44,6 +44,11 @@
           <text class="page-result__score-context">均值 ≈ 105 · 前 {{ result.percentile }}%</text>
           <view class="page-result__aiq-level" :style="{ color: aiqLevel.color }">{{ aiqLevel.icon }} {{ aiqLevel.label }}</view>
 
+          <!-- PB个人纪录对比 -->
+          <view v-if="pbCompareText" class="page-result__pb-compare" :class="'page-result__pb-compare--' + pbState.type">
+            <text>{{ pbCompareText }}</text>
+          </view>
+
           <!-- 连续进化庆祝 -->
           <view v-if="streakData" class="page-result__streak-celebrate">
             <text class="page-result__streak-emoji">{{ streakEmoji }}</text>
@@ -674,6 +679,21 @@ const pbState = computed(() => {
   if (gap <= 0) return { type: 'equal', icon: '✅', text: '你再次达到了个人最好成绩！', sub: `AI商数 ${currentAIQ} · 稳定的高水平 = 真正的实力` };
   if (gap <= 5) return { type: 'near', icon: '😤', text: `就差 ${gap} 点！离你的PB只差一口气`, sub: `本次 ${currentAIQ} · PB ${prevAIQ} · 再来一次！` };
   return { type: 'below', icon: '💪', text: '这次发挥不太理想，但你的PB还在', sub: `本次 ${currentAIQ} · 最高纪录 ${prevAIQ} 仍在等你挑战` };
+});
+
+// PB内联对比文案（AIQ下方小字）
+const pbCompareText = computed(() => {
+  if (result.value.isFirstTime) return '';
+  if (result.value.isNewHighest) {
+    const gain = toAIQuotient(result.value.totalScore || 0) - toAIQuotient(Number(uni.getStorageSync('last_pb') || 0));
+    return gain > 0 ? `🏆 个人新纪录！提升 +${gain}` : '🏆 新个人纪录！';
+  }
+  const currentAIQ = toAIQuotient(result.value.totalScore || 0);
+  const pbAIQ = toAIQuotient(Number(uni.getStorageSync('last_pb') || 0));
+  const gap = pbAIQ - currentAIQ;
+  if (gap <= 0) return `✅ 持平个人最高纪录`;
+  if (gap <= 5) return `📈 距个人最高还差 ${gap} 点`;
+  return `💪 距个人最高 ${pbAIQ} 还差 ${gap} 点`;
 });
 const fakeTier = ref('');
 const topFriends = ref([]);
@@ -2205,6 +2225,16 @@ onShareTimeline(() => {
     font-weight: 600;
     text-align: center;
     letter-spacing: 2rpx;
+  }
+
+  &__pb-compare {
+    margin-top: 6rpx;
+    font-size: 22rpx;
+    text-align: center;
+    &--new-pb { color: #ffd700; font-weight: bold; }
+    &--equal { color: #4caf50; }
+    &--near { color: #00c8ff; }
+    &--below { color: rgba(255,255,255,0.35); }
   }
 
   // 连续进化庆祝

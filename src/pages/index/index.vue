@@ -63,6 +63,7 @@
         <text class="page-index__returning-tier">{{ returningTierEmoji }} {{ returningTierName }}</text>
         <text class="page-index__returning-aiq">AI商数 {{ returningAIQ }}</text>
         <text class="page-index__returning-pct">超越全国 {{ returningPercentile }}% 用户</text>
+        <text v-if="returningPBLabel" class="page-index__returning-pb-badge">{{ returningPBLabel }}</text>
         <view class="page-index__returning-actions">
           <button class="page-index__returning-btn page-index__returning-btn--view" @click="viewMyResult">
             📋 查看我的结果
@@ -318,6 +319,7 @@ const returningTierEmoji = ref('');
 const returningAIQ = ref(0);
 const returningPercentile = ref(0);
 const returningTierBadge = ref('');
+const returningPBLabel = ref(''); // PB徽章文案
 let t5 = null, t10 = null, ctaTimer = null;
 
 // F1: CTA 按钮文案轮换
@@ -505,7 +507,7 @@ async function loadReturningUserData() {
 function applyReturningData(data) {
   returningTierName.value = data.tier || '';
   returningTierEmoji.value = data.tierEmoji || '';
-  // PB机制: 始终展示个人最高分(pbScore), 而非最近一次测试分
+  // PB机制: 始终展示个人最高分, 而非最近一次测试分
   const pbScore = Number(uni.getStorageSync('last_pb') || 0);
   const lastScore = data.totalScore || 0;
   const displayScore = pbScore > 0 ? Math.max(pbScore, lastScore) : lastScore;
@@ -515,9 +517,28 @@ function applyReturningData(data) {
   returningPercentile.value = data.percentile || 0;
   const tierObj = TIERS.find(t => t.name === data.tier);
   returningTierBadge.value = tierObj ? TIER_BADGE_IMAGES[tierObj.name] || '' : '';
+  // PB徽章
+  const lastTestScore = Number(uni.getStorageSync('last_score') || 0);
+  if (pbScore > 0 && lastTestScore > 0 && lastTestScore < pbScore) {
+    const pbAIQ = Math.round((pbScore / 50) * 80 + 70);
+    returningPBLabel.value = `🏆 个人最高 AI商数 ${pbAIQ}`;
+  } else if (pbScore > 0 && data.totalScore && data.totalScore >= pbScore && !data.isFirstTime) {
+    returningPBLabel.value = '🏆 这是你的新个人纪录！';
+  } else if (pbScore > 0) {
+    const pbAIQ = Math.round((pbScore / 50) * 80 + 70);
+    returningPBLabel.value = `🏆 个人最高 AI商数 ${pbAIQ}`;
+  } else {
+    returningPBLabel.value = '';
+  }
   showReturningHero.value = true;
-  // 更新 CTA 文案
-  ctaText.value = '再测一次，看段位变了没';
+  // PB联动CTA文案
+  if (lastTestScore > 0 && pbScore > 0 && lastTestScore >= pbScore - 2) {
+    ctaText.value = '😤 差一点破纪录！再来一次';
+  } else if (pbScore > 0 && lastTestScore >= pbScore) {
+    ctaText.value = '🏆 趁热打铁，巩固新纪录';
+  } else {
+    ctaText.value = '再测一次，看段位变了没';
+  }
 }
 
 // Phase 9: 身份卡 — 微信新规范 chooseAvatar + nickname input
@@ -1234,7 +1255,17 @@ onShareTimeline(() => {
   &__returning-pct {
     font-size: 22rpx;
     color: rgba(255, 255, 255, 0.5);
-    margin-bottom: 8rpx;
+    margin-bottom: 4rpx;
+  }
+
+  &__returning-pb-badge {
+    font-size: 22rpx;
+    color: #ffd700;
+    font-weight: bold;
+    background: rgba(245,158,11,0.1);
+    padding: 4rpx 16rpx;
+    border-radius: 20rpx;
+    margin-bottom: 12rpx;
   }
 
   &__returning-actions {
