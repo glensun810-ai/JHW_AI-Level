@@ -58,6 +58,13 @@
             <text class="page-result__identity-persona">{{ personaEmoji }} {{ personaName }}</text>
           </view>
 
+          <!-- Phase 10: PB 挑战状态 -->
+          <view v-if="pbState.text" class="page-result__pb-state" :class="'page-result__pb-state--' + pbState.type">
+            <text class="page-result__pb-state-icon">{{ pbState.icon }}</text>
+            <text class="page-result__pb-state-text">{{ pbState.text }}</text>
+            <text v-if="pbState.sub" class="page-result__pb-state-sub">{{ pbState.sub }}</text>
+          </view>
+
           <!-- 回访用户：段位变化 -->
           <view v-if="!isFirstTimeTest && tierDeltaText" class="page-result__tier-delta page-result__fade-in">
             <text class="page-result__tier-delta-text">{{ tierDeltaText }}</text>
@@ -649,6 +656,25 @@ const result = ref({ tier: '', tierEmoji: '', totalScore: 0, percentile: 0, next
 const stage = ref('evaluating');
 const stageNum = ref(0);
 const displayScore = ref(0);
+// Phase 10: PB 挑战状态
+const pbState = computed(() => {
+  const isNew = result.value.isNewHighest;
+  const isFirst = result.value.isFirstTime;
+  const currentScore = result.value.totalScore || 0;
+  const prevScore = Number(uni.getStorageSync('last_pb') || 0);
+  const currentAIQ = toAIQuotient(currentScore);
+  const prevAIQ = prevScore ? toAIQuotient(prevScore) : 0;
+  const gap = prevAIQ - currentAIQ;
+
+  if (isFirst) return { type: 'first', icon: '🎯', text: '你的AI段位基准已建立！', sub: '每一次测试，都是一次自我超越' };
+  if (isNew) {
+    const gain = currentAIQ - prevAIQ;
+    return { type: 'new-pb', icon: '🏆', text: '恭喜！你刷新了个人最好成绩！', sub: `AI商数 ${prevAIQ} → ${currentAIQ}  📈 +${gain}` };
+  }
+  if (gap <= 0) return { type: 'equal', icon: '✅', text: '你再次达到了个人最好成绩！', sub: `AI商数 ${currentAIQ} · 稳定的高水平 = 真正的实力` };
+  if (gap <= 5) return { type: 'near', icon: '😤', text: `就差 ${gap} 点！离你的PB只差一口气`, sub: `本次 ${currentAIQ} · PB ${prevAIQ} · 再来一次！` };
+  return { type: 'below', icon: '💪', text: '这次发挥不太理想，但你的PB还在', sub: `本次 ${currentAIQ} · 最高纪录 ${prevAIQ} 仍在等你挑战` };
+});
 const fakeTier = ref('');
 const topFriends = ref([]);
 const friendLoaded = ref(false);
@@ -1578,6 +1604,7 @@ function startSequence() {
       }
       uni.setStorageSync('last_tier_name', result.value.tier);
       uni.setStorageSync('last_score', result.value.totalScore);
+      if (result.value.isNewHighest) uni.setStorageSync('last_pb', result.value.totalScore);
       trackReversalStart(fakeTier.value, result.value.tier);
       // Phase 5: 反转音效同步（与 ReversalReveal 组件 phase 时间线对齐）
       const soundEng = createSoundEngine();
@@ -1603,6 +1630,7 @@ function startSequence() {
       );
       uni.setStorageSync('last_tier_name', result.value.tier);
       uni.setStorageSync('last_score', result.value.totalScore);
+      if (result.value.isNewHighest) uni.setStorageSync('last_pb', result.value.totalScore);
       trackResultView(result.value.tier, tierIndex.value, false);
     }
     resultRevealTime = Date.now();
@@ -1948,7 +1976,17 @@ onShareAppMessage(() => {
       : `AI洞察：${m.trait || '我有隐藏特质'} 🧠 想看看你的吗？`;
     shareContext.value = ''; // 一次性消费
   }
-  // "差一点就晋升"戏剧化分享 — 优先级最高
+  // Phase 10: PB破纪录专属分享 — 最高优先级
+  else if (result.value.isNewHighest && !result.value.isFirstTime) {
+    const currentAIQ = toAIQuotient(result.value.totalScore || 0);
+    const prevPB = Number(uni.getStorageSync('last_pb') || 0);
+    const prevAIQ = prevPB ? toAIQuotient(prevPB) : 0;
+    const gain = currentAIQ - prevAIQ;
+    title = gain > 0
+      ? `🏆 我刷新了AI段位纪录！AI商数 ${prevAIQ}→${currentAIQ}，提升 +${gain}！你也来测？`
+      : `🏆 我突破了自己的AI段位！现在是「${result.value.tier}」AI商数${currentAIQ}，测测你的？`;
+  }
+  // "差一点就晋升"戏剧化分享
   else if (aiqPointsToNext.value > 0 && aiqPointsToNext.value <= 2 && result.value.nextTier) {
     const diffOneCopies = [
       `就差一点点！我离${result.value.nextTier}只差临门一脚…你测测看？`,
@@ -3081,6 +3119,46 @@ onShareTimeline(() => {
 
     &-icon { font-size: 28rpx; }
     &-text { font-size: 24rpx; color: #c4b5fd; font-weight: 500; }
+  }
+
+  // Phase 10: PB 挑战状态
+  &__pb-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rpx;
+    margin-top: 20rpx;
+    padding: 18rpx 28rpx;
+    border-radius: 16rpx;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    animation: fade-in 0.4s ease-out both;
+
+    &--new-pb {
+      background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(255,215,0,0.06));
+      border: 1rpx solid rgba(245,158,11,0.3);
+    }
+    &--near {
+      background: linear-gradient(135deg, rgba(0,200,255,0.08), rgba(124,58,237,0.06));
+      border: 1rpx solid rgba(0,200,255,0.2);
+    }
+    &--equal {
+      background: rgba(76,175,80,0.08);
+      border: 1rpx solid rgba(76,175,80,0.2);
+    }
+    &--first {
+      background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(167,139,250,0.04));
+      border: 1rpx solid rgba(124,58,237,0.2);
+    }
+    &--below {
+      background: rgba(255,255,255,0.04);
+      border: 1rpx solid rgba(255,255,255,0.08);
+    }
+
+    &-icon { font-size: 36rpx; }
+    &-text { font-size: 28rpx; color: #fff; font-weight: bold; text-align: center; }
+    &-sub { font-size: 22rpx; color: rgba(255,255,255,0.5); text-align: center; }
   }
 
   &__screenshot-hint {
