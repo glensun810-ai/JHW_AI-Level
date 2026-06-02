@@ -1529,19 +1529,20 @@ onShareTimeline(() => {
   }
 
   &__cta {
-    width: 400rpx; height: 112rpx; margin-top: 32rpx;
+    min-width: 360rpx; max-width: 90vw; height: 112rpx; margin-top: 32rpx;
+    padding: 0 36rpx;
     background: linear-gradient(135deg, #7c3aed, #f59e0b);
-    border-radius: 56rpx; font-size: 36rpx; font-weight: 700;
+    border-radius: 56rpx; font-size: 32rpx; font-weight: 700;
     color: #fff; border: none;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 8rpx 40rpx rgba(124, 58, 237, 0.4);
     animation: breathe 1.5s ease-in-out infinite;
     will-change: transform;
+    white-space: nowrap;
     &--urgent { animation: breathe-fast 0.8s ease-in-out infinite; will-change: transform; }
     &--no-free {
       background: linear-gradient(135deg, #7c3aed, #a78bfa);
-      font-size: 28rpx;
-      width: 480rpx;
+      font-size: 26rpx;
     }
   }
 
