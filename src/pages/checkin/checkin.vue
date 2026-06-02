@@ -147,43 +147,56 @@ const REWARD_SPECIAL = {
   100: { text: '解锁称号「百炼成金」+ 1000 XP + 永久免费' },
 };
 
+// 从已签到日期数组计算连续天数（不受测试连续天数污染）
+function calcStreakFromDates(dates, checkedToday) {
+  if (!dates || dates.length === 0) return 0;
+  const sorted = [...dates].sort((a, b) => b.localeCompare(a)); // 降序
+  const today = new Date().toISOString().slice(0, 10);
+
+  // 从今天（或昨天，如果今天未签到）开始数连续
+  let check = new Date();
+  if (!checkedToday) check.setDate(check.getDate() - 1);
+
+  let streak = 0;
+  const dateSet = new Set(sorted);
+  for (let i = 0; i < 366; i++) {
+    const d = check.toISOString().slice(0, 10);
+    if (dateSet.has(d)) {
+      streak++;
+      check.setDate(check.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 onMounted(async () => {
   trackPageView('checkin');
   const today = new Date().toISOString().slice(0, 10);
 
-  // 优先从 localStorage 恢复（离线可用，不受云端波动影响）
-  const localStreak = Number(uni.getStorageSync('checkin_streak') || 0);
   const localDates = uni.getStorageSync('checkin_dates');
   checkedToday.value = uni.getStorageSync('checkin_date') === today;
-  consecutiveDays.value = localStreak;
-  checkedDates.value = localDates ? JSON.parse(localDates) : buildLocalCheckedDates(localStreak);
+  checkedDates.value = localDates ? JSON.parse(localDates) : [];
 
-  // 从服务端同步签到数据（仅作补充，不覆盖本地有效数据）
+  // 从服务端同步签到数据
   try {
     const res = await fetchWeeklyStats();
     if (res.code === 0 && res.data) {
-      // 取本地和云端中较大的连续天数
-      const cloudStreak = res.data.consecutiveDays || 0;
-      if (cloudStreak > consecutiveDays.value) {
-        consecutiveDays.value = cloudStreak;
-      }
-      // 云端 checkedDates 优先（完整记录）
+      checkedToday.value = res.data.checkedToday || checkedToday.value;
       if (res.data.checkedDates && res.data.checkedDates.length > 0) {
         checkedDates.value = res.data.checkedDates;
         uni.setStorageSync('checkin_dates', JSON.stringify(res.data.checkedDates));
       }
-      checkedToday.value = res.data.checkedToday || checkedToday.value;
       weeklyRising.value = res.data.weeklyRising || [];
     }
   } catch (e) {
-    // 云端不可用时降级到本地数据（已有值不变）
     console.warn('[checkin] 云端同步失败，使用本地数据');
   }
 
-  // 持久化当前连续天数（仅当比已存储值更大时更新）
-  if (consecutiveDays.value > localStreak) {
-    uni.setStorageSync('checkin_streak', consecutiveDays.value);
-  }
+  // 从实际签到日期计算连续天数（不依赖 users.consecutiveDays）
+  consecutiveDays.value = calcStreakFromDates(checkedDates.value, checkedToday.value);
+  uni.setStorageSync('checkin_streak', consecutiveDays.value);
 });
 
 function buildLocalCheckedDates(streak) {
