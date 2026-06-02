@@ -6,7 +6,7 @@
         <text class="page-checkin__streak-num">{{ consecutiveDays }}</text>
         <text class="page-checkin__streak-unit">天</text>
       </view>
-      <text class="page-checkin__streak-label">已连续签到</text>
+      <text class="page-checkin__streak-label">{{ nickname ? nickname + ' 已连续签到' : '已连续签到' }}</text>
       <text class="page-checkin__brand">进化湾 · 每日签到</text>
     </view>
 
@@ -107,6 +107,7 @@ import { createSoundEngine } from '@/utils/sound-engine.js';
 
 const consecutiveDays = ref(0);
 const checkedToday = ref(false);
+const nickname = ref('');
 const weeklyRising = ref([]);
 const checkedDates = ref([]);
 const justChecked = ref(false);
@@ -184,6 +185,7 @@ onMounted(async () => {
     const res = await fetchWeeklyStats();
     if (res.code === 0 && res.data) {
       checkedToday.value = res.data.checkedToday || checkedToday.value;
+      if (res.data.nickname) nickname.value = res.data.nickname;
       if (res.data.checkedDates && res.data.checkedDates.length > 0) {
         checkedDates.value = res.data.checkedDates;
         uni.setStorageSync('checkin_dates', JSON.stringify(res.data.checkedDates));

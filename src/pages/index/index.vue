@@ -48,6 +48,12 @@
 
       <!-- Phase 4: 回访用户段位卡片（始终可见，不消耗额度） -->
       <view v-if="showReturningHero" class="page-index__returning-card">
+        <!-- 用户身份标识 -->
+        <view v-if="identityProfile.nickname" class="page-index__returning-identity">
+          <image v-if="identityProfile.avatar" class="page-index__returning-avatar" :src="identityProfile.avatar" mode="aspectFill" />
+          <view v-else class="page-index__returning-avatar page-index__returning-avatar--placeholder">👤</view>
+          <text class="page-index__returning-nick">{{ identityProfile.nickname }}</text>
+        </view>
         <image
           v-if="returningTierBadge"
           class="page-index__returning-badge"
@@ -1179,6 +1185,26 @@ onShareTimeline(() => {
     border: 1rpx solid rgba(245, 158, 11, 0.2);
     border-radius: 24rpx;
     animation: fade-in 0.5s ease-out both;
+  }
+
+  &__returning-identity {
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
+    margin-bottom: 8rpx;
+  }
+
+  &__returning-avatar {
+    width: 48rpx; height: 48rpx; border-radius: 50%;
+    background: rgba(255,255,255,0.08); flex-shrink: 0;
+    &--placeholder {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24rpx;
+    }
+  }
+
+  &__returning-nick {
+    font-size: 26rpx; color: #fff; font-weight: 500;
   }
 
   &__returning-badge {
