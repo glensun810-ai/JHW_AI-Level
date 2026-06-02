@@ -44,7 +44,10 @@
       <view v-if="friendLoading" class="page-rank__loading">加载中…</view>
       <template v-else>
 <view v-if="isGlobalFallback && friendList.length > 0" class="page-rank__fallback-notice">
-          <text>暂未添加好友，展示全服高手榜。分享给好友即可查看好友排名</text>
+          <text class="page-rank__fallback-icon">🌐</text>
+          <text class="page-rank__fallback-label">全服高手榜</text>
+          <text class="page-rank__fallback-hint">暂未添加好友 · 分享给好友即可查看好友排名</text>
+          <button class="page-rank__fallback-share" open-type="share">📤 邀请好友</button>
         </view>
         <view v-if="friendList.length > 0" class="page-rank__items">
           <view
@@ -672,6 +675,47 @@ onShareTimeline(() => {
     padding-top: 120rpx;
     color: $color-text-secondary;
     font-size: 26rpx;
+  }
+
+  &__fallback-notice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6rpx;
+    padding: 24rpx 28rpx;
+    margin-bottom: 16rpx;
+    background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(0,200,255,0.04));
+    border: 1rpx solid rgba(124,58,237,0.1);
+    border-radius: 16rpx;
+  }
+
+  &__fallback-icon {
+    font-size: 36rpx;
+  }
+
+  &__fallback-label {
+    font-size: 24rpx;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  &__fallback-hint {
+    font-size: 20rpx;
+    color: rgba(255,255,255,0.35);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  &__fallback-share {
+    margin-top: 8rpx;
+    padding: 12rpx 32rpx;
+    background: rgba(124,58,237,0.15);
+    border: 1rpx solid rgba(124,58,237,0.25);
+    border-radius: 24rpx;
+    font-size: 22rpx;
+    color: #a78bfa;
+    font-weight: 500;
+    line-height: 1.5;
   }
 
   &__items {
