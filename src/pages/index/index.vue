@@ -505,8 +505,12 @@ async function loadReturningUserData() {
 function applyReturningData(data) {
   returningTierName.value = data.tier || '';
   returningTierEmoji.value = data.tierEmoji || '';
-  returningAIQ.value = data.totalScore
-    ? Math.round((data.totalScore / 50) * 80 + 70)
+  // PB机制: 始终展示个人最高分(pbScore), 而非最近一次测试分
+  const pbScore = Number(uni.getStorageSync('last_pb') || 0);
+  const lastScore = data.totalScore || 0;
+  const displayScore = pbScore > 0 ? Math.max(pbScore, lastScore) : lastScore;
+  returningAIQ.value = displayScore
+    ? Math.round((displayScore / 50) * 80 + 70)
     : 0;
   returningPercentile.value = data.percentile || 0;
   const tierObj = TIERS.find(t => t.name === data.tier);
