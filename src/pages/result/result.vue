@@ -1707,6 +1707,11 @@ function scheduleStages() {
         soundEng.play('near_miss');
       }
     }, 1900),
+    // Phase 10: PB音效
+    setTimeout(() => {
+      if (result.value?.isNewHighest && !result.value?.isFirstTime) soundEng.play('pb_break');
+      else if (pbState.value?.type === 'near') soundEng.play('pb_near');
+    }, 2200),
     setTimeout(() => {
       const streak = result.value?.streak;
       if (streak && (streak.milestoneHit || (streak.consecutiveDays >= 3 && streak.consecutiveDays % 3 === 0))) {
@@ -1718,8 +1723,9 @@ function scheduleStages() {
 }
 
 function animateScore() {
-  // Phase 5: 分数滚动音效
-  createSoundEngine().play('score_counter');
+  // Phase 5: 分数滚动音效（PB模式增强）
+  const isPb = result.value?.isNewHighest && !result.value?.isFirstTime;
+  createSoundEngine().play('score_counter', { pb: isPb });
   const raw = result.value.totalScore;
   const target = Math.round((raw / 50) * 80 + 70);
   let current = 0;
@@ -1739,6 +1745,7 @@ function animateScore() {
 function openSharePanel() {
   try { trackShareClick('sticky'); } catch (e) { /* */ }
   showSharePanel.value = true;
+  createSoundEngine().play('share_open');
 }
 
 function saveAndClosePanel(type) {

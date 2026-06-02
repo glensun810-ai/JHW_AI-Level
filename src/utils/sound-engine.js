@@ -172,28 +172,33 @@ function tierReveal(ctx) {
 }
 
 /** Tier 1-5: AIQ 分数滚动 — 30 次微点击 + 最终解决音 */
-function scoreCounter(ctx) {
+function scoreCounter(ctx, options = {}) {
+  const isPb = options.pb === true;
   const now = ctx.currentTime;
   const master = ctx.createGain();
-  master.gain.setValueAtTime(0.3, now);
+  master.gain.setValueAtTime(isPb ? 0.38 : 0.3, now);
   master.connect(ctx.destination);
 
-  // 30 次微点击
+  // 30 次微点击（PB模式扫频更宽）
+  const sweepStart = isPb ? 300 : 300;
+  const sweepEnd = isPb ? 800 : 600;
   for (let i = 0; i < 30; i++) {
     const t = now + i * (800 / 30) / 1000;
-    const freq = 300 + (i / 29) * 300; // 300→600Hz
+    const freq = sweepStart + (i / 29) * (sweepEnd - sweepStart);
     const { osc: o, gain: g } = osc(ctx, 'sine', freq);
-    rampGain(g, 0.12, 0.002, 0, 0.015, t);
+    rampGain(g, isPb ? 0.16 : 0.12, 0.002, 0, 0.015, t);
     o.connect(g);
     g.connect(master);
     o.start(t);
     setTimeout(() => { try { o.stop(); } catch (e) { /* */ } }, 900);
   }
 
-  // 最终解决音
+  // 最终解决音（PB模式更高更响）
   const tFinal = now + 0.82;
-  const { osc: finalO, gain: finalG } = osc(ctx, 'sine', 880);
-  rampGain(finalG, 0.35, 0.01, 0.04, 0.1, tFinal);
+  const finalFreq = isPb ? 1047 : 880;
+  const finalVol = isPb ? 0.5 : 0.35;
+  const { osc: finalO, gain: finalG } = osc(ctx, 'sine', finalFreq);
+  rampGain(finalG, finalVol, 0.01, 0.04, 0.1, tFinal);
   finalO.connect(finalG);
   finalG.connect(master);
   finalO.start(tFinal);
@@ -562,6 +567,99 @@ function resultWhisper(ctx) {
   });
 }
 
+// ── Phase 10: PB破纪录号角（比 tier_reveal 更辉煌）──
+function pbBreak(ctx) {
+  const now = ctx.currentTime;
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.45, now);
+  master.connect(ctx.destination);
+
+  // 低音 sweep（更深沉）
+  const { osc: bass, gain: bassG } = osc(ctx, 'sine', 55);
+  rampFreq(bass, 55, 165, now, 0.25);
+  rampGain(bassG, 0.7, 0.01, 0.25, 0.35, now);
+  bass.connect(bassG);
+  bassG.connect(master);
+  bass.start(now);
+
+  // 高音上行琶音 C→E→G→C 两次（更辉煌）
+  const notes = [523, 659, 784, 1047, 1319, 1568, 2093];
+  notes.forEach((freq, i) => {
+    const t = now + 0.1 + i * 0.08;
+    const { osc: o, gain: g } = osc(ctx, 'triangle', freq);
+    rampGain(g, 0.5, 0.005, 0, 0.12, t);
+    o.connect(g);
+    g.connect(master);
+    o.start(t);
+    setTimeout(() => { try { o.stop(); } catch (e) { /* */ } }, 1200);
+  });
+
+  // 胜利泛音铃
+  const { osc: bell, gain: bellG } = osc(ctx, 'sine', 2093);
+  rampGain(bellG, 0.5, 0.005, 0.1, 0.3, now + 0.6);
+  bell.connect(bellG);
+  bellG.connect(master);
+  bell.start(now + 0.6);
+
+  return new Promise((r) => {
+    setTimeout(() => { try { master.disconnect(); } catch (e) { /* */ } r(); }, 1000);
+  });
+}
+
+// Phase 10: PB接近悬念音（差一点 → 想再来一次）
+function pbNear(ctx) {
+  const now = ctx.currentTime;
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.3, now);
+  master.connect(ctx.destination);
+
+  // 上行扫频（期待感）
+  const { osc: sweep, gain: sweepG } = osc(ctx, 'sine', 330);
+  rampFreq(sweep, 330, 494, now, 0.4);
+  rampGain(sweepG, 0.25, 0.05, 0.25, 0.1, now);
+  sweep.connect(sweepG);
+  sweepG.connect(master);
+  sweep.start(now);
+
+  // 两声轻叩（暗示"差一点"）
+  [0.45, 0.6].forEach((t, i) => {
+    const tt = now + t;
+    const { osc: o, gain: g } = osc(ctx, 'triangle', 523 + i * 40);
+    rampGain(g, 0.2, 0.003, 0, 0.08, tt);
+    o.connect(g);
+    g.connect(master);
+    o.start(tt);
+    setTimeout(() => { try { o.stop(); } catch (e) { /* */ } }, 800);
+  });
+
+  return new Promise((r) => {
+    setTimeout(() => { try { master.disconnect(); } catch (e) { /* */ } r(); }, 750);
+  });
+}
+
+// Phase 10: 分享面板展开音（轻快仪式感）
+function shareOpen(ctx) {
+  const now = ctx.currentTime;
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.3, now);
+  master.connect(ctx.destination);
+
+  // 两个快速上行音符
+  [523, 784].forEach((freq, i) => {
+    const t = now + i * 0.06;
+    const { osc: o, gain: g } = osc(ctx, 'triangle', freq);
+    rampGain(g, 0.3, 0.003, 0, 0.06, t);
+    o.connect(g);
+    g.connect(master);
+    o.start(t);
+    setTimeout(() => { try { o.stop(); } catch (e) { /* */ } }, 200);
+  });
+
+  return new Promise((r) => {
+    setTimeout(() => { try { master.disconnect(); } catch (e) { /* */ } r(); }, 180);
+  });
+}
+
 // ── 预设注册表 ──
 
 const PRESETS = new Map([
@@ -583,6 +681,9 @@ const PRESETS = new Map([
   ['cta_press', ctaPress],
   ['home_arrive', homeArrive],
   ['result_whisper', resultWhisper],
+  ['pb_break', pbBreak],
+  ['pb_near', pbNear],
+  ['share_open', shareOpen],
 ]);
 
 // ── 引擎工厂 ──
