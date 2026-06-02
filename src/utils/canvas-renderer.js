@@ -307,10 +307,10 @@ async function renderTierCard(canvas, ctx, data) {
     friendRankBottom = friendY + pillH;
   }
 
-  // ─── ⑨ 小程序码面板 670×180 ───
+  // ─── ⑨ 小程序码面板 670×190 ───
   const qrPanelY = friendRankBottom + 20;
   const qrPanelW = 670;
-  const qrPanelH = 180;
+  const qrPanelH = 190;
   const qrPanelX = (W - qrPanelW) / 2;
   drawRoundRect(ctx, qrPanelX, qrPanelY, qrPanelW, qrPanelH, 16);
   ctx.fillStyle = 'rgba(255,255,255,0.03)';
@@ -322,18 +322,18 @@ async function renderTierCard(canvas, ctx, data) {
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 26px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('扫码测测你的 AI 段位', W / 2, qrPanelY + 33);
+  ctx.fillText('扫码测测你的 AI 段位', W / 2, qrPanelY + 30);
 
   const qrSize = 140;
   const qrX = (W - qrSize) / 2;
-  const qrY = qrPanelY + 38;
+  const qrY = qrPanelY + 28;
   await drawMiniCode(canvas, ctx, qrX, qrY, qrSize, miniCodeUrl, 14);
 
-  // 长按提示（面板内底部）
+  // 长按提示（面板内底部，QR下方）
   ctx.fillStyle = theme.subtitle;
-  ctx.font = '18px sans-serif';
+  ctx.font = '17px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('长按识别小程序码', W / 2, qrPanelY + qrPanelH - 6);
+  ctx.fillText('长按识别小程序码', W / 2, qrPanelY + qrPanelH - 2);
 
   // 页脚已由 QR 面板中的品牌文案替代
 }
