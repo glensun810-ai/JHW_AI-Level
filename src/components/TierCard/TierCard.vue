@@ -29,7 +29,7 @@
           ↗️ 转发给朋友
         </button>
       </view>
-      <text class="tier-card__close" @click="closePreview">×</text>
+      <view class="tier-card__close" @click="closePreview">×</view>
     </view>
   </view>
 </template>

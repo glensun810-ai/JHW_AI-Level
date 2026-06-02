@@ -2,9 +2,9 @@
   <view class="calendar">
     <!-- 月份标题 -->
     <view class="calendar__header">
-      <text class="calendar__nav" @click="prevMonth">‹</text>
-      <text class="calendar__month">{{ year }}年{{ month }}月</text>
-      <text class="calendar__nav" :class="{ 'calendar__nav--disabled': !canNext }" @click="nextMonth">›</text>
+      <view class="calendar__nav" @click="prevMonth">‹</view>
+      <view class="calendar__month">{{ year }}年{{ month }}月</view>
+      <view class="calendar__nav" :class="{ 'calendar__nav--disabled': !canNext }" @click="nextMonth">›</view>
     </view>
 
     <!-- 星期标题 -->

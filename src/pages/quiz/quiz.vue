@@ -16,7 +16,7 @@
       />
       <text v-if="store.deepMode" class="page-quiz__deep-badge">深度定段</text>
       <text v-if="store.dailyMode" class="page-quiz__deep-badge">每日一题</text>
-      <text class="page-quiz__home-btn" @click="goHome">🏠</text>
+      <view class="page-quiz__home-btn" @click="goHome">🏠</view>
     </view>
 
     <!-- 加载中 -->
@@ -31,7 +31,7 @@
       <text class="page-quiz__error-title">题目加载失败</text>
       <text class="page-quiz__error-hint">可能是网络波动，请重试</text>
       <button class="page-quiz__error-retry" @click="loadFresh">重新加载</button>
-      <text class="page-quiz__error-back" @click="goBack">← 返回首页</text>
+      <view class="page-quiz__error-back" @click="goBack">← 返回首页</view>
     </view>
 
     <!-- 题目区 -->
@@ -81,15 +81,15 @@
         <view v-if="quizState === 'commenting' && !answerFeedbackGiven" class="page-quiz__feedback">
           <text class="page-quiz__feedback-label">这题怎么样？</text>
           <view class="page-quiz__feedback-btns">
-            <text class="page-quiz__feedback-btn" @click="giveAnswerFeedback('up')">👍</text>
-            <text class="page-quiz__feedback-btn" @click="giveAnswerFeedback('down')">👎</text>
+            <view class="page-quiz__feedback-btn" @click="giveAnswerFeedback('up')">👍</view>
+            <view class="page-quiz__feedback-btn" @click="giveAnswerFeedback('down')">👎</view>
           </view>
         </view>
         <!-- 手动推进按钮 -->
         <view v-if="quizState === 'commenting'" class="page-quiz__next-wrap">
-          <text class="page-quiz__next-btn" @click="goNext">
+          <view class="page-quiz__next-btn" @click="goNext">
             {{ store.isLastQuestion ? '查看结果 →' : '下一题 →' }}
-          </text>
+          </view>
         </view>
       </view>
 

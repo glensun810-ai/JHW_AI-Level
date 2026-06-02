@@ -4,8 +4,8 @@
     <view v-if="stage === 'revealing'" class="page-result__topnav">
       <text class="page-result__topnav-title">进化湾</text>
       <view class="page-result__topnav-actions">
-        <text class="page-result__topnav-link" @click="goHome">🏠首页</text>
-        <text class="page-result__topnav-link" @click="goToRank">📊排行</text>
+        <view class="page-result__topnav-link" @click="goHome">🏠首页</view>
+        <view class="page-result__topnav-link" @click="goToRank">📊排行</view>
       </view>
     </view>
 
@@ -232,7 +232,7 @@
                 <text class="page-result__star-title">已点亮 {{ collectedCards.length }} 颗知识星</text>
                 <text v-if="starRankInFriends > 0" class="page-result__star-rank">好友中第 {{ starRankInFriends }} 名</text>
               </view>
-              <text class="page-result__star-handbook-link" @click="goToHandbook">进化手册 →</text>
+              <view class="page-result__star-handbook-link" @click="goToHandbook">进化手册 →</view>
             </view>
             <view class="page-result__star-grid">
               <text
