@@ -267,7 +267,7 @@ exports.main = async (event, context) => {
           .get();
 
         // 按用户去重取最高分
-        const userBest = {};
+        userBest = {};
         for (const r of (weekTests || [])) {
           if (!userBest[r._openid] || r.totalScore > userBest[r._openid].score) {
             userBest[r._openid] = { _openid: r._openid, score: r.totalScore, tier: r.tier, rankChange: 0 };
