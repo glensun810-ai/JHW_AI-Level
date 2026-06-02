@@ -231,32 +231,63 @@ exports.main = async (event, context) => {
       return { code: 0, data: { history, totalTests: records.length } };
     }
 
-    // Phase 3: 本周积分排行榜（基于 weekly_rankings 快照）
+    // Phase 3: 本周积分排行榜
     if (action === 'weeklyLeaderboard') {
       const weekStart = getWeekStart();
       const weekEnd = new Date(new Date(weekStart).getTime() + 7 * 86400000);
       const weekLabel = `${weekStart.slice(5)} - ${weekEnd.toISOString().slice(5, 10)}`;
 
-      const { data: rankings } = await db.collection('weekly_rankings')
-        .where({ weekStart })
-        .orderBy('score', 'desc')
-        .limit(20)
-        .get();
-
+      let rankings = [];
       let totalParticipants = 0;
+      let userBest = {};
+
+      // 优先从 weekly_rankings 读取（精确快照）
       try {
-        totalParticipants = ((await db.collection('weekly_rankings').where({ weekStart }).count()).total || 0);
-      } catch (e) { totalParticipants = rankings.length; }
+        const { data } = await db.collection('weekly_rankings')
+          .where({ weekStart })
+          .orderBy('score', 'desc')
+          .limit(20)
+          .get();
+        rankings = data || [];
+        try {
+          totalParticipants = ((await db.collection('weekly_rankings').where({ weekStart }).count()).total || 0);
+        } catch (e) { totalParticipants = rankings.length; }
+      } catch (e) {
+        console.log('[getWeeklyStats] weekly_rankings 读取失败，降级到 test_records:', e.message);
+      }
+
+      // 降级：从 test_records + users 重建排行榜
+      if (rankings.length === 0) {
+        const weekStartDate = new Date(weekStart);
+        const { data: weekTests } = await db.collection('test_records')
+          .where({ createdAt: _.gte(weekStartDate) })
+          .field({ _openid: true, totalScore: true, tier: true })
+          .orderBy('createdAt', 'desc')
+          .limit(200)
+          .get();
+
+        // 按用户去重取最高分
+        const userBest = {};
+        for (const r of (weekTests || [])) {
+          if (!userBest[r._openid] || r.totalScore > userBest[r._openid].score) {
+            userBest[r._openid] = { _openid: r._openid, score: r.totalScore, tier: r.tier, rankChange: 0 };
+          }
+        }
+        rankings = Object.values(userBest).sort((a, b) => b.score - a.score).slice(0, 20);
+        totalParticipants = Object.keys(userBest).length;
+      }
 
       // 批量查用户信息
       const rankOpenids = rankings.map(r => r._openid);
       const userMap = {};
       if (rankOpenids.length > 0) {
-        const { data: users } = await db.collection('users')
-          .where({ _openid: _.in(rankOpenids) })
-          .field({ _openid: true, nickname: true, avatar: true, currentTier: true })
-          .get();
-        users.forEach(u => { userMap[u._openid] = u; });
+        try {
+          const { data: users } = await db.collection('users')
+            .where({ _openid: _.in(rankOpenids) })
+            .field({ _openid: true, nickname: true, avatar: true, currentTier: true })
+            .get();
+          users.forEach(u => { userMap[u._openid] = u; });
+        } catch (e) { /* 降级到匿名 */ }
       }
 
       const leaderboard = rankings.map((r, i) => ({
@@ -268,31 +299,29 @@ exports.main = async (event, context) => {
         rankChange: r.rankChange || 0,
       }));
 
-      // 当前用户排名（可能不在 top 20）
+      // 当前用户排名
       let myEntry = null;
-      const myInTop = rankings.find(r => r._openid === OPENID);
-      if (myInTop) {
-        const myIdx = rankings.findIndex(r => r._openid === OPENID);
-        myEntry = { rank: myIdx + 1, score: myInTop.score, rankChange: myInTop.rankChange || 0 };
-      } else {
-        const { data: myRankings } = await db.collection('weekly_rankings')
-          .where({ _openid: OPENID, weekStart })
-          .limit(1)
-          .get();
-        if (myRankings.length > 0) {
-          let higherCount = 0;
-          try {
-            const countResult = await db.collection('weekly_rankings')
-              .where({ weekStart, score: _.gt(myRankings[0].score) })
-              .count();
-            higherCount = countResult.total || 0;
-          } catch (e) { /* fall through */ }
-          myEntry = {
-            rank: higherCount + 1,
-            score: myRankings[0].score,
-            rankChange: myRankings[0].rankChange || 0,
-          };
-        }
+      const myBest = userBest[OPENID] || rankings.find(r => r._openid === OPENID);
+      if (myBest) {
+        const myRank = Object.keys(userBest).length > 0
+          ? Object.values(userBest).filter(u => u.score > (myBest.score || 0)).length + 1
+          : leaderboard.findIndex(r => r.score === (myBest.score || 0)) + 1 || totalParticipants;
+        myEntry = { rank: myRank || totalParticipants, score: myBest.score || 0, rankChange: 0 };
+      } else if (rankings.length > 0) {
+        // 用户不在此周榜单中，尝试单独查询
+        try {
+          const wkStart = getWeekStart();
+          const { data: myRec } = await db.collection('test_records')
+            .where({ _openid: OPENID, createdAt: _.gte(new Date(wkStart)) })
+            .orderBy('totalScore', 'desc')
+            .limit(1)
+            .get();
+          if (myRec.length > 0) {
+            const myScore = myRec[0].totalScore || 0;
+            const higher = Object.values(userBest).filter(u => u.score > myScore).length;
+            myEntry = { rank: higher + 1, score: myScore, rankChange: 0 };
+          }
+        } catch (e) { /* ignore */ }
       }
 
       return { code: 0, data: { leaderboard, myEntry, totalParticipants, weekLabel } };
