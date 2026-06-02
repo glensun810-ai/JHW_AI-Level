@@ -67,6 +67,36 @@
         </view>
       </view>
 
+      <!-- Phase 9: AI身份卡 — 让段位真正属于你 -->
+      <view v-if="showIdentityCard" class="page-index__identity-card">
+        <view class="page-index__identity-card-header">
+          <text class="page-index__identity-card-icon">🪪</text>
+          <text class="page-index__identity-card-title">打造你的AI身份</text>
+          <text class="page-index__identity-card-close" @click="showIdentityCard = false">×</text>
+        </view>
+        <text class="page-index__identity-card-desc">设置头像和昵称，你的段位卡和排行榜会更酷</text>
+        <view class="page-index__identity-card-form">
+          <button class="page-index__identity-avatar" open-type="chooseAvatar" @chooseavatar="onIndexChooseAvatar">
+            <image v-if="identityProfile.avatar" class="page-index__identity-avatar-img" :src="identityProfile.avatar" mode="aspectFill" />
+            <text v-else class="page-index__identity-avatar-placeholder">👤</text>
+            <text class="page-index__identity-avatar-tip">点击换头像</text>
+          </button>
+          <input class="page-index__identity-nick" type="nickname" :value="identityProfile.nickname" placeholder="点击输入昵称" @blur="onIndexNickSave" />
+        </view>
+        <view v-if="identityProfile.nickname" class="page-index__identity-preview">
+          <text class="page-index__identity-preview-label">预览效果：</text>
+          <view class="page-index__identity-preview-card">
+            <image v-if="identityProfile.avatar" class="page-index__identity-preview-avatar" :src="identityProfile.avatar" mode="aspectFill" />
+            <text v-else class="page-index__identity-preview-avatar">👤</text>
+            <view class="page-index__identity-preview-info">
+              <text class="page-index__identity-preview-name">{{ identityProfile.nickname || '你' }}</text>
+              <text class="page-index__identity-preview-tier">{{ returningTierEmoji }} {{ returningTierName }}</text>
+            </view>
+            <text class="page-index__identity-preview-aiq">AI商数 {{ returningAIQ }}</text>
+          </view>
+        </view>
+      </view>
+
       <!-- A3: AI实时评价 -->
       <view class="page-index__ai-eval">
         <text class="page-index__ai-eval-dot" />
@@ -275,6 +305,9 @@ const weeklyTotalParticipants = ref(0);
 // Phase 4: 回访用户段位展示（分享零门槛）
 const showReturningHero = ref(false);
 const returningTierName = ref('');
+// Phase 9: AI身份卡
+const showIdentityCard = ref(false);
+const identityProfile = ref({ nickname: '', avatar: '' });
 const returningTierEmoji = ref('');
 const returningAIQ = ref(0);
 const returningPercentile = ref(0);
@@ -477,6 +510,56 @@ function applyReturningData(data) {
   ctaText.value = '再测一次，看段位变了没';
 }
 
+// Phase 9: 身份卡 — 微信新规范 chooseAvatar + nickname input
+async function onIndexChooseAvatar(e) {
+  const tempPath = e.detail.avatarUrl;
+  if (!tempPath) return;
+  try {
+    uni.showLoading({ title: '上传中...', mask: true });
+    const openid = getUserOpenidSync();
+    const uploadRes = await wx.cloud.uploadFile({
+      cloudPath: `avatars/${openid}_${Date.now()}.png`,
+      filePath: tempPath,
+    });
+    identityProfile.value.avatar = uploadRes.fileID;
+    // 同步到云端
+    callCloudFunction('getWeeklyStats', {
+      action: 'updateProfile',
+      nickname: identityProfile.value.nickname,
+      avatar: uploadRes.fileID,
+    }, { retry: false }).catch(() => {});
+    uni.hideLoading();
+  } catch (err) {
+    uni.hideLoading();
+    console.warn('[index] 头像上传失败:', err);
+  }
+}
+
+function onIndexNickSave(e) {
+  const nick = e.detail.value;
+  if (!nick || !nick.trim()) return;
+  identityProfile.value.nickname = nick.trim();
+  callCloudFunction('getWeeklyStats', {
+    action: 'updateProfile',
+    nickname: nick.trim(),
+    avatar: identityProfile.value.avatar,
+  }, { retry: false }).catch(() => {});
+}
+
+async function loadIdentityProfile() {
+  try {
+    const res = await fetchWeeklyStats();
+    if (res.code === 0 && res.data) {
+      identityProfile.value.nickname = res.data.nickname || '';
+      identityProfile.value.avatar = res.data.avatar || '';
+      // 已测试但未设置身份 → 显示身份卡引导
+      if (showReturningHero.value && !identityProfile.value.nickname) {
+        showIdentityCard.value = true;
+      }
+    }
+  } catch (e) { /* ignore */ }
+}
+
 function viewMyResult() {
   uni.navigateTo({
     url: '/pages/result/result?mode=review',
@@ -557,6 +640,7 @@ onMounted(async () => {
   preloadInviteStatus(); // 预加载邀请解锁状态
   loadWeeklyRank(); // Phase 3: 静默加载本周排名
   loadReturningUserData(); // Phase 4: 回访用户段位展示
+  loadIdentityProfile();  // Phase 9: 加载身份信息
 
   // Phase 5: 挑战/反转 Banner 到达音效
   if (showReversalBanner.value || (friendName.value && !showReversalBanner.value)) {
@@ -591,6 +675,7 @@ onShow(() => {
   loadTierProgress();
   loadWeeklyRank();
   loadReturningUserData(); // Phase 4: 回访用户段位展示
+  loadIdentityProfile();  // Phase 9: 加载身份信息
   preloadInviteStatus(); // 刷新邀请解锁状态
 });
 
@@ -1148,6 +1233,52 @@ onShareTimeline(() => {
       box-shadow: 0 4rpx 16rpx rgba(124, 58, 237, 0.3);
     }
   }
+
+  // Phase 9: AI身份卡
+  &__identity-card {
+    margin: 24rpx 0 0;
+    padding: 24rpx 28rpx;
+    background: linear-gradient(135deg, rgba(0,200,255,0.06), rgba(124,58,237,0.08));
+    border: 1rpx solid rgba(0,200,255,0.15);
+    border-radius: 20rpx;
+    animation: fade-in 0.4s ease-out both;
+    &-header { display: flex; align-items: center; gap: 8rpx; margin-bottom: 8rpx; }
+    &-icon { font-size: 28rpx; }
+    &-title { font-size: 26rpx; color: #fff; font-weight: bold; flex: 1; }
+    &-close { font-size: 32rpx; color: rgba(255,255,255,0.3); padding: 4rpx 8rpx; }
+    &-desc { font-size: 22rpx; color: rgba(255,255,255,0.45); display: block; margin-bottom: 18rpx; }
+    &-form { display: flex; align-items: center; gap: 20rpx; }
+  }
+  &__identity-avatar {
+    width: 100rpx; height: 100rpx; border-radius: 50%;
+    background: rgba(255,255,255,0.06); border: 2rpx dashed rgba(255,255,255,0.2);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 0; flex-shrink: 0; overflow: hidden; position: relative;
+    &::after { border: none; }
+    &-img { width: 100%; height: 100%; border-radius: 50%; position: absolute; }
+    &-placeholder { font-size: 40rpx; }
+    &-tip { font-size: 16rpx; color: rgba(255,255,255,0.3); margin-top: -4rpx; }
+  }
+  &__identity-nick {
+    flex: 1; height: 80rpx; background: rgba(255,255,255,0.06);
+    border-radius: 12rpx; padding: 0 20rpx; font-size: 28rpx; color: #fff;
+    border: 1rpx solid rgba(255,255,255,0.1);
+  }
+  &__identity-preview { margin-top: 20rpx; }
+  &__identity-preview-label { font-size: 20rpx; color: rgba(255,255,255,0.3); display: block; margin-bottom: 10rpx; }
+  &__identity-preview-card {
+    display: flex; align-items: center; gap: 14rpx;
+    padding: 16rpx 20rpx; background: rgba(255,255,255,0.06);
+    border-radius: 14rpx;
+  }
+  &__identity-preview-avatar {
+    width: 52rpx; height: 52rpx; border-radius: 50%; background: rgba(255,255,255,0.08);
+    font-size: 28rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  &__identity-preview-info { flex: 1; display: flex; flex-direction: column; }
+  &__identity-preview-name { font-size: 26rpx; color: #fff; font-weight: 500; }
+  &__identity-preview-tier { font-size: 22rpx; color: #c0a0ff; }
+  &__identity-preview-aiq { font-size: 24rpx; color: #f59e0b; font-weight: bold; flex-shrink: 0; }
 
   // 新用户简化引导
   &__quick-guide {
