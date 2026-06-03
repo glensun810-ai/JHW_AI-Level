@@ -825,6 +825,8 @@ async function handleStart() {
     startQuiz();
     return;
   }
+  // 非免费路径，清除可能残留的 gatePath
+  getApp().globalData.gatePath = '';
 
   // ② 邀请解锁（优先 — 社交裂变）
   // 缓存命中 → 乐观启动 + 后台核销

@@ -1744,8 +1744,11 @@ function animateScore() {
 // Phase 6: 分享操作面板
 function openSharePanel() {
   try { trackShareClick('sticky'); } catch (e) { /* */ }
-  showSharePanel.value = true;
-  createSoundEngine().play('share_open');
+  // 确保面板渲染
+  if (typeof showSharePanel !== 'undefined') {
+    showSharePanel.value = true;
+    setTimeout(() => createSoundEngine().play('share_open'), 100);
+  }
 }
 
 function saveAndClosePanel(type) {

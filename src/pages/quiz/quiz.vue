@@ -513,11 +513,13 @@ async function submitAndGo() {
       store.answers,
     );
 
-    const wasFree = getApp().globalData.gatePath === 'free' && !hasUsedFreeTestToday();
+    const gatePath = getApp().globalData.gatePath || '';
+    const wasFree = gatePath === 'free';
     const res = await store.submitTest(challengeId.value);
 
     if (res.code === 0 && res.data) {
-      if (wasFree) { markFreeTestUsed(); getApp().globalData.gatePath = ''; }
+      if (wasFree) { markFreeTestUsed(); }
+      getApp().globalData.gatePath = ''; // 消费后始终清除
       // 邀请转化追踪
       const inviterUid = getApp().globalData.shareFromUid || '';
       if (inviterUid) {
