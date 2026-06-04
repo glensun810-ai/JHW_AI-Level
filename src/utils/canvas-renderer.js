@@ -98,6 +98,7 @@ function drawRoundRect(ctx, x, y, w, h, r) {
 async function renderTierCard(canvas, ctx, data) {
   const W = 750;
   const H = 1000;
+  const G = 8; // 8px 栅格
 
   const tierName = data.tierName || '萌新';
   const theme = THEMES[tierName] || THEMES['萌新'];
@@ -122,66 +123,44 @@ async function renderTierCard(canvas, ctx, data) {
   canvas.height = H * pixelRatio;
   ctx.scale(pixelRatio, pixelRatio);
 
-  // ─── ① 背景渐变 + 星场 ───
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+  // ─── ① 深空背景 — 径向渐变 + 暗角 ───
+  const bgGrad = ctx.createRadialGradient(W / 2, H * 0.35, 60, W / 2, H * 0.5, W);
   bgGrad.addColorStop(0, theme.bg);
-  bgGrad.addColorStop(1, theme.bgEnd);
+  bgGrad.addColorStop(0.6, theme.bgEnd);
+  bgGrad.addColorStop(1, '#050510');
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, W, H);
 
-  for (let i = 0; i < 40; i++) {
+  // 暗角叠加
+  const vignette = ctx.createRadialGradient(W / 2, H / 2, W * 0.45, W / 2, H / 2, W * 0.75);
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, 'rgba(0,0,0,0.35)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, W, H);
+
+  // 星点
+  for (let i = 0; i < 55; i++) {
     const sx = Math.random() * W;
     const sy = Math.random() * H;
-    ctx.fillStyle = Math.random() > 0.7 ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)';
+    const alpha = Math.random() * 0.4 + 0.1;
+    const size = Math.random() * 2 + 0.3;
+    ctx.fillStyle = `rgba(200,220,255,${alpha})`;
     ctx.beginPath();
-    ctx.arc(sx, sy, Math.random() * 1.5 + 0.5, 0, Math.PI * 2);
+    ctx.arc(sx, sy, size, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // ─── ② 品牌标识 ───
-  ctx.fillStyle = theme.subtitle;
-  ctx.font = '18px sans-serif';
+  // ─── ② 品牌标识 — 顶部细体字 ───
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.font = '16px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('进化湾', W / 2, 36);
+  ctx.letterSpacing = '3px';
+  ctx.fillText('进 化 湾', W / 2, G * 6);
 
-  // ─── ③ 用户头像 + 昵称 ───
-  let avatarDrawn = false;
-  const avatarCY = 90;
-  if (userAvatar) {
-    try {
-      const avatarImg = await loadImageWithTimeout(canvas, userAvatar, 5000);
-      const avatarSize = 56;
-      const avatarX = W / 2 - avatarSize / 2;
-      const avatarY = avatarCY - avatarSize / 2;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(W / 2, avatarCY, avatarSize / 2, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);
-      ctx.restore();
-      ctx.beginPath();
-      ctx.arc(W / 2, avatarCY, avatarSize / 2 + 2, 0, Math.PI * 2);
-      ctx.strokeStyle = theme.text;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      avatarDrawn = true;
-    } catch (e) { /* 头像加载失败，继续无头像渲染 */ }
-  }
-  if (avatarDrawn && userNickname) {
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '22px sans-serif';
-    ctx.textAlign = 'center';
-    const displayName = userNickname.length > 12 ? userNickname.slice(0, 12) + '...' : userNickname;
-    ctx.fillText(displayName + ' 的AI段位', W / 2, 150);
-  }
-
-  const topShift = avatarDrawn ? 90 : 0;
-
-  // ─── ④ 段位徽章（220×220 PNG + 240×240 辉光底板） ───
+  // ─── ③ 段位徽章 — 居中 200×200 ───
   const badgeSrc = TIER_BADGE_IMAGES[tierName] || TIER_BADGE_IMAGES['萌新'];
-  const badgeSize = 220;
-  const badgeX = (W - badgeSize) / 2;
-  const badgeY = 85 + topShift;
+  const badgeSize = 200;
+  const badgeY = G * 10;
   let badgeDrawn = false;
   try {
     const badgeImg = canvas.createImage();
@@ -190,60 +169,63 @@ async function renderTierCard(canvas, ctx, data) {
       badgeImg.onerror = () => reject(new Error('badge load failed'));
       badgeImg.src = badgeSrc;
     });
-    const glowSize = 240;
-    const glowX = (W - glowSize) / 2;
-    const glowY = badgeY - 10;
+    // 辉光
     ctx.shadowColor = theme.glow;
-    ctx.shadowBlur = 40;
-    drawRoundRect(ctx, glowX, glowY, glowSize, glowSize, 20);
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.shadowBlur = 48;
+    drawRoundRect(ctx, (W - 240) / 2, badgeY - 10, 240, 240, 24);
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
     ctx.fill();
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
-    ctx.drawImage(badgeImg, badgeX, badgeY, badgeSize, badgeSize);
+    ctx.drawImage(badgeImg, (W - badgeSize) / 2, badgeY, badgeSize, badgeSize);
     badgeDrawn = true;
-  } catch (e) { /* 徽章加载失败，用 emoji 替代 */ }
+  } catch (e) { /* fallback */ }
 
-  // ─── ⑤ 段位名称 ───
-  if (!badgeDrawn) {
-    ctx.font = 'bold 120px sans-serif';
+  // ─── ④ 段位名称 — 超粗体 ───
+  const nameY = badgeY + badgeSize + G * 4;
+  if (badgeDrawn) {
+    ctx.fillStyle = theme.text;
+    ctx.font = 'bold 56px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(emoji, W / 2, 260 + topShift);
-    ctx.font = 'bold 52px sans-serif';
-    ctx.fillText(tierName, W / 2, 370 + topShift);
+    ctx.fillText(emoji + ' ' + tierName, W / 2, nameY);
   } else {
     ctx.fillStyle = theme.text;
-    ctx.font = 'bold 52px sans-serif';
+    ctx.font = 'bold 120px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(emoji + ' ' + tierName, W / 2, 345 + topShift);
+    ctx.fillText(emoji, W / 2, badgeY + 100);
+    ctx.font = 'bold 56px sans-serif';
+    ctx.fillText(tierName, W / 2, badgeY + 190);
   }
 
-  // ─── ⑥ AI 商数（大数字 + 下方标签 + 参照系） ───
-  const scoreY = 420 + topShift;
+  // ─── ⑤ AI 商数 — 超大数字 ───
+  const scoreY = nameY + G * 7;
   ctx.fillStyle = theme.text;
-  ctx.font = 'bold 88px sans-serif';
+  ctx.font = 'bold 96px sans-serif';
   ctx.textAlign = 'center';
   ctx.shadowColor = theme.glow;
-  ctx.shadowBlur = 20;
+  ctx.shadowBlur = 24;
   ctx.fillText(String(aiQuotient), W / 2, scoreY);
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = theme.subtitle;
   ctx.font = '24px sans-serif';
-  ctx.fillText('AI商数', W / 2, 470 + topShift);
+  ctx.fillText('AI 商数', W / 2, scoreY + G * 4);
 
-  ctx.fillStyle = theme.subtitle;
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.font = '20px sans-serif';
-  ctx.fillText('均值约105 · 超越全国 ' + percentile + '% 的用户', W / 2, 500 + topShift);
+  ctx.fillText('均值约105 · 超越全国 ' + percentile + '% 的用户', W / 2, scoreY + G * 8);
 
-  // ─── ⑦ 段位进度面板 600×105 ───
-  const progPanelY = 545 + topShift;
-  const progPanelW = 600;
-  const progPanelH = 105;
-  const progPanelX = (W - progPanelW) / 2;
-  drawRoundRect(ctx, progPanelX, progPanelY, progPanelW, progPanelH, 14);
-  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  // ─── ⑥ 进度面板 — 磨砂玻璃卡片 ───
+  const progY = scoreY + G * 12;
+  const progW = 620;
+  const progH = 100;
+  const progX = (W - progW) / 2;
+  drawRoundRect(ctx, progX, progY, progW, progH, 16);
+  const progBgGrad = ctx.createLinearGradient(0, progY, 0, progY + progH);
+  progBgGrad.addColorStop(0, 'rgba(255,255,255,0.06)');
+  progBgGrad.addColorStop(1, 'rgba(255,255,255,0.02)');
+  ctx.fillStyle = progBgGrad;
   ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   ctx.lineWidth = 1;
@@ -252,95 +234,116 @@ async function renderTierCard(canvas, ctx, data) {
   if (nextTierObj) {
     const aiqGap = toAIQuotient(nextTierObj.min) - aiQuotient;
     ctx.fillStyle = theme.text;
-    ctx.font = '26px sans-serif';
+    ctx.font = '24px sans-serif';
     ctx.textAlign = 'center';
-    const ptsText = aiqGap <= 2 ? `只差 ${aiqGap} 点` : `还差 ${aiqGap} 点`;
-    ctx.fillText(`距「${nextTierObj.name}」${ptsText}`, W / 2, progPanelY + 38);
+    ctx.fillText(`距「${nextTierObj.name}」${aiqGap <= 2 ? `只差 ${aiqGap} 点` : `还差 ${aiqGap} 点`}`, W / 2, progY + G * 4);
 
-    const barX = progPanelX + 60;
-    const barW = progPanelW - 120;
-    const barY = progPanelY + 62;
-    const barH = 12;
+    const barX = progX + 50;
+    const barW = progW - 100;
+    const barY = progY + G * 7;
+    const barH = 10;
     const currentTier = getTier(totalScore);
     const scoreInTier = totalScore - currentTier.min;
     const tierSpan = currentTier.max - currentTier.min;
     const ratio = tierSpan > 0 ? Math.max(0.05, scoreInTier / tierSpan) : 1.0;
-    const fillW = Math.max(barH, barW * ratio);
 
-    drawRoundRect(ctx, barX, barY, barW, barH, 6);
-    ctx.fillStyle = theme.barTrack;
+    drawRoundRect(ctx, barX, barY, barW, barH, 5);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.fill();
-
-    drawRoundRect(ctx, barX, barY, fillW, barH, 6);
-    ctx.fillStyle = theme.barFill;
+    drawRoundRect(ctx, barX, barY, Math.max(barH, barW * ratio), barH, 5);
+    const barFillGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    barFillGrad.addColorStop(0, theme.glow);
+    barFillGrad.addColorStop(1, '#f59e0b');
+    ctx.fillStyle = barFillGrad;
     ctx.fill();
 
     ctx.fillStyle = theme.text;
     ctx.font = '22px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(emoji, barX - 28, barY + 10);
-    ctx.fillText(nextTierObj.emoji, barX + barW + 28, barY + 10);
+    ctx.fillText(emoji, barX - 32, barY + 8);
+    ctx.fillText(nextTierObj.emoji, barX + barW + 32, barY + 8);
   } else {
     ctx.fillStyle = theme.text;
-    ctx.font = 'bold 28px sans-serif';
+    ctx.font = 'bold 26px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('已达成最高段位「无界」', W / 2, progPanelY + 38);
-    ctx.fillStyle = theme.subtitle;
-    ctx.font = '20px sans-serif';
-    ctx.fillText('作为先行者，引领AI进化浪潮', W / 2, progPanelY + 70);
+    ctx.fillText('已达成最高段位「无界」', W / 2, progY + G * 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '18px sans-serif';
+    ctx.fillText('作为先行者，引领AI进化浪潮', W / 2, progY + G * 8);
   }
 
-  // ─── ⑧ 好友排名 pill ───
-  let friendRankBottom = progPanelY + progPanelH;
+  // ─── ⑦ 好友排名 pill ───
+  let nextY = progY + progH;
   if (friendRank) {
-    const friendY = progPanelY + progPanelH + 18;
-    const pillW = 320;
-    const pillH = 40;
-    const pillX = (W - pillW) / 2;
-    drawRoundRect(ctx, pillX, friendY, pillW, pillH, 22);
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    const fY = progY + progH + G * 2;
+    const pillW = 340;
+    const pillH = 44;
+    drawRoundRect(ctx, (W - pillW) / 2, fY, pillW, pillH, 22);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.fill();
     ctx.fillStyle = theme.accent;
     ctx.font = 'bold 24px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`\u{1F3C6} 好友排名第 ${friendRank.rank} / ${friendRank.total} 位`, W / 2, friendY + 28);
-    friendRankBottom = friendY + pillH;
+    ctx.fillText(`🏆 好友排名第 ${friendRank.rank} / ${friendRank.total} 位`, W / 2, fY + G * 4);
+    nextY = fY + pillH;
   }
 
-  // ─── ⑨ 小程序码面板 670×170 — 左文右码 ───
-  const qrPanelY = friendRankBottom + 20;
-  const qrPanelW = 670;
-  const qrPanelH = 170;
+  // ─── ⑧ 用户信息（如有） ───
+  if (userAvatar || userNickname) {
+    const infoY = nextY + G * 3;
+    if (userAvatar) {
+      try {
+        const avatarImg = await loadImageWithTimeout(canvas, userAvatar, 4000);
+        const aSize = 44;
+        const aX = W / 2 - aSize / 2 - (userNickname ? 60 : 0);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(aX + aSize / 2, infoY + aSize / 2, aSize / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(avatarImg, aX, infoY, aSize, aSize);
+        ctx.restore();
+        if (userNickname) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '22px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText(userNickname + ' 的AI段位', aX + aSize + 16, infoY + G * 4);
+        }
+      } catch (e) { /* ignore */ }
+    }
+    nextY = infoY + G * 7;
+  }
+
+  // ─── ⑨ 小程序码面板 — 左文右码 ───
+  const qrPanelY = nextY + G * 2;
+  const qrPanelW = 660;
+  const qrPanelH = 160;
   const qrPanelX = (W - qrPanelW) / 2;
   drawRoundRect(ctx, qrPanelX, qrPanelY, qrPanelW, qrPanelH, 16);
   ctx.fillStyle = 'rgba(255,255,255,0.03)';
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  // 左侧文案区
-  const textX = qrPanelX + 40;
+  // 左：文案
+  const txtX = qrPanelX + G * 5;
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 28px sans-serif';
+  ctx.font = 'bold 26px sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('扫码测测你的', textX, qrPanelY + 52);
+  ctx.fillText('扫码测测你的 AI 段位', txtX, qrPanelY + G * 6);
 
-  ctx.fillStyle = theme.subtitle;
-  ctx.font = '24px sans-serif';
-  ctx.fillText('AI 段位', textX, qrPanelY + 88);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '20px sans-serif';
+  ctx.fillText('看看你在好友中排第几', txtX, qrPanelY + G * 10);
 
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.font = '16px sans-serif';
-  ctx.fillText('长按识别小程序码', textX, qrPanelY + 130);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.font = '15px sans-serif';
+  ctx.fillText('长按识别小程序码', txtX, qrPanelY + G * 16);
 
-  // 右侧小程序码
-  const qrSize = 140;
-  const qrX = qrPanelX + qrPanelW - qrSize - 28;
-  const qrY = qrPanelY + 15;
+  // 右：小程序码
+  const qrSize = 130;
+  const qrX = qrPanelX + qrPanelW - qrSize - G * 3;
+  const qrY = qrPanelY + G * 2;
   await drawMiniCode(canvas, ctx, qrX, qrY, qrSize, miniCodeUrl, 12);
-
-  // 页脚已由 QR 面板中的品牌文案替代
 }
 
 // ── 人格卡渲染函数 ──
