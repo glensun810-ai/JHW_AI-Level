@@ -182,42 +182,42 @@ async function renderTierCard(canvas, ctx, data) {
   } catch (e) { /* fallback */ }
 
   // ─── ④ 段位名称 — 超粗体 ───
-  const nameY = badgeY + badgeSize + G * 4;
+  const nameY = badgeY + badgeSize + G * 5;
   if (badgeDrawn) {
     ctx.fillStyle = theme.text;
-    ctx.font = 'bold 56px sans-serif';
+    ctx.font = 'bold 52px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(emoji + ' ' + tierName, W / 2, nameY);
   } else {
     ctx.fillStyle = theme.text;
-    ctx.font = 'bold 120px sans-serif';
+    ctx.font = 'bold 100px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(emoji, W / 2, badgeY + 100);
-    ctx.font = 'bold 56px sans-serif';
-    ctx.fillText(tierName, W / 2, badgeY + 190);
+    ctx.font = 'bold 52px sans-serif';
+    ctx.fillText(tierName, W / 2, badgeY + 180);
   }
 
   // ─── ⑤ AI 商数 — 超大数字 ───
-  const scoreY = nameY + G * 7;
+  const scoreY = nameY + G * 13;  // 段位名→AIQ: 104px间距, 消除重叠
   ctx.fillStyle = theme.text;
-  ctx.font = 'bold 96px sans-serif';
+  ctx.font = 'bold 88px sans-serif';
   ctx.textAlign = 'center';
   ctx.shadowColor = theme.glow;
-  ctx.shadowBlur = 24;
+  ctx.shadowBlur = 20;
   ctx.fillText(String(aiQuotient), W / 2, scoreY);
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = theme.subtitle;
-  ctx.font = '24px sans-serif';
-  ctx.fillText('AI 商数', W / 2, scoreY + G * 4);
+  ctx.font = '22px sans-serif';
+  ctx.fillText('AI 商数', W / 2, scoreY + G * 6);
 
   ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = '20px sans-serif';
-  ctx.fillText('均值约105 · 超越全国 ' + percentile + '% 的用户', W / 2, scoreY + G * 8);
+  ctx.font = '18px sans-serif';
+  ctx.fillText('均值约105 · 超越全国 ' + percentile + '% 的用户', W / 2, scoreY + G * 10);
 
   // ─── ⑥ 进度面板 — 磨砂玻璃卡片 ───
-  const progY = scoreY + G * 12;
+  const progY = scoreY + G * 15;
   const progW = 620;
   const progH = 100;
   const progX = (W - progW) / 2;
