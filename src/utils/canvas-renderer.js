@@ -182,7 +182,7 @@ async function renderTierCard(canvas, ctx, data) {
   } catch (e) { /* fallback */ }
 
   // ─── ④ 段位名称 — 超粗体 ───
-  const nameY = badgeY + badgeSize + G * 5;
+  const nameY = badgeY + badgeSize + G * 6;
   if (badgeDrawn) {
     ctx.fillStyle = theme.text;
     ctx.font = 'bold 52px sans-serif';
