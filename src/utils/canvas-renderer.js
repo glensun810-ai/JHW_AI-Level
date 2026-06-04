@@ -307,10 +307,10 @@ async function renderTierCard(canvas, ctx, data) {
     friendRankBottom = friendY + pillH;
   }
 
-  // ─── ⑨ 小程序码面板 670×190 ───
+  // ─── ⑨ 小程序码面板 670×170 — 左文右码 ───
   const qrPanelY = friendRankBottom + 20;
   const qrPanelW = 670;
-  const qrPanelH = 190;
+  const qrPanelH = 170;
   const qrPanelX = (W - qrPanelW) / 2;
   drawRoundRect(ctx, qrPanelX, qrPanelY, qrPanelW, qrPanelH, 16);
   ctx.fillStyle = 'rgba(255,255,255,0.03)';
@@ -319,21 +319,26 @@ async function renderTierCard(canvas, ctx, data) {
   ctx.lineWidth = 1;
   ctx.stroke();
 
+  // 左侧文案区
+  const textX = qrPanelX + 40;
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 26px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('扫码测测你的 AI 段位', W / 2, qrPanelY + 30);
+  ctx.font = 'bold 28px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('扫码测测你的', textX, qrPanelY + 52);
 
-  const qrSize = 140;
-  const qrX = (W - qrSize) / 2;
-  const qrY = qrPanelY + 28;
-  await drawMiniCode(canvas, ctx, qrX, qrY, qrSize, miniCodeUrl, 14);
-
-  // 长按提示（面板内底部，QR下方）
   ctx.fillStyle = theme.subtitle;
-  ctx.font = '17px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('长按识别小程序码', W / 2, qrPanelY + qrPanelH - 2);
+  ctx.font = '24px sans-serif';
+  ctx.fillText('AI 段位', textX, qrPanelY + 88);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '16px sans-serif';
+  ctx.fillText('长按识别小程序码', textX, qrPanelY + 130);
+
+  // 右侧小程序码
+  const qrSize = 140;
+  const qrX = qrPanelX + qrPanelW - qrSize - 28;
+  const qrY = qrPanelY + 15;
+  await drawMiniCode(canvas, ctx, qrX, qrY, qrSize, miniCodeUrl, 12);
 
   // 页脚已由 QR 面板中的品牌文案替代
 }
@@ -842,22 +847,36 @@ async function renderSquareShare(canvas, ctx, data) {
     }
   }
 
-  // ─── 下 1/3: 小程序码 + 引导文案 ───
+  // ─── 下 1/3: 小程序码 + 引导文案（左文右码）───
   const bottomY = midY + 190;
+  const qrPanelX = 60;
+  const qrPanelW = W - 120;
+  const qrPanelH = 170;
+  drawRoundRect(ctx, qrPanelX, bottomY, qrPanelW, qrPanelH, 16);
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // 左侧文案
+  const textX = qrPanelX + 40;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 26px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('扫码测测你的', textX, bottomY + 54);
   ctx.fillStyle = theme.subtitle;
-  ctx.font = '26px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('扫码测测你的AI段位', W / 2, bottomY + 30);
+  ctx.font = '22px sans-serif';
+  ctx.fillText('AI 段位', textX, bottomY + 84);
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '16px sans-serif';
+  ctx.fillText('长按识别小程序码', textX, bottomY + 130);
 
-  const qrSize = 150;
-  const qrX = (W - qrSize) / 2;
-  const qrY = bottomY + 50;
-
+  // 右侧小程序码
+  const qrSize = 140;
+  const qrX = qrPanelX + qrPanelW - qrSize - 24;
+  const qrY = bottomY + 15;
   await drawMiniCode(canvas, ctx, qrX, qrY, qrSize, miniCodeUrl);
-
-  ctx.fillStyle = theme.subtitle;
-  ctx.font = '20px sans-serif';
-  ctx.fillText('长按识别 · 看看你的AI段位排第几', W / 2, qrY + qrSize + 24);
 }
 
 // ── 渲染入口：优先使用离屏 Canvas，降级到 DOM Canvas ──
