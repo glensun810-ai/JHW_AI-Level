@@ -1979,13 +1979,25 @@ const subscribeText = computed(() => {
 });
 
 async function requestSubscribe() {
-  if (streakData.value?.consecutiveDays >= 1) {
-    await requestSubscribeMessage(['checkinReminder', 'tierChange']);
-  } else {
-    await requestSubscribeMessage(['challengeNotify', 'tierChange']);
-  }
-  uni.showToast({ title: '设置成功！明天见 👋', icon: 'success' });
   showSubscribePrompt.value = false;
+  const isStreak = streakData.value?.consecutiveDays >= 1;
+  const tmplIds = isStreak
+    ? ['checkinReminder', 'tierChange']
+    : ['challengeNotify', 'tierChange'];
+
+  try {
+    const result = await requestSubscribeMessage(tmplIds);
+    // 检查是否有模板被用户接受
+    const accepted = Object.values(result).some(status => status === 'accept');
+    if (accepted && isStreak) {
+      uni.showToast({ title: '已开启提醒，明天见 👋', icon: 'success', duration: 2000 });
+    } else if (accepted) {
+      uni.showToast({ title: '已开启通知', icon: 'success', duration: 1500 });
+    }
+    // 用户拒绝时静默，不弹 Toast
+  } catch (e) {
+    // 调起失败时静默，避免错误提示打扰用户
+  }
 }
 
 onShareAppMessage(() => {
