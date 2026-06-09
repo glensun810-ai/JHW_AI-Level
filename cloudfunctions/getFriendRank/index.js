@@ -255,9 +255,14 @@ exports.main = async (event, context) => {
         }
       }
 
-      // 降级：无 openGId 或无群会话记录时，返回邀请好友列表
-      if (groupList.length === 0) {
-        groupList = allUsers.slice(0, 10);
+      // 降级：无 openGId 或无群会话记录时
+      // 改：不再偷偷返回好友列表（避免"群榜显示好友榜"的认知混乱）
+      // 而是返回明确的 noGroup 标记，让前端展示引导
+      let isGlobalFallback = groupList.length === 0 || !openGId;
+      
+      // 但为了让功能可用，如果无群数据但有好友数据，展示好友排名并标注"基于好友链"
+      if (groupList.length === 0 && allUsers.length > 0) {
+        groupList = allUsers.slice(0, 20);
       }
 
       return {
@@ -265,7 +270,9 @@ exports.main = async (event, context) => {
         message: 'ok',
         data: {
           groupRankings: groupList,
-          isGlobalFallback: groupList.length === 0 || !openGId,
+          noGroupId: !openGId,
+          isGlobalFallback,
+          basedOnFriends: groupList.length > 0 && !openGId,
           friendCount: groupList.length,
           invitedCount: groupList.length,
         },

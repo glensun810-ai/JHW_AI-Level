@@ -510,6 +510,8 @@ exports.main = async (event, context) => {
 	      .get();
 	    if (dupRecords.length > 0) {
 	      console.log(`[submitScore] 重复提交已拦截 openid=${OPENID.slice(0,8)}... questionSetId=${questionSetId}`);
+	      // 即使重复提交也要更新周排行榜（防止榜单数据丢失）
+	      await updateWeeklyRanking(OPENID, clampedTierScore, tier.name);
 	      // 重复提交仍返回完整结果数据，确保用户始终看到结果页
 	      return {
 	        code: 0,
@@ -605,36 +607,7 @@ exports.main = async (event, context) => {
       });
     }
 
-    // 更新 weekly_rankings（周排行榜快照）
-    const weekStart = getWeekStart();
-    const { data: existingWeek } = await db.collection('weekly_rankings')
-      .where({ _openid: OPENID, weekStart })
-      .get();
-
-    if (existingWeek.length > 0) {
-      const prevScore = existingWeek[0].score || 0;
-      await db.collection('weekly_rankings')
-        .where({ _openid: OPENID, weekStart })
-        .update({
-          data: {
-            tier: tier.name,
-            score: clampedTierScore,
-            rankChange: clampedTierScore - prevScore,
-            createdAt: new Date(),
-          },
-        });
-    } else {
-      await db.collection('weekly_rankings').add({
-        data: {
-          weekStart,
-          _openid: OPENID,
-          tier: tier.name,
-          score: clampedTierScore,
-          rankChange: 0,
-          createdAt: new Date(),
-        },
-      });
-    }
+    await updateWeeklyRanking(OPENID, clampedTierScore, tier.name);
 
     // Phase 3: 检测超越关系（仅在新高分时触发）
     if (isNewHighest) {
@@ -684,6 +657,55 @@ exports.main = async (event, context) => {
       } catch (e) {
         console.log(`[submitScore] 挑战结算失败: ${e.message}`);
       }
+    }
+
+    // 段位波动：查询最近 5 次测试记录，计算分数区间和趋势
+    let recentScoreRange = null;
+    try {
+      const { data: recent5 } = await db.collection('test_records')
+        .where({ _openid: OPENID })
+        .field({ totalScore: true, tier: true, createdAt: true })
+        .orderBy('createdAt', 'desc')
+        .limit(5)
+        .get();
+      if (recent5.length > 0) {
+        const scores = recent5.map(r => Math.min(50, Math.max(5, r.totalScore || 0)));
+        const tiers = recent5.map(r => r.tier || '');
+        const low = Math.min(...scores);
+        const high = Math.max(...scores);
+        const latest = scores[0];
+        // 计算趋势
+        let trend;
+        if (scores.length >= 3) {
+          const recent3 = scores.slice(0, 3);
+          const diffs = [];
+          for (let i = 1; i < recent3.length; i++) {
+            diffs.push(recent3[i-1] - recent3[i]);
+          }
+          const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+          if (avg > 2) trend = { icon: '📈', label: '持续上升', color: '#4caf50' };
+          else if (avg < -2) trend = { icon: '📉', label: '持续下降', color: '#f59e0b' };
+          else trend = { icon: '⚖️', label: '保持稳定', color: '#ffd700' };
+        } else {
+          trend = { icon: '📊', label: '数据积累中', color: '#8899aa' };
+        }
+        // 段位区间使用的名称：取最高分对应的段位
+        const highTier = getTier(high);
+        recentScoreRange = {
+          low,
+          high,
+          latest,
+          lowAIQ: Math.round((low / 50) * 80 + 70),
+          highAIQ: Math.round((high / 50) * 80 + 70),
+          latestAIQ: Math.round((latest / 50) * 80 + 70),
+          tierName: highTier.name,
+          tierEmoji: highTier.emoji,
+          trend,
+          count: scores.length,
+        };
+      }
+    } catch (e) {
+      console.log('[submitScore] recentScoreRange 查询失败:', e.message);
     }
 
     // 段位悬赏：好友通过悬赏链接进入并完成测试，对比猜测段位 vs 实际段位
@@ -825,6 +847,8 @@ exports.main = async (event, context) => {
           streakBroken: streakBroken,
         },
         challengeResult,
+        // 段位波动：最近 5 次分数区间 + 趋势
+        scoreRange: recentScoreRange,
       },
     };
   } catch (err) {
@@ -832,6 +856,45 @@ exports.main = async (event, context) => {
     return { code: 500, message: '服务器内部错误', data: null };
   }
 };
+
+// ── 写入/更新周排行榜（可被主流程和幂等保护复用）──
+async function updateWeeklyRanking(openid, score, tierName) {
+  try {
+    const weekStart = getWeekStart();
+    const { data: existing } = await db.collection('weekly_rankings')
+      .where({ _openid: openid, weekStart })
+      .get();
+
+    if (existing.length > 0) {
+      const prevScore = existing[0].score || 0;
+      const newScore = Math.max(score, prevScore); // 取本周最高分
+      await db.collection('weekly_rankings')
+        .where({ _openid: openid, weekStart })
+        .update({
+          data: {
+            tier: tierName,
+            score: newScore,
+            rankChange: newScore - prevScore,
+            updatedAt: new Date(),
+          },
+        });
+    } else {
+      await db.collection('weekly_rankings').add({
+        data: {
+          weekStart,
+          _openid: openid,
+          tier: tierName,
+          score,
+          rankChange: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    }
+  } catch (e) {
+    console.log('[submitScore] updateWeeklyRanking 失败:', e.message);
+  }
+}
 
 function getWeekStart() {
   const d = new Date();

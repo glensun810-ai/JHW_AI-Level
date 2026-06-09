@@ -263,7 +263,7 @@ exports.main = async (event, context) => {
           .where({ createdAt: _.gte(weekStartDate) })
           .field({ _openid: true, totalScore: true, tier: true })
           .orderBy('createdAt', 'desc')
-          .limit(200)
+          .limit(500)
           .get();
 
         // 按用户去重取最高分
@@ -450,6 +450,8 @@ exports.main = async (event, context) => {
         testedToday: lastTestDate === today,
         consecutiveDays,
         testConsecutiveDays,
+        // 合并连续天数：用户只关心一个"连续活跃"数字
+        unifiedStreak: Math.max(testConsecutiveDays, consecutiveDays),
         streakBest,
         checkedDates,
         collectedCards,
@@ -470,10 +472,15 @@ exports.main = async (event, context) => {
 };
 
 function getWeekStart() {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(d.setDate(diff)).toISOString().slice(0, 10);
+  // 用北京时间（UTC+8）计算周一起始，确保国内用户周日测试归入当周
+  const now = new Date();
+  const cstOffset = 8 * 60 * 60 * 1000;
+  const cstDate = new Date(now.getTime() + cstOffset);
+  const day = cstDate.getUTCDay();
+  // day=0(周日)→减到上周一, day=1(周一)→当天
+  const diff = cstDate.getUTCDate() - day + (day === 0 ? -6 : 1);
+  const mondayCST = new Date(Date.UTC(cstDate.getUTCFullYear(), cstDate.getUTCMonth(), diff));
+  return mondayCST.toISOString().slice(0, 10);
 }
 
 function TIER_ORDER(name) {

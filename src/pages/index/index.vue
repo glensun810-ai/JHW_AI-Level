@@ -115,25 +115,9 @@
         <text class="page-index__prejudge-text">{{ prejudgeText }}</text>
       </view>
 
-      <!-- 新用户引导：三步流程可视化 -->
-      <view v-if="isFirstVisit" class="page-index__onboarding">
-        <view class="page-index__onboarding-steps">
-          <view class="page-index__onboarding-step">
-            <text class="page-index__onboarding-step-num">①</text>
-            <text class="page-index__onboarding-step-text">答5题</text>
-          </view>
-          <text class="page-index__onboarding-arrow">→</text>
-          <view class="page-index__onboarding-step">
-            <text class="page-index__onboarding-step-num">②</text>
-            <text class="page-index__onboarding-step-text">AI分析</text>
-          </view>
-          <text class="page-index__onboarding-arrow">→</text>
-          <view class="page-index__onboarding-step">
-            <text class="page-index__onboarding-step-num">③</text>
-            <text class="page-index__onboarding-step-text">分享比一比</text>
-          </view>
-        </view>
-        <text class="page-index__onboarding-time">⏱ 仅需2分钟 · 测出你的AI真实水平</text>
+      <!-- 新用户：首次体验引导（精简易读） -->
+      <view v-if="isFirstVisit" class="page-index__quick-start">
+        <text class="page-index__quick-start-text">5题 · 2分钟 · 测出你的真实AI水平</text>
       </view>
 
       <!-- 连续进化天数 -->
@@ -160,6 +144,24 @@
 
       <!-- 免费次数提示 -->
       <text v-if="freeTestRemaining === 0" class="page-index__cta-hint">今日免费次数已用完 · 分享即可获得新次数</text>
+
+      <!-- 经验值进度条（显性化等级成长） -->
+      <view class="page-index__exp-primary">
+        <text class="page-index__exp-primary-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
+        <view class="page-index__exp-primary-track">
+          <view class="page-index__exp-primary-fill" :style="{ width: expStore.levelProgress + '%' }" />
+        </view>
+        <text class="page-index__exp-primary-hint">测试 +10 XP · 签到 +5 XP · 分享 +15 XP</text>
+      </view>
+
+      <!-- 经验值进度条（显性化等级成长） -->
+      <view class="page-index__exp-primary">
+        <text class="page-index__exp-primary-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
+        <view class="page-index__exp-primary-track">
+          <view class="page-index__exp-primary-fill" :style="{ width: expStore.levelProgress + '%' }" />
+        </view>
+        <text class="page-index__exp-primary-hint">测试 +10 XP · 签到 +5 XP · 分享 +15 XP</text>
+      </view>
 
       <!-- CTA下方轻量社交证明 -->
       <view class="page-index__proof">
@@ -209,11 +211,7 @@
         <text class="page-index__daily-entry-arrow">→</text>
       </view>
 
-      <!-- 每日主题预告 -->
-      <view class="page-index__theme-badge">
-        <text class="page-index__theme-icon">{{ themeIcon }}</text>
-        <text class="page-index__theme-label">{{ themeLabel }}</text>
-      </view>
+
 
       <!-- 今日状态条 -->
       <view class="page-index__status-bar">
@@ -221,11 +219,7 @@
         <text v-else>今日免费次数已用完 · 邀请好友或看广告继续</text>
       </view>
 
-      <!-- 实时：X 人正在测试 -->
-      <view v-if="testingNow > 0" class="page-index__testing-now">
-        <text class="page-index__testing-now-dot" />
-        <text class="page-index__testing-now-text">{{ testingNow }} 人正在测试</text>
-      </view>
+
 
       <!-- 好友段位气泡 -->
       <view v-if="friendBubble" class="page-index__friend-bubble" @click="handleStart">
@@ -250,13 +244,7 @@
         <text class="page-index__tier-teaser-cta">再测一次很可能就升段 →</text>
       </view>
 
-      <!-- F14: 进化值展示 -->
-      <view class="page-index__exp-bar">
-        <text class="page-index__exp-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
-        <view class="page-index__exp-track">
-          <view class="page-index__exp-fill" :style="{ width: expStore.levelProgress + '%' }" />
-        </view>
-      </view>
+
 
       <!-- v0.9: 深度定段入口 -->
       <view v-if="expStore.unlocks.deepMode" class="page-index__deep-entry" @click="handleDeepStart">
@@ -310,6 +298,7 @@ const inviteStatsLoaded = ref(false);
 const myWeeklyRank = ref(null);
 const weeklyTotalParticipants = ref(0);
 // Phase 4: 回访用户段位展示（分享零门槛）
+const showIdentityPanel = ref(false);
 const showReturningHero = ref(false);
 const returningTierName = ref('');
 // Phase 9: AI身份卡
@@ -589,6 +578,14 @@ async function loadIdentityProfile() {
       }
     }
   } catch (e) { /* ignore */ }
+}
+
+function toggleIdentityPanel() {
+  showIdentityPanel.value = !showIdentityPanel.value;
+}
+
+function toggleIdentityPanel() {
+  showIdentityPanel.value = !showIdentityPanel.value;
 }
 
 function viewMyResult() {

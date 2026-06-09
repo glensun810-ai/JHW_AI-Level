@@ -184,8 +184,8 @@
           </view>
         </template>
         <view v-else class="page-rank__empty">
-          <text class="page-rank__empty-text">本周尚无排行数据</text>
-          <text class="page-rank__empty-hint">加油测试，争取本周上榜！</text>
+          <text class="page-rank__empty-text">本周排行数据加载中</text>
+          <text class="page-rank__empty-hint">完成一次测试后即可上榜 · 排行榜每日凌晨结算</text>
         </view>
       </template>
     </scroll-view>
@@ -194,6 +194,9 @@
     <scroll-view v-if="activeTab === 'group'" scroll-y class="page-rank__list">
       <view v-if="groupLoading" class="page-rank__loading">加载中…</view>
       <template v-else>
+        <view v-if="basedOnFriends && groupList.length > 0" class="page-rank__group-notice page-rank__group-notice--friend">
+          <text class="page-rank__group-notice-text">👥 暂未获取到群数据 · 以下为基于好友链的排名（供参考）</text>
+        </view>
         <view v-if="groupList.length > 0" class="page-rank__items">
           <view v-for="(g, i) in groupList" :key="g._openid || i" class="page-rank__item">
             <text class="page-rank__rank" :class="{ 'page-rank__rank--top': i < 3 }">{{ i + 1 }}</text>
@@ -210,7 +213,8 @@
         </view>
         <view v-else class="page-rank__empty">
           <text class="page-rank__empty-text">群段位挑战榜</text>
-          <text class="page-rank__empty-hint">将小程序分享到微信群，即可查看群内好友段位排名</text>
+          <text v-if="noGroupId" class="page-rank__empty-hint">暂未获取到群信息 · 从微信群分享进入小程序即可看到群排名</text>
+          <text v-else class="page-rank__empty-hint">将小程序分享到微信群，即可查看群内段位排名</text>
           <button class="page-rank__empty-btn" open-type="share">分享到群聊</button>
         </view>
       </template>
@@ -274,6 +278,8 @@ const weekLabel = ref('');
 // Tab 4
 const groupLoading = ref(true);
 const groupList = ref([]);
+const noGroupId = ref(true);
+const basedOnFriends = ref(false);
 
 // Tab 1.5: 知识星榜
 const starLoading = ref(true);
@@ -338,6 +344,11 @@ onShow(() => {
   updateCountdown();
   // 刷新隐私状态
   privacyHidden.value = !!uni.getStorageSync('privacy_hidden');
+  // 每次显示时从 globalData 刷新 groupId（用户可能在别处分享到了群聊）
+  const app = getApp();
+  if (app.globalData.groupId && activeTab.value !== 'group') {
+    console.log('[rank] onShow: detected groupId', app.globalData.groupId.substring(0,8));
+  }
 });
 
 function updateCountdown() {
@@ -437,6 +448,8 @@ async function loadGroupRank() {
     const res = await fetchFriendRank('groupRank', { openGId: groupId });
     if (res.code === 0 && res.data) {
       groupList.value = res.data.groupRankings || [];
+      noGroupId.value = res.data.noGroupId !== false;
+      basedOnFriends.value = res.data.basedOnFriends === true;
     }
   } catch (e) {
     // 静默失败
