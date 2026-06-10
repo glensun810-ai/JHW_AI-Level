@@ -1255,7 +1255,7 @@ onShareTimeline(() => {
   &__hero {
     position: relative; z-index: 10;
     display: flex; flex-direction: column; align-items: center;
-    padding-top: 120rpx; transition: transform 0.3s ease-out;
+    padding-top: 168rpx; transition: transform 0.3s ease-out;
     &--shrink { transform: scale(0.92); opacity: 0.7; }
   }
 
