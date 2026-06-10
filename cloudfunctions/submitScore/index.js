@@ -752,6 +752,26 @@ exports.main = async (event, context) => {
 
         // 邀请解锁：被邀请人完成测试 → 邀请人获得奖励
         await completeInviteReward(event.fromUid, OPENID, tier.name, isDeepMode);
+    // E2: 写入分享回执
+    try {
+      const inviterInfo = await db.collection('users').where({ _openid: event.fromUid }).field({ nickname: true }).get();
+      const inviterName = (inviterInfo.data && inviterInfo.data[0] && inviterInfo.data[0].nickname) ? inviterInfo.data[0].nickname : '好友';
+      await db.collection('share_feedback').add({
+        data: {
+          inviterUid: event.fromUid,
+          completerUid: OPENID,
+          completerName: userData.nickname || '好友',
+          completerTier: tier.name,
+          completerAIQ: clampedTierScore,
+          isRead: false,
+          createdAt: db.serverDate(),
+          expiresAt: new Date(Date.now() + 7 * 86400000),
+        }
+      });
+    } catch (e) {
+      console.log('[share_feedback] 写入失败:', e.message);
+    }
+
 
         // Phase 7: 被邀请者也获得 +1 免费测试机会（仅首次测试，防刷）
         if (!user._id) {

@@ -54,7 +54,22 @@
       <text class="page-index__identity-float-tier">{{ returningTierEmoji || '🐣' }} {{ returningTierName || '萌新' }}</text>
     </view>
 
-    <!-- ====== 个人面板弹窗 ====== -->
+    <!-- E2: 分享回执通知 -->
+      <view v-if="showShareFeedback && shareFeedbacks.length > 0" class="page-index__share-feedback" @click="dismissShareFeedback">
+        <view class="page-index__share-feedback-inner" @click.stop>
+          <text class="page-index__share-feedback-icon">🎉</text>
+          <view class="page-index__share-feedback-content">
+            <text class="page-index__share-feedback-text">
+              你推荐的 <text class="page-index__share-feedback-name">{{ shareFeedbacks[0].completerName }}</text>
+              刚刚完成 AI 段位测试！
+            </text>
+            <text class="page-index__share-feedback-tier">{{ shareFeedbacks[0].completerTier }} · AI商数 {{ shareFeedbacks[0].completerAIQ }}</text>
+          </view>
+          <text class="page-index__share-feedback-close" @click="dismissShareFeedback">✕</text>
+        </view>
+      </view>
+
+      <!-- ====== 个人面板弹窗 ====== -->
     <view v-if="showIdentityPanel" class="page-index__identity-overlay" @click="showIdentityPanel = false">
       <view class="page-index__identity-panel" @click.stop>
         <view class="page-index__identity-panel-header">
@@ -509,6 +524,37 @@ function goToWeeklyRank() {
 }
 
 // Phase 4: 加载回访用户段位数据（三级降级：localStorage → cloud → 无）
+
+
+// E2: 加载分享回执
+const shareFeedbacks = ref([]);
+const showShareFeedback = ref(false);
+
+async function loadShareFeedbacks() {
+  try {
+    const db = uniCloud.database();
+    const { result } = await db.collection('share_feedback')
+      .where({
+        inviterUid: getUserOpenidSync(),
+        isRead: false,
+        expiresAt: _.gt(new Date()),
+      })
+      .orderBy('createdAt', 'desc')
+      .limit(3)
+      .get();
+    if (result && result.data && result.data.length > 0) {
+      shareFeedbacks.value = result.data;
+      showShareFeedback.value = true;
+    }
+  } catch (e) {
+    console.warn('[index] loadShareFeedbacks 失败:', e.message);
+  }
+}
+
+function dismissShareFeedback() {
+  showShareFeedback.value = false;
+}
+
 async function loadReturningUserData() {
   try {
     // Priority 1: 完整 localStorage 数据
@@ -718,7 +764,8 @@ onMounted(async () => {
   loadTierProgress(); // 回访用户段位进度（静默）
   preloadInviteStatus(); // 预加载邀请解锁状态
   loadWeeklyRank(); // Phase 3: 静默加载本周排名
-  loadReturningUserData(); // Phase 4: 回访用户段位展示
+  loadShareFeedbacks();
+    loadReturningUserData(); // Phase 4: 回访用户段位展示
   loadIdentityProfile();  // Phase 9: 加载身份信息
 
   // Phase 5: 挑战/反转 Banner 到达音效
@@ -1998,4 +2045,17 @@ padding-top: 180rpx
   0%, 100% { box-shadow: 0 0 0 rgba(245, 158, 11, 0); border-color: rgba(245, 158, 11, 0.25); }
   50% { box-shadow: 0 0 30rpx rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); }
 }
+
+
+
+
+.page-index__share-feedback { margin: 12rpx 32rpx 0; animation: fade-in 0.3s ease-out; z-index: 50; position: relative; }
+.page-index__share-feedback-inner { display: flex; align-items: center; gap: 12rpx; padding: 16rpx 20rpx; background: rgba(245,158,11,0.1); border: 1rpx solid rgba(245,158,11,0.2); border-radius: 16rpx; }
+.page-index__share-feedback-icon { font-size: 32rpx; flex-shrink: 0; }
+.page-index__share-feedback-content { flex: 1; }
+.page-index__share-feedback-text { font-size: 24rpx; color: #fff; line-height: 1.4; }
+.page-index__share-feedback-name { color: #f59e0b; font-weight: 600; }
+.page-index__share-feedback-tier { font-size: 20rpx; color: rgba(255,255,255,0.4); margin-top: 4rpx; display: block; }
+.page-index__share-feedback-close { font-size: 28rpx; color: rgba(255,255,255,0.3); padding: 4rpx 8rpx; flex-shrink: 0; }
+
 </style>
