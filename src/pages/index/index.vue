@@ -176,8 +176,9 @@
         <text class="page-index__proof-label">人已完成定段 · 5题2分钟</text>
       </view>
 
-      <text v-if="showHint" class="page-index__hint">3秒测出你的AI段位</text>
     </view>
+
+    <text v-if="showHint" class="page-index__hint">3秒测出你的AI段位</text>
 
     <!-- Phase 2: 邀请进度横幅 -->
     <view v-if="inviteStatsLoaded && freeTestRemaining === 0" class="page-index__invite-banner" :class="{ 'page-index__invite-banner--has-unlocks': inviteStats.inviteUnlocks > 0 }">
@@ -1760,6 +1761,7 @@ padding-top: 180rpx
   &__hint {
     font-size: 26rpx; color: #f59e0b; margin-top: 16rpx;
     animation: fade-in 0.4s ease-out;
+    text-align: center;
   }
 
   &__proof {
