@@ -84,7 +84,26 @@
                 <view class="page-result__mind-read-highlight">
                   <text>{{ mindReadingInsight.highlight }}</text>
                 </view>
-              </template>
+              
+
+  <!-- E1: 分享奖励弹窗 -->
+  <view v-if="showShareReward" class="page-result__share-reward-overlay" @click="closeShareReward">
+    <view class="page-result__share-reward-card" @click.stop>
+      <text class="page-result__share-reward-emoji">🎉</text>
+      <text class="page-result__share-reward-title">分享成功！</text>
+      <view class="page-result__share-reward-xp">
+        <text class="page-result__share-reward-xp-num">+{{ shareRewardXp }}</text>
+        <text class="page-result__share-reward-xp-label">XP</text>
+      </view>
+      <text class="page-result__share-reward-hint">已解锁 1 次额外测试机会</text>
+      <view class="page-result__share-reward-actions">
+        <button class="page-result__share-reward-btn" open-type="share">📤 再分享一次</button>
+        <text class="page-result__share-reward-close" @click="closeShareReward">知道了</text>
+      </view>
+    </view>
+  </view>
+
+</template>
               <template v-else>
                 <view class="page-result__mind-read-question">
                   <text class="page-result__mind-read-q-emoji">{{ mindReadingInsight.stemEmoji }}</text>
@@ -2111,6 +2130,18 @@ onShareTimeline(() => {
     imageUrl: shareImage || undefined,
   };
 });
+
+
+// E1: 分享后即时奖励弹窗
+const showShareReward = ref(false);
+const shareRewardXp = ref(0);
+function triggerShareReward(xp) {
+  shareRewardXp.value = xp;
+  showShareReward.value = true;
+  setTimeout(() => { showShareReward.value = false; }, 3000);
+}
+function closeShareReward() { showShareReward.value = false; }
+
 </script>
 
 <style scoped lang="scss">
@@ -4272,4 +4303,18 @@ onShareTimeline(() => {
   from { transform: translateY(0) rotate(-5deg); }
   to { transform: translateY(-6rpx) rotate(5deg); }
 }
+
+
+.page-result__share-reward-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 500; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
+.page-result__share-reward-card { width: 540rpx; max-width: 85vw; background: linear-gradient(180deg,#1a0a33,#0d1b2a); border: 1rpx solid rgba(124,58,237,0.3); border-radius: 32rpx; padding: 48rpx 32rpx 32rpx; display: flex; flex-direction: column; align-items: center; }
+.page-result__share-reward-emoji { font-size: 72rpx; margin-bottom: 16rpx; }
+.page-result__share-reward-title { font-size: 32rpx; font-weight: 700; color: #fff; margin-bottom: 12rpx; }
+.page-result__share-reward-xp { display: flex; align-items: baseline; gap: 8rpx; margin-bottom: 6rpx; }
+.page-result__share-reward-xp-num { font-size: 56rpx; font-weight: bold; color: #f59e0b; }
+.page-result__share-reward-xp-label { font-size: 24rpx; color: rgba(255,255,255,0.5); }
+.page-result__share-reward-hint { font-size: 24rpx; color: rgba(255,255,255,0.6); margin-bottom: 28rpx; }
+.page-result__share-reward-actions { display: flex; flex-direction: column; align-items: center; gap: 16rpx; width: 100%; }
+.page-result__share-reward-btn { width: 80%; height: 80rpx; background: linear-gradient(135deg,#7c3aed,#a78bfa); color: #fff; border-radius: 40rpx; font-size: 28rpx; font-weight: 600; border: none; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 80rpx; }
+.page-result__share-reward-close { font-size: 24rpx; color: rgba(255,255,255,0.3); padding: 8rpx 16rpx; }
+
 </style>
