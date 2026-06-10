@@ -803,25 +803,6 @@ onShareTimeline(() => {
     flex-shrink: 0;
   }
 
-
-  &__group-notice {
-    margin: 16rpx 0; padding: 16rpx 20rpx;
-    background: rgba(124, 58, 237, 0.08);
-    border: 1rpx solid rgba(124, 58, 237, 0.2);
-    border-radius: 16rpx; text-align: center;
-  }
-  &__group-notice--friend { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.06); }
-  &__group-notice-text { font-size: 24rpx; color: rgba(255,255,255,0.6); line-height: 1.5; }
-
-  &__star-my {
-    display: flex; align-items: center; gap: 8rpx;
-    padding: 20rpx 24rpx; margin-bottom: 16rpx;
-    background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(245,158,11,0.06));
-    border: 1rpx solid rgba(124,58,237,0.25);
-    border-radius: 20rpx;
-  }
-  &__star-my-text { font-size: 28rpx; color: #fff; font-weight: 600; }
-
   &__group-share-card {
     display: flex;
     justify-content: center;

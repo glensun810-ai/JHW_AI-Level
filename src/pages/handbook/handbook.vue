@@ -470,6 +470,9 @@ onMounted(async () => {
   position: relative;
 }
 
+
+.page-handbook__scroll { margin-top: 0; }
+
 // ── 固定顶栏 ──
 .page-handbook__topbar {
   display: flex;

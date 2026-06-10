@@ -536,8 +536,22 @@ async function submitAndGo() {
           }).catch(() => {});
       }
       getApp().globalData.gatePath = ''; // 消费后始终清除
-      // 邀请转化追踪
+      // 每日一题标记
+      if (store.dailyMode) {
+        const today = new Date().toISOString().slice(0, 10);
+        uni.setStorageSync('daily_done_date', today);
+      }
+      // 分享回执
       const inviterUid = getApp().globalData.shareFromUid || '';
+      if (inviterUid && !res.data.isDuplicate) {
+        callCloudFunction('submitScore', {
+          action: 'recordShareFeedback',
+          inviterUid,
+          inviteeTier: res.data.tier || '',
+          inviteeScore: res.data.totalScore || 0,
+        }, { retry: false }).catch(() => {});
+      }
+      // 邀请转化追踪
       if (inviterUid) {
         trackInviteConversion(inviterUid, res.data.tier || '');
       }

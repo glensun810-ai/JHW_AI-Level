@@ -695,6 +695,55 @@ exports.main = async (event, context) => {
       }
     }
 
+    // 段位波动：查询最近 5 次测试记录，计算分数区间和趋势
+    let recentScoreRange = null;
+    try {
+      const { data: recent5 } = await db.collection('test_records')
+        .where({ _openid: OPENID })
+        .field({ totalScore: true, tier: true, createdAt: true })
+        .orderBy('createdAt', 'desc')
+        .limit(5)
+        .get();
+      if (recent5.length > 0) {
+        const scores = recent5.map(r => Math.min(50, Math.max(5, r.totalScore || 0)));
+        const tiers = recent5.map(r => r.tier || '');
+        const low = Math.min(...scores);
+        const high = Math.max(...scores);
+        const latest = scores[0];
+        // 计算趋势
+        let trend;
+        if (scores.length >= 3) {
+          const recent3 = scores.slice(0, 3);
+          const diffs = [];
+          for (let i = 1; i < recent3.length; i++) {
+            diffs.push(recent3[i-1] - recent3[i]);
+          }
+          const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+          if (avg > 2) trend = { icon: '📈', label: '持续上升', color: '#4caf50' };
+          else if (avg < -2) trend = { icon: '📉', label: '持续下降', color: '#f59e0b' };
+          else trend = { icon: '⚖️', label: '保持稳定', color: '#ffd700' };
+        } else {
+          trend = { icon: '📊', label: '数据积累中', color: '#8899aa' };
+        }
+        // 段位区间使用的名称：取最高分对应的段位
+        const highTier = getTier(high);
+        recentScoreRange = {
+          low,
+          high,
+          latest,
+          lowAIQ: Math.round((low / 50) * 80 + 70),
+          highAIQ: Math.round((high / 50) * 80 + 70),
+          latestAIQ: Math.round((latest / 50) * 80 + 70),
+          tierName: highTier.name,
+          tierEmoji: highTier.emoji,
+          trend,
+          count: scores.length,
+        };
+      }
+    } catch (e) {
+      console.log('[submitScore] recentScoreRange 查询失败:', e.message);
+    }
+
     // 段位悬赏：好友通过悬赏链接进入并完成测试，对比猜测段位 vs 实际段位
     const { bountyTier, targetName } = event;
     if (bountyTier && targetName && event.fromUid && event.fromUid !== OPENID) {
@@ -834,6 +883,8 @@ exports.main = async (event, context) => {
           streakBroken: streakBroken,
         },
         challengeResult,
+        // 段位波动：最近 5 次分数区间 + 趋势
+        scoreRange: recentScoreRange,
       },
     };
   } catch (err) {

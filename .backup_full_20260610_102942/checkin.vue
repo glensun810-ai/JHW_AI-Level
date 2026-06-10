@@ -128,11 +128,11 @@ const rewards = [
   { day: 5, desc: '解锁 1 道签到专属趣味题' },
   { day: 7, desc: '解锁称号「AI践行者」+ 50 XP' },
   { day: 14, desc: '解锁称号「AI探索家」+ 80 XP' },
-  { day: 21, desc: '+100 XP + 段位保护卡（断签不降段）' },
+  { day: 21, desc: '+100 XP + 免费测试机会 ×1' },
   { day: 30, desc: '解锁称号「AI进化者」+ 专属段位卡边框' },
   { day: 50, desc: '解锁称号「恒心大师」+ 200 XP' },
   { day: 80, desc: '解锁称号「进化先驱」+ 500 XP + 专属徽章' },
-  { day: 100, desc: '解锁称号「百炼成金」+ 段位卡钻石特效' },
+  { day: 100, desc: '解锁称号「百炼成金」+ 1000 XP + 永久免费测试' },
 ];
 
 const REWARD_SPECIAL = {
@@ -141,11 +141,11 @@ const REWARD_SPECIAL = {
   5:  { text: '解锁 1 道签到专属趣味题' },
   7:  { text: '解锁称号「AI践行者」+50 XP' },
   14: { text: '解锁称号「AI探索家」+80 XP' },
-  21: { text: '获得 +100 XP + 段位保护卡' },
+  21: { text: '获得 +100 XP + 免费测试机会 ×1' },
   30: { text: '解锁称号「AI进化者」+ 专属段位卡边框' },
   50: { text: '解锁称号「恒心大师」+ 200 XP' },
   80: { text: '解锁称号「进化先驱」+ 500 XP' },
-  100: { text: '解锁称号「百炼成金」+ 段位卡钻石特效' },
+  100: { text: '解锁称号「百炼成金」+ 1000 XP + 永久免费' },
 };
 
 // 从已签到日期数组计算连续天数（不受测试连续天数污染）
@@ -439,20 +439,6 @@ onShareTimeline(() => {
   }
 
   // ====== 签到后分享引导 ======
-
-  &__rewards { margin-top: 16rpx; }
-
-  &__total {
-    font-size: 24rpx; color: rgba(255,255,255,0.4);
-    margin-top: 8rpx; text-align: center;
-  }
-
-  &__share-prompt-dot {
-    width: 12rpx; height: 12rpx; border-radius: 50%;
-    background: #f59e0b; flex-shrink: 0;
-    animation: prompt-dot-pulse 1.5s ease-in-out infinite;
-  }
-
   &__share-prompt {
     display: flex;
     align-items: center;

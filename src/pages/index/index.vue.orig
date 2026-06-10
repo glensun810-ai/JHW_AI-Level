@@ -110,7 +110,6 @@
         <text class="page-index__returning-tier-large">{{ returningTierEmoji }}</text>
         <text class="page-index__returning-tier-name">{{ returningTierName }}</text>
         <text class="page-index__returning-aiq">AI商数 {{ returningAIQ }}</text>
-        <text v-if="returningScoreRange" class="page-index__returning-range">近期 {{ returningScoreRange.lowAIQ }} ~ {{ returningScoreRange.highAIQ }}</text>
         <text class="page-index__returning-pct">超越全国 {{ returningPercentile }}% 用户</text>
         <text v-if="returningPBLabel" class="page-index__returning-pb-badge">{{ returningPBLabel }}</text>
         <view class="page-index__returning-actions">
@@ -365,7 +364,6 @@ const identityProfile = ref({ nickname: '', avatar: '' });
 const returningTierEmoji = ref('');
 const returningAIQ = ref(0);
 const returningPercentile = ref(0);
-const returningScoreRange = ref(null);
 const returningTierBadge = ref('');
 const returningPBLabel = ref(''); // PB徽章文案
 let t5 = null, t10 = null, ctaTimer = null;

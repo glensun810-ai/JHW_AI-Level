@@ -3,7 +3,7 @@
  * v1.0 — 广告前置模型：每日首次免费，后续需看广告再进答题
  * 当 AD_UNIT_ID 未配置时，降级为邀请解锁提示
  */
-export const AD_UNIT_ID = ''; // TODO: 在微信公众平台→流量主→广告位管理中创建激励视频广告位后填入
+const AD_UNIT_ID = ''; // TODO: 在微信公众平台→流量主→广告位管理中创建激励视频广告位后填入
 
 let rewardedVideoAd = null;
 let pendingCallback = null;
@@ -25,7 +25,7 @@ export function getFreeTestsRemaining() {
 }
 
 export function hasUsedFreeTestToday() {
-  return FREE_TESTS_PER_DAY > 0 && getFreeTestsRemaining() <= 0;
+  return getFreeTestsRemaining() <= 0;
 }
 
 export function markFreeTestUsed() {

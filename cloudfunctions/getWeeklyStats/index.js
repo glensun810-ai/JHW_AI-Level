@@ -450,8 +450,6 @@ exports.main = async (event, context) => {
         testedToday: lastTestDate === today,
         consecutiveDays,
         testConsecutiveDays,
-        // 合并连续天数：用户只关心一个"连续活跃"数字
-        unifiedStreak: Math.max(testConsecutiveDays, consecutiveDays),
         streakBest,
         checkedDates,
         collectedCards,
@@ -491,9 +489,9 @@ function TIER_ORDER(name) {
 function getReward(day) {
   const rewards = {
     1: '「坚持打卡」徽章',
-    3: '额外 1 次免费测试次数',
+    3: '额外 30 XP + 连续签到头像挂件（3天限定）',
     5: '解锁 1 道签到专属趣味题',
-    7: '解锁隐藏称号「AI践行者」+ 额外 2 次测试',
+    7: '解锁称号「AI践行者」+ 段位卡银框特效',
     14: '解锁称号「AI探索家」',
     30: '解锁称号「AI进化者」+ 专属段位卡边框',
   };

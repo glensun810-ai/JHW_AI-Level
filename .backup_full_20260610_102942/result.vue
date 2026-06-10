@@ -1927,8 +1927,8 @@ function retryQuiz() {
   quizStoreHook.reset();
 
   // 直接进答题页，无需走首页广告门控（setIndex 递增确保题目不重复）
-  uni.switchTab({
-    url: '/pages/index/index',
+  uni.reLaunch({
+    url: '/pages/quiz/quiz?retry=1',
     fail: () => {
       uni.showToast({ title: '启动失败，请重试', icon: 'none' });
     },
@@ -3174,20 +3174,6 @@ onShareTimeline(() => {
   }
 
   // Phase 10: PB 挑战状态
-
-  &__score-range {
-    display: flex; align-items: center; gap: 12rpx; justify-content: center;
-    margin-top: 16rpx; padding: 12rpx 20rpx;
-    background: rgba(124, 58, 237, 0.06); border: 1rpx solid rgba(124, 58, 237, 0.15);
-    border-radius: 16rpx;
-  }
-  &__score-range-label { font-size: 22rpx; color: rgba(255,255,255,0.45); }
-  &__score-range-value { font-size: 28rpx; color: #f59e0b; font-weight: bold; }
-  &__score-range-trend { font-size: 22rpx; font-weight: 600; }
-
-  &__drop-explain { margin-top: 12rpx; padding: 16rpx 20rpx; background: rgba(245, 158, 11, 0.06); border-radius: 12rpx; }
-  &__drop-explain-text { font-size: 24rpx; color: rgba(255, 255, 255, 0.6); line-height: 1.5; }
-
   &__pb-state {
     display: flex;
     flex-direction: column;
@@ -3875,9 +3861,6 @@ onShareTimeline(() => {
   padding: 14rpx 18rpx;
   background: rgba(255, 255, 255, 0.04);
   border-radius: 12rpx;
-
-  &--strength { border-left: 4rpx solid #4ade80; }
-  &--growth { border-left: 4rpx solid #60a5fa; }
 
   &-icon { font-size: 28rpx; flex-shrink: 0; }
 

@@ -1,0 +1,78 @@
+@@ -115,25 +163,9 @@
+         <text class="page-index__prejudge-text">{{ prejudgeText }}</text>
+       </view>
+ 
+-      <!-- 新用户引导：三步流程可视化 -->
+-      <view v-if="isFirstVisit" class="page-index__onboarding">
+-        <view class="page-index__onboarding-steps">
+-          <view class="page-index__onboarding-step">
+-            <text class="page-index__onboarding-step-num">①</text>
+-            <text class="page-index__onboarding-step-text">答5题</text>
+-          </view>
+-          <text class="page-index__onboarding-arrow">→</text>
+-          <view class="page-index__onboarding-step">
+-            <text class="page-index__onboarding-step-num">②</text>
+-            <text class="page-index__onboarding-step-text">AI分析</text>
+-          </view>
+-          <text class="page-index__onboarding-arrow">→</text>
+-          <view class="page-index__onboarding-step">
+-            <text class="page-index__onboarding-step-num">③</text>
+-            <text class="page-index__onboarding-step-text">分享比一比</text>
+-          </view>
+-        </view>
+-        <text class="page-index__onboarding-time">⏱ 仅需2分钟 · 测出你的AI真实水平</text>
++      <!-- 新用户：首次体验引导（精简易读） -->
++      <view v-if="isFirstVisit" class="page-index__quick-start">
++        <text class="page-index__quick-start-text">5题 · 2分钟 · 测出你的真实AI水平</text>
+       </view>
+ 
+       <!-- 连续进化天数 -->
+@@ -193,11 +234,7 @@
+         <text class="page-index__daily-entry-arrow">→</text>
+       </view>
+ 
+-      <!-- 每日主题预告 -->
+-      <view class="page-index__theme-badge">
+-        <text class="page-index__theme-icon">{{ themeIcon }}</text>
+-        <text class="page-index__theme-label">{{ themeLabel }}</text>
+-      </view>
++
+ 
+       <!-- 今日状态条 -->
+       <view class="page-index__status-bar">
+@@ -205,11 +242,7 @@
+         <text v-else>今日免费次数已用完 · 邀请好友或看广告继续</text>
+       </view>
+ 
+-      <!-- 实时：X 人正在测试 -->
+-      <view v-if="testingNow > 0" class="page-index__testing-now">
+-        <text class="page-index__testing-now-dot" />
+-        <text class="page-index__testing-now-text">{{ testingNow }} 人正在测试</text>
+-      </view>
++
+ 
+       <!-- 好友段位气泡 -->
+       <view v-if="friendBubble" class="page-index__friend-bubble" @click="handleStart">
+@@ -234,13 +267,7 @@
+         <text class="page-index__tier-teaser-cta">再测一次很可能就升段 →</text>
+       </view>
+ 
+-      <!-- F14: 进化值展示 -->
+-      <view class="page-index__exp-bar">
+-        <text class="page-index__exp-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
+-        <view class="page-index__exp-track">
+-          <view class="page-index__exp-fill" :style="{ width: expStore.levelProgress + '%' }" />
+-        </view>
+-      </view>
++
+ 
+       <!-- v0.9: 深度定段入口 -->
+       <view v-if="expStore.unlocks.deepMode" class="page-index__deep-entry" @click="handleDeepStart">
+@@ -294,6 +321,7 @@
+ const myWeeklyRank = ref(null);
+ const weeklyTotalParticipants = ref(0);
+ // Phase 4: 回访用户段位展示（分享零门槛）
++const showIdentityPanel = ref(false);
+ const showReturningHero = ref(false);
+ const returningTierName = ref('');
+ // Phase 9: AI身份卡

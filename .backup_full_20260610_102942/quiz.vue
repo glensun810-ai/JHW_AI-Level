@@ -429,20 +429,14 @@ function giveAnswerFeedback(fb) {
   store.setAnswerFeedback(currentIndex.value, fb);
 }
 
-async function goNext() {
+function goNext() {
   // Phase 5: 进入下一题音效
   createSoundEngine().play('quiz_next');
   if (store.isLastQuestion) {
     quizState.value = 'submitting';
     selectedComment.value = '';
     showRarity.value = '';
-    try {
-      await submitAndGo();
-    } catch (e) {
-      console.error('[goNext] submitAndGo exception:', e);
-      uni.showToast({ title: 'submit exception, retry', icon: 'none', duration: 2500 });
-      quizState.value = 'ready';
-    }
+    submitAndGo();
   } else {
     // 核心区交叉淡入，不移动位置
     questionFading.value = true;
@@ -521,20 +515,10 @@ async function submitAndGo() {
 
     const gatePath = getApp().globalData.gatePath || '';
     const wasFree = gatePath === 'free';
-    const submitRes = await store.submitTest(challengeId.value);
-    const res = submitRes || {};
+    const res = await store.submitTest(challengeId.value);
 
     if (res.code === 0 && res.data) {
       if (wasFree) { markFreeTestUsed(); }
-      // invite_unlock: 答题完成后核销
-      if (gatePath === 'invite_unlock') {
-        callCloudFunction('submitScore', { action: 'claimInviteUnlock' }, { retry: false })
-          .then(ir => {
-            if (ir.code === 0 && ir.data?.available) {
-              uni.showToast({ title: '已使用邀请解锁次数！', icon: 'success' });
-            }
-          }).catch(() => {});
-      }
       getApp().globalData.gatePath = ''; // 消费后始终清除
       // 邀请转化追踪
       const inviterUid = getApp().globalData.shareFromUid || '';
@@ -561,24 +545,14 @@ async function submitAndGo() {
       return;
     }
 
-    if ((res.code === 500 || res.code === -1) && store.lastResult) {
-      uni.removeStorageSync('quiz_breakpoint');
-      uni.redirectTo({ url: '/pages/result/result' });
-      return;
-    }
+    // 其他错误：显示服务端消息
     const errMsg = res.message || '提交失败，请重试';
     uni.showToast({ title: errMsg, icon: 'none', duration: 2500 });
     console.error('[submitAndGo] 提交失败:', res.code, res.message);
     quizState.value = 'ready';
   } catch (err) {
     console.error('[submitAndGo] 异常:', err);
-    const backup = uni.getStorageSync('score_submit_backup');
-    if (backup && store.lastResult) {
-      uni.removeStorageSync('quiz_breakpoint');
-      uni.redirectTo({ url: '/pages/result/result' });
-      return;
-    }
-    uni.showToast({ title: '网络异常，已保存数据，请重试', icon: 'none', duration: 2500 });
+    uni.showToast({ title: '网络异常，请重试', icon: 'none', duration: 2500 });
     quizState.value = 'ready';
   }
 }

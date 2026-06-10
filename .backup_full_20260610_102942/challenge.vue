@@ -234,17 +234,6 @@ onShareTimeline(() => {
     text-align: center;
   }
 
-
-  &__rank-invite {
-    display: flex; align-items: center; gap: 10rpx;
-    margin: 20rpx 0; padding: 16rpx 20rpx;
-    background: rgba(124, 58, 237, 0.06);
-    border: 1rpx solid rgba(124, 58, 237, 0.15);
-    border-radius: 16rpx;
-  }
-  &__rank-invite-icon { font-size: 32rpx; flex-shrink: 0; }
-  &__rank-invite-text { font-size: 26rpx; color: rgba(255,255,255,0.6); flex: 1; }
-
   &__subscribe-trigger {
     margin-top: 20rpx;
     padding: 16rpx 28rpx;

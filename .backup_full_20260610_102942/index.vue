@@ -41,84 +41,35 @@
       <text class="page-index__challenge-vs">你能超过 TA 吗？</text>
     </view>
 
-    <!-- ====== 右上角身份浮层 ====== -->
-    <view class="page-index__identity-float" @click="toggleIdentityPanel">
-      <view class="page-index__identity-float-ring" :class="'page-index__identity-float-ring--' + (returningTierName || '萌新')">
-        <image v-if="identityProfile.avatar" class="page-index__identity-float-avatar" :src="identityProfile.avatar" mode="aspectFill" />
-        <text v-else class="page-index__identity-float-avatar page-index__identity-float-avatar--placeholder">👤</text>
-      </view>
-      <view class="page-index__identity-float-info">
-        <text class="page-index__identity-float-name">{{ identityProfile.nickname || '未命名探索者' }}</text>
-        <text class="page-index__identity-float-level">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
-      </view>
-      <text class="page-index__identity-float-tier">{{ returningTierEmoji || '🐣' }} {{ returningTierName || '萌新' }}</text>
-    </view>
-
-    <!-- ====== 个人面板弹窗 ====== -->
-    <view v-if="showIdentityPanel" class="page-index__identity-overlay" @click="showIdentityPanel = false">
-      <view class="page-index__identity-panel" @click.stop>
-        <view class="page-index__identity-panel-header">
-          <view class="page-index__identity-panel-avatar-wrap">
-            <button class="page-index__identity-panel-avatar-btn" open-type="chooseAvatar" @chooseavatar="onIndexChooseAvatar">
-              <image v-if="identityProfile.avatar" class="page-index__identity-panel-avatar" :src="identityProfile.avatar" mode="aspectFill" />
-              <text v-else class="page-index__identity-panel-avatar page-index__identity-panel-avatar--placeholder">👤</text>
-            </button>
-            <view class="page-index__identity-panel-level-badge">Lv.{{ expStore.level }}</view>
-          </view>
-          <input class="page-index__identity-panel-nick" type="nickname" :value="identityProfile.nickname" placeholder="点击设置昵称" @blur="onIndexNickSave" />
-          <text class="page-index__identity-panel-close" @click="showIdentityPanel = false">✕</text>
-        </view>
-        <view class="page-index__identity-panel-body">
-          <view class="page-index__identity-panel-row">
-            <text class="page-index__identity-panel-label">🏆 历史最高段位</text>
-            <text class="page-index__identity-panel-value">{{ returningTierEmoji }} {{ returningTierName || '未定段' }}</text>
-          </view>
-          <view class="page-index__identity-panel-row">
-            <text class="page-index__identity-panel-label">🧠 AI商数</text>
-            <text class="page-index__identity-panel-value">{{ returningAIQ || '—' }}</text>
-          </view>
-          <view class="page-index__identity-panel-row">
-            <text class="page-index__identity-panel-label">🔥 连续活跃</text>
-            <text class="page-index__identity-panel-value">{{ streakDays }} 天</text>
-          </view>
-          <view class="page-index__identity-panel-row">
-            <text class="page-index__identity-panel-label">📊 超越全国</text>
-            <text class="page-index__identity-panel-value">{{ returningPercentile }}% 用户</text>
-          </view>
-          <view class="page-index__identity-panel-exp">
-            <text class="page-index__identity-panel-exp-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
-            <view class="page-index__identity-panel-exp-track">
-              <view class="page-index__identity-panel-exp-fill" :style="{ width: expStore.levelProgress + '%' }" />
-            </view>
-            <text class="page-index__identity-panel-exp-num">{{ expStore.currentLevelExp }} / {{ expStore.nextLevelExp }} XP</text>
-          </view>
-        </view>
-        <view class="page-index__identity-panel-footer">
-          <button class="page-index__identity-panel-share-btn" open-type="share">📤 分享我的段位卡</button>
-          <button class="page-index__identity-panel-log-btn" @click="viewMyResult">📋 查看我的结果</button>
-        </view>
-      </view>
-    </view>
-
     <!-- ====== 首屏可见区 ====== -->
     <view class="page-index__hero" :class="{ 'page-index__hero--shrink': btnShrink }">
       <text v-if="!showReturningHero" class="page-index__title">进化湾 · AI段位测评</text>
       <text v-if="!showReturningHero" class="page-index__subtitle">AI时代，你处在哪个段位？</text>
 
-      <!-- Phase 4: 回访用户段位卡片（大号段位展示） -->
+      <!-- Phase 4: 回访用户段位卡片（始终可见，不消耗额度） -->
       <view v-if="showReturningHero" class="page-index__returning-card">
-        <text class="page-index__returning-tier-large">{{ returningTierEmoji }}</text>
-        <text class="page-index__returning-tier-name">{{ returningTierName }}</text>
+        <!-- 用户身份标识 -->
+        <view v-if="identityProfile.nickname" class="page-index__returning-identity">
+          <image v-if="identityProfile.avatar" class="page-index__returning-avatar" :src="identityProfile.avatar" mode="aspectFill" />
+          <view v-else class="page-index__returning-avatar page-index__returning-avatar--placeholder">👤</view>
+          <text class="page-index__returning-nick">{{ identityProfile.nickname }}</text>
+        </view>
+        <image
+          v-if="returningTierBadge"
+          class="page-index__returning-badge"
+          :src="returningTierBadge"
+          mode="aspectFit"
+        />
+        <text class="page-index__returning-tier">{{ returningTierEmoji }} {{ returningTierName }}</text>
         <text class="page-index__returning-aiq">AI商数 {{ returningAIQ }}</text>
-        <text v-if="returningScoreRange" class="page-index__returning-range">近期 {{ returningScoreRange.lowAIQ }} ~ {{ returningScoreRange.highAIQ }}</text>
         <text class="page-index__returning-pct">超越全国 {{ returningPercentile }}% 用户</text>
         <text v-if="returningPBLabel" class="page-index__returning-pb-badge">{{ returningPBLabel }}</text>
         <view class="page-index__returning-actions">
-          <button class="page-index__returning-btn page-index__returning-btn--share" open-type="share" @click="trackShareClick('home', 'returning_hero')">
-            📤 分享我的段位
-          </button>
           <button class="page-index__returning-btn page-index__returning-btn--view" @click="viewMyResult">
-            📋 详情
+            📋 查看我的结果
+          </button>
+          <button class="page-index__returning-btn page-index__returning-btn--share" open-type="share" @click="trackShareClick('home', 'returning_hero')">
+            📤 分享段位卡
           </button>
         </view>
       </view>
@@ -175,9 +126,9 @@
           <text class="page-index__streak-emoji">{{ streakDays >= 30 ? '👑' : streakDays >= 7 ? '⚡' : '🔥' }}</text>
           <text class="page-index__streak-count">{{ streakDays }}</text>
         </view>
-        <text class="page-index__streak-label">连续活跃 {{ streakDays }} 天</text>
+        <text class="page-index__streak-label">连续进化 {{ streakDays }} 天</text>
         <text v-if="streakBest > streakDays" class="page-index__streak-best">最长记录 {{ streakBest }} 天</text>
-        <text v-if="!testedToday && streakDays > 0" class="page-index__streak-risk">⚡ 今天还没测，签个到也能续上活跃记录！</text>
+        <text v-if="!testedToday && streakDays > 0" class="page-index__streak-risk">⚡ 今天还没测，连续记录要断了！</text>
       </view>
 
       <!-- CTA 按钮 -->
@@ -193,15 +144,6 @@
 
       <!-- 免费次数提示 -->
       <text v-if="freeTestRemaining === 0" class="page-index__cta-hint">今日免费次数已用完 · 分享即可获得新次数</text>
-
-      <!-- 经验值进度条（显性化等级成长） -->
-      <view class="page-index__exp-primary">
-        <text class="page-index__exp-primary-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
-        <view class="page-index__exp-primary-track">
-          <view class="page-index__exp-primary-fill" :style="{ width: expStore.levelProgress + '%' }" />
-        </view>
-        <text class="page-index__exp-primary-hint">测试 +10 XP · 签到 +5 XP · 分享 +15 XP</text>
-      </view>
 
       <!-- 经验值进度条（显性化等级成长） -->
       <view class="page-index__exp-primary">
@@ -365,7 +307,6 @@ const identityProfile = ref({ nickname: '', avatar: '' });
 const returningTierEmoji = ref('');
 const returningAIQ = ref(0);
 const returningPercentile = ref(0);
-const returningScoreRange = ref(null);
 const returningTierBadge = ref('');
 const returningPBLabel = ref(''); // PB徽章文案
 let t5 = null, t10 = null, ctaTimer = null;
@@ -424,14 +365,8 @@ const testedToday = ref(false);
 // 每日一题
 function handleDailyStart() {
   if (transitioning.value) return;
-  const today = new Date().toISOString().slice(0, 10);
-  const dailyDone = uni.getStorageSync('daily_done_date');
-  if (dailyDone === today) {
-    uni.showToast({ title: '今日每日一题已完成，明天再来吧！', icon: 'none' });
-    return;
-  }
   quizStore.reset();
-  quizStore.setDailyMode(true);
+  quizStore.setDeepMode(false);
   uni.removeStorageSync('quiz_breakpoint');
   trackTestStart('daily', ctaText.value);
   transitioning.value = true;
@@ -468,9 +403,8 @@ async function loadTierProgress() {
     const res = await fetchWeeklyStats();
     if (res.code === 0 && res.data) {
       // 连续测试天数
-      // 使用 unifiedStreak：合并测试连续+签到连续，减少用户困惑
-      streakDays.value = res.data.unifiedStreak || Math.max(res.data.testConsecutiveDays || 0, res.data.consecutiveDays || 0);
-      streakBest.value = Math.max(res.data.streakBest || 0, streakDays.value);
+      streakDays.value = res.data.testConsecutiveDays || 0;
+      streakBest.value = res.data.streakBest || 0;
       testedToday.value = res.data.testedToday || false;
 
       // 连续进化中但今天还没测 → 紧迫模式
@@ -644,10 +578,6 @@ async function loadIdentityProfile() {
       }
     }
   } catch (e) { /* ignore */ }
-}
-
-function toggleIdentityPanel() {
-  showIdentityPanel.value = !showIdentityPanel.value;
 }
 
 function toggleIdentityPanel() {
@@ -1025,8 +955,21 @@ function startQuiz() {
 
 function handleDeepStart() {
   if (transitioning.value) return;
+  // Phase 5: 深度模式入口音效
+  createSoundEngine().play('cta_press');
+  quizStore.reset();
   quizStore.setDeepMode(true);
-  handleStart();
+  uni.removeStorageSync('quiz_breakpoint');
+  trackTestStart('deep', ctaText.value);
+  transitioning.value = true;
+  if (particleRef.value) particleRef.value.accelerate();
+  btnShrink.value = true;
+  setTimeout(() => { showOverlay.value = true; }, 300);
+  setTimeout(() => {
+    const params = (challengeMode.value && challengeData.value)
+      ? 'challengeId=' + encodeURIComponent(challengeData.value._id) : '';
+    navigateToQuiz(params);
+  }, 500);
 }
 
 onShareAppMessage(() => {
