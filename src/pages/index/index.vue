@@ -1576,7 +1576,7 @@ onShareTimeline(() => {
   &__scroll {
     position: relative; z-index: 10;
     display: flex; flex-direction: column; align-items: center;
-    padding: 32rpx 0 160rpx;
+    padding: 0 0 160rpx;
   }
 
   // 每日一题快速入口
@@ -1757,6 +1757,8 @@ padding-top: 180rpx
   &__hint {
     font-size: 26rpx; color: #f59e0b; margin-top: 16rpx;
     animation: fade-in 0.4s ease-out;
+    display: block;
+    width: 100%;
     text-align: center;
   }
 
