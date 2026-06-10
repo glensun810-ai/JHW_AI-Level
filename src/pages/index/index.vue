@@ -213,7 +213,7 @@
     </view>
 
     <!-- Phase 2: 邀请进度横幅 -->
-    <view v-if="inviteStatsLoaded" class="page-index__invite-banner" :class="{ 'page-index__invite-banner--has-unlocks': inviteStats.inviteUnlocks > 0 }">
+    <view v-if="inviteStatsLoaded && freeTestRemaining === 0" class="page-index__invite-banner" :class="{ 'page-index__invite-banner--has-unlocks': inviteStats.inviteUnlocks > 0 }">
       <template v-if="inviteStats.inviteUnlocks > 0">
         <view class="page-index__invite-banner-inner" @click="handleStart">
           <text class="page-index__invite-banner-icon">🎁</text>
@@ -589,7 +589,14 @@ async function onIndexChooseAvatar(e) {
       cloudPath: `avatars/${openid}_${Date.now()}.png`,
       filePath: tempPath,
     });
-    identityProfile.value.avatar = uploadRes.fileID;
+    try {
+      const { fileList } = await wx.cloud.getTempFileURL({
+        fileList: [uploadRes.fileID],
+      });
+      identityProfile.value.avatar = fileList[0].tempFileURL;
+    } catch (e) {
+      identityProfile.value.avatar = uploadRes.fileID;
+    }
     // 同步到云端
     callCloudFunction('getWeeklyStats', {
       action: 'updateProfile',
@@ -982,8 +989,9 @@ function navigateToQuiz(params = '') {
 function startQuiz() {
   // Phase 5: CTA 入口音效
   createSoundEngine().play('cta_press');
+  const keepDeep = quizStore.isDeepMode;
   quizStore.reset();
-  quizStore.setDeepMode(false);
+  quizStore.setDeepMode(keepDeep);
   uni.removeStorageSync('quiz_breakpoint'); // 清除旧断点，确保全新开始
   trackTestStart(challengeMode.value ? 'challenge' : 'new', ctaText.value);
   transitioning.value = true;
