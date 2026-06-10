@@ -22,3 +22,6 @@ Thumbs.db
 
 # 密钥文件
 private.key
+.backup_*
+*.orig
+*.rej
