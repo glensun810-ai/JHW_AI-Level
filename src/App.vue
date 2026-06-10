@@ -100,7 +100,7 @@ export default {
     initAnalytics();
   },
   onShow(options) {
-      this.tryJoinGroupSession();
+      tryJoinGroupSession();
     // 检测是否从分享卡片进入
     if (options && options.query) {
       const q = options.query;
@@ -175,8 +175,7 @@ export default {
     }
   },
   onHide() {},
-  methods: {
-    async tryJoinGroupSession() {
+  async tryJoinGroupSession() {
     try {
       const res = await wx.getGroupEnterInfo();
       if (res && res.encryptedData) {
@@ -192,7 +191,6 @@ export default {
         }
       }
     } catch (e) {}
-    },
   },
 };
 </script>
