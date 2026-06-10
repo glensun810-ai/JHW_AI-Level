@@ -157,46 +157,16 @@
       </view>
 
       <!-- C2: 首次AI身份预判 -->
-      <view v-if="!returningTierName" class="page-index__prejudge">
+      <view class="page-index__prejudge">
         <text class="page-index__prejudge-text">{{ prejudgeText }}</text>
       </view>
 
       <!-- 新用户：首次体验引导（精简易读） -->
-      <view v-if="!returningTierName" class="page-index__quick-start">
+      <view class="page-index__quick-start">
         <text class="page-index__quick-start-text">5题 · 2分钟 · 测出你的真实AI水平</text>
       </view>
 
-      <!-- 连续进化天数 -->
-      <view v-if="streakDays >= 1" class="page-index__streak">
-        <view class="page-index__streak-flame">
-          <text class="page-index__streak-emoji">{{ streakDays >= 30 ? '👑' : streakDays >= 7 ? '⚡' : '🔥' }}</text>
-          <text class="page-index__streak-count">{{ streakDays }}</text>
-        </view>
-        <text class="page-index__streak-label">连续活跃 {{ streakDays }} 天</text>
-        <text v-if="streakBest > streakDays" class="page-index__streak-best">最长记录 {{ streakBest }} 天</text>
-        <text v-if="!testedToday && streakDays > 0" class="page-index__streak-risk">⚡ 今天还没测，签个到也能续上活跃记录！</text>
-      </view>
-
-      <!-- CTA 按钮 -->
-      <button
-        class="page-index__cta"
-        :class="{ 'page-index__cta--urgent': isUrgent, 'page-index__cta--no-free': freeTestRemaining === 0 }"
-        :disabled="transitioning"
-        @click="handleStart"
-      >
-        <template v-if="freeTestRemaining > 0">{{ ctaText }}（剩{{ freeTestRemaining }}次）</template>
-        <template v-else>📤 邀请好友，解锁免费次数</template>
-      </button>
-
-      <!-- 免费次数提示 -->
-      <text v-if="freeTestRemaining === 0" class="page-index__cta-hint">今日免费次数已用完 · 分享即可获得新次数</text>
-
-      <!-- 经验值进度条（显性化等级成长） -->
-      <view class="page-index__exp-primary">
-        <text class="page-index__exp-primary-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
-        <view class="page-index__exp-primary-track">
-          <view class="page-index__exp-primary-fill" :style="{ width: expStore.levelProgress + '%' }" />
-        </view>
+      
         <text class="page-index__exp-primary-hint">测试 +10 XP · 签到 +5 XP · 分享 +15 XP</text>
       </view>
 
@@ -241,6 +211,38 @@
 
     <!-- ====== 滚动探索区 ====== -->
     <view class="page-index__scroll">
+<!-- 连续进化天数 -->
+      <view v-if="streakDays >= 1" class="page-index__streak">
+        <view class="page-index__streak-flame">
+          <text class="page-index__streak-emoji">{{ streakDays >= 30 ? '👑' : streakDays >= 7 ? '⚡' : '🔥' }}</text>
+          <text class="page-index__streak-count">{{ streakDays }}</text>
+        </view>
+        <text class="page-index__streak-label">连续活跃 {{ streakDays }} 天</text>
+        <text v-if="streakBest > streakDays" class="page-index__streak-best">最长记录 {{ streakBest }} 天</text>
+        <text v-if="!testedToday && streakDays > 0" class="page-index__streak-risk">⚡ 今天还没测，签个到也能续上活跃记录！</text>
+      </view>
+
+      <!-- CTA 按钮 -->
+      <button
+        class="page-index__cta"
+        :class="{ 'page-index__cta--urgent': isUrgent, 'page-index__cta--no-free': freeTestRemaining === 0 }"
+        :disabled="transitioning"
+        @click="handleStart"
+      >
+        <template v-if="freeTestRemaining > 0">{{ ctaText }}（剩{{ freeTestRemaining }}次）</template>
+        <template v-else>📤 邀请好友，解锁免费次数</template>
+      </button>
+
+      <!-- 免费次数提示 -->
+      <text v-if="freeTestRemaining === 0" class="page-index__cta-hint">今日免费次数已用完 · 分享即可获得新次数</text>
+
+      <!-- 经验值进度条（显性化等级成长） -->
+      <view class="page-index__exp-primary">
+        <text class="page-index__exp-primary-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
+        <view class="page-index__exp-primary-track">
+          <view class="page-index__exp-primary-fill" :style="{ width: expStore.levelProgress + '%' }" />
+        </view>
+
       <!-- 每日一题快速入口 -->
       <view class="page-index__daily-entry" @click="handleDailyStart">
         <text class="page-index__daily-entry-icon">⚡</text>
@@ -1252,7 +1254,7 @@ onShareTimeline(() => {
   &__hero {
     position: relative; z-index: 10;
     display: flex; flex-direction: column; align-items: center;
-    padding-top: 180rpx; transition: transform 0.3s ease-out;
+    padding-top: 120rpx; transition: transform 0.3s ease-out;
     &--shrink { transform: scale(0.92); opacity: 0.7; }
   }
 
