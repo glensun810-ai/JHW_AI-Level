@@ -232,7 +232,32 @@ exports.main = async (event, context) => {
     allUsers.sort((a, b) => (b.highestScore || 0) - (a.highestScore || 0));
 
     // 修复6：群挑战榜 action — 按 openGId 过滤同群用户
-    if (action === 'groupRank') {
+    
+if (action === 'joinGroupSession') {
+  try {
+    const { openGId } = event;
+    if (!openGId) return { code: 400, message: '缺少 openGId' };
+    const wxContext = cloud.getWXContext();
+    const OPENID = wxContext.OPENID;
+    const { data: existing } = await db.collection('group_sessions')
+      .where({ openGId, _openid: OPENID })
+      .get();
+    if (existing.length > 0) {
+      await db.collection('group_sessions').doc(existing[0]._id).update({
+        data: { lastActiveAt: db.serverDate() }
+      });
+    } else {
+      await db.collection('group_sessions').add({
+        data: { openGId, _openid: OPENID, lastActiveAt: db.serverDate(), testCount: 1 }
+      });
+    }
+    return { code: 0, message: 'ok' };
+  } catch (e) {
+    return { code: 500, message: e.message };
+  }
+}
+
+if (action === 'groupRank') {
       const openGId = event.openGId || '';
       let groupList = [];
 

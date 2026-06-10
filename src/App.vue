@@ -100,6 +100,7 @@ export default {
     initAnalytics();
   },
   onShow(options) {
+      this.tryJoinGroupSession();
     // 检测是否从分享卡片进入
     if (options && options.query) {
       const q = options.query;
@@ -174,6 +175,23 @@ export default {
     }
   },
   onHide() {},
+  async tryJoinGroupSession() {
+    try {
+      const res = await wx.getGroupEnterInfo();
+      if (res && res.encryptedData) {
+        const { data: decryptRes } = await wx.cloud.callFunction({
+          name: 'submitScore',
+          data: { action: 'decryptGroupInfo', encryptedData: res.encryptedData, iv: res.iv }
+        });
+        if (decryptRes && decryptRes.openGId) {
+          await wx.cloud.callFunction({
+            name: 'getFriendRank',
+            data: { action: 'joinGroupSession', openGId: decryptRes.openGId }
+          });
+        }
+      }
+    } catch (e) {}
+  },
 };
 </script>
 
