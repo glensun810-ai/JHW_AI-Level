@@ -10,9 +10,24 @@
     </view>
 
     <!-- 阶段0：评估中 -->
-    <view v-if="stage === 'evaluating'" class="page-result__evaluating">
-      <view class="page-result__ripple" />
-      <text class="page-result__eval-text">AI 正在评估你的段位…</text>
+    <!-- E8: 维度链评估动画 -->
+    <view v-if="stage === 'evaluating'" class="page-result__eval-chain">
+      <view class="page-result__eval-chain-step" :class="{ 'page-result__eval-chain-step--done': evalStep >= 1 }">
+        <text class="page-result__eval-chain-icon">{{ evalStep >= 1 ? '✅' : '⏳' }}</text>
+        <text class="page-result__eval-chain-label">分析答题模式</text>
+      </view>
+      <view class="page-result__eval-chain-step" :class="{ 'page-result__eval-chain-step--done': evalStep >= 2 }">
+        <text class="page-result__eval-chain-icon">{{ evalStep >= 2 ? '✅' : '⏳' }}</text>
+        <text class="page-result__eval-chain-label">计算AI商数</text>
+      </view>
+      <view class="page-result__eval-chain-step" :class="{ 'page-result__eval-chain-step--done': evalStep >= 3 }">
+        <text class="page-result__eval-chain-icon">{{ evalStep >= 3 ? '✅' : '⏳' }}</text>
+        <text class="page-result__eval-chain-label">匹配人格画像</text>
+      </view>
+      <view class="page-result__eval-chain-step" :class="{ 'page-result__eval-chain-step--active': evalStep === 4 }">
+        <text class="page-result__eval-chain-icon">{{ evalStep === 4 ? '⋯' : evalStep > 4 ? '✅' : '⏳' }}</text>
+        <text class="page-result__eval-chain-label">最终定段…</text>
+      </view>
     </view>
 
     <!-- 阶段0.5：反转惊喜 -->
@@ -679,6 +694,7 @@ const personaCardRef = ref(null);
 const personaCardUrl = ref('');
 const result = ref({ tier: '', tierEmoji: '', totalScore: 0, percentile: 0, nextTier: null, pointsToNext: 0, radarData: null, commentary: [], tierCommentary: '', persona: null });
 const stage = ref('evaluating');
+const evalStep = ref(0);
 const stageNum = ref(0);
 const displayScore = ref(0);
 // Phase 10: PB 挑战状态
@@ -1634,7 +1650,14 @@ function startSequence() {
 
     if (shouldReverse) {
       wasReversed.value = true;
-      stage.value = 'reversal';
+      
+      // E8: 维度链动画
+      evalStep.value = 1;
+      setTimeout(() => { evalStep.value = 2; }, 300);
+      setTimeout(() => { evalStep.value = 3; }, 600);
+      setTimeout(() => { evalStep.value = 4; }, 900);
+
+stage.value = 'reversal';
       fakeTier.value = isFirstTime
         ? (REVERSAL_FAKE_TIERS[result.value.tier] || '系统错误 ⚠️')
         : reversalFakeTier;
@@ -4326,5 +4349,15 @@ function goToChallenge() {
 
 
 .page-result__challenge-btn { height: 72rpx; padding: 0 24rpx; background: rgba(124,58,237,0.15); border: 1rpx solid rgba(124,58,237,0.3); border-radius: 36rpx; font-size: 26rpx; color: #c0a0ff; font-weight: 600; display: flex; align-items: center; justify-content: center; margin-left: 12rpx; line-height: 72rpx; }
+
+
+
+.page-result__eval-chain { display: flex; flex-direction: column; align-items: center; gap: 24rpx; padding: 80rpx 0; }
+.page-result__eval-chain-step { display: flex; align-items: center; gap: 12rpx; opacity: 0.3; transition: opacity 0.3s ease; }
+.page-result__eval-chain-step--done { opacity: 1; }
+.page-result__eval-chain-step--active { opacity: 1; }
+.page-result__eval-chain-step--active .page-result__eval-chain-label { color: #f59e0b; }
+.page-result__eval-chain-icon { font-size: 32rpx; width: 40rpx; text-align: center; }
+.page-result__eval-chain-label { font-size: 28rpx; color: #fff; font-weight: 500; }
 
 </style>
