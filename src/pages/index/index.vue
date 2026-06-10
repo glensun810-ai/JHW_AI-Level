@@ -1737,14 +1737,6 @@ onShareTimeline(() => {
 &__streak-risk { font-size: 22rpx; font-weight: 600; color: #ff6b6b; }
 
 &__identity-tip { margin: 16rpx 32rpx 0; padding: 16rpx 20rpx; background: rgba(0,200,255,0.06); border: 1rpx solid rgba(0,200,255,0.12); border-radius: 12rpx; text-align: center; }
-&__identity-tip-text { font-size: 24rpx; color: rgba(255,255,255,0.5); }
-
-// ====== 布局优化 ======
-padding-top: 180rpx
-&__cta { height: 96rpx; }
-&__proof { margin-top: 16rpx; display: flex; justify-content: center; gap: 8rpx; }
-&__proof-num { font-size: 24rpx; }
-&__proof-label { font-size: 24rpx; color: rgba(255,255,255,0.4); }
 
   &__cta-hint {
     display: block;
