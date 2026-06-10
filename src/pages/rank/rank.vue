@@ -421,7 +421,10 @@ async function loadWeeklyRising() {
   weeklyLoading.value = true;
   try {
     // Phase 3: 优先使用积分排行榜
-    const res = await fetchWeeklyLeaderboard();
+    const res = await Promise.race([
+      fetchWeeklyLeaderboard(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+    ]);
     if (res.code === 0 && res.data && res.data.leaderboard && res.data.leaderboard.length > 0) {
       leaderboard.value = res.data.leaderboard;
       myWeeklyEntry.value = res.data.myEntry;
@@ -451,7 +454,15 @@ async function loadGroupRank() {
   try {
     const app = getApp();
     const groupId = app.globalData.groupId || '';
-    const res = await fetchFriendRank('groupRank', { openGId: groupId });
+    if (!groupId) {
+      noGroupId.value = true;
+      groupLoading.value = false;
+      return;
+    }
+    const res = await Promise.race([
+      fetchFriendRank('groupRank', { openGId: groupId }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+    ]);
     if (res.code === 0 && res.data) {
       groupList.value = res.data.groupRankings || [];
       noGroupId.value = res.data.noGroupId !== false;
@@ -488,7 +499,10 @@ async function generateGroupRankImage() {
 async function loadStarRank() {
   starLoading.value = true;
   try {
-    const res = await fetchFriendRank('collectRank');
+    const res = await Promise.race([
+      fetchFriendRank('collectRank'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+    ]);
     if (res.code === 0 && res.data) {
       starList.value = res.data.collectRankings || [];
       myCollectRank.value = res.data.myCollectRank;
