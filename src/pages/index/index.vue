@@ -203,24 +203,6 @@
         <text class="page-index__exp-primary-hint">测试 +10 XP · 签到 +5 XP · 分享 +15 XP</text>
       </view>
 
-      <!-- 经验值进度条（显性化等级成长） -->
-      <view class="page-index__exp-primary">
-        <text class="page-index__exp-primary-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
-        <view class="page-index__exp-primary-track">
-          <view class="page-index__exp-primary-fill" :style="{ width: expStore.levelProgress + '%' }" />
-        </view>
-        <text class="page-index__exp-primary-hint">测试 +10 XP · 签到 +5 XP · 分享 +15 XP</text>
-      </view>
-
-      <!-- 经验值进度条（显性化等级成长） -->
-      <view class="page-index__exp-primary">
-        <text class="page-index__exp-primary-label">Lv.{{ expStore.level }} {{ expStore.levelName }}</text>
-        <view class="page-index__exp-primary-track">
-          <view class="page-index__exp-primary-fill" :style="{ width: expStore.levelProgress + '%' }" />
-        </view>
-        <text class="page-index__exp-primary-hint">测试 +10 XP · 签到 +5 XP · 分享 +15 XP</text>
-      </view>
-
       <!-- CTA下方轻量社交证明 -->
       <view class="page-index__proof">
         <text class="page-index__proof-num">{{ displayUsers.toLocaleString() }}</text>
@@ -1722,7 +1704,7 @@ onShareTimeline(() => {
 &__identity-tip-text { font-size: 24rpx; color: rgba(255,255,255,0.5); }
 
 // ====== 布局优化 ======
-&__hero { padding-top: 80rpx; }
+padding-top: 180rpx
 &__cta { height: 96rpx; }
 &__proof { margin-top: 16rpx; display: flex; justify-content: center; gap: 8rpx; }
 &__proof-num { font-size: 24rpx; }
@@ -1952,6 +1934,18 @@ onShareTimeline(() => {
       color: rgba(124, 58, 237, 0.5);
     }
   }
+
+
+&__identity-panel-avatar { width: 96rpx; height: 96rpx; border-radius: 50%; }
+&__identity-panel-avatar--placeholder { display: flex; align-items: center; justify-content: center; font-size: 48rpx; width: 96rpx; height: 96rpx; }
+&__identity-panel-avatar-wrap { position: relative; }
+
+
+
+&__identity-panel-avatar { width: 96rpx; height: 96rpx; border-radius: 50%; }
+&__identity-panel-avatar--placeholder { display: flex; align-items: center; justify-content: center; font-size: 48rpx; width: 96rpx; height: 96rpx; }
+&__identity-panel-avatar-wrap { position: relative; }
+
 }
 
 @keyframes breathe {
