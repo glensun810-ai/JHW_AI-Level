@@ -650,14 +650,6 @@ function toggleIdentityPanel() {
   showIdentityPanel.value = !showIdentityPanel.value;
 }
 
-function toggleIdentityPanel() {
-  showIdentityPanel.value = !showIdentityPanel.value;
-}
-
-function toggleIdentityPanel() {
-  showIdentityPanel.value = !showIdentityPanel.value;
-}
-
 function viewMyResult() {
   uni.navigateTo({
     url: '/pages/result/result?mode=review',
@@ -1246,12 +1238,13 @@ onShareTimeline(() => {
   }
 
   &__title {
-    font-size: 72rpx; font-weight: 700; color: #fff;
-    text-shadow: 0 0 40rpx rgba(124, 58, 237, 0.5);
+    font-size: 48rpx; font-weight: 700; color: #fff;
+    text-shadow: 0 0 30rpx rgba(124, 58, 237, 0.4);
+    letter-spacing: 0.02em;
   }
 
   &__subtitle {
-    font-size: 28rpx; color: rgba(255, 255, 255, 0.45); margin-top: 16rpx;
+    font-size: 24rpx; color: rgba(255, 255, 255, 0.4); margin-top: 12rpx;
   }
 
   // Phase 4: 回访用户段位卡片
