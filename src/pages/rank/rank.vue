@@ -151,6 +151,7 @@
             <text class="page-rank__leaderboard-my-score">AI商数 {{ toAIQ(myWeeklyEntry.score) }}</text>
             <text v-if="myWeeklyEntry.rankChange > 0" class="page-rank__leaderboard-my-change page-rank__leaderboard-my-change--up">⬆️ +{{ myWeeklyEntry.rankChange }}</text>
             <text v-else-if="myWeeklyEntry.rankChange < 0" class="page-rank__leaderboard-my-change page-rank__leaderboard-my-change--down">⬇️ {{ myWeeklyEntry.rankChange }}</text>
+            <button class="page-rank__leaderboard-my-share" open-type="share">📤 分享排名</button>
             <text v-if="myWeeklyEntry.rankChange !== 0" class="page-rank__rank-change" :class="myWeeklyEntry.rankChange > 0 ? 'page-rank__rank-change--up' : 'page-rank__rank-change--down'">
               {{ myWeeklyEntry.rankChange > 0 ? '↑' : '↓' }}{{ Math.abs(myWeeklyEntry.rankChange) }}
             </text>
@@ -546,8 +547,19 @@ function getTierBarColor(tierName) {
 
 onShareAppMessage(() => {
   const uid = getUserOpenidSync();
+  const myRank = myWeeklyEntry.value ? myWeeklyEntry.value.rank : null;
+  const myTier = myWeeklyEntry.value ? myWeeklyEntry.value.currentTier : '';
+  const myScore = myWeeklyEntry.value ? toAIQ(myWeeklyEntry.value.score) : '';
+  let title;
+  if (myRank && myRank <= 3) {
+    title = `🏆 我第${myRank}名！AI商数${myScore}，${myTier}段位！不服来战？`;
+  } else if (myRank) {
+    title = `我在AI段位榜排第${myRank}名！${myTier} · AI商数${myScore}，你能超过我吗？`;
+  } else {
+    title = '测测你的AI段位！看看你在好友中排第几';
+  }
   return {
-    title: '测测你的AI段位！看看你在好友中排第几',
+    title,
     path: uid ? `/pages/index/index?from_uid=${uid}` : '/pages/index/index',
     imageUrl: getApp().globalData.defaultShareImage || '/static/images/default-share.png',
   };
@@ -1109,5 +1121,8 @@ function challengeFriend(friend) {
 
 
 .page-rank__challenge-btn { font-size: 32rpx; padding: 8rpx 12rpx; flex-shrink: 0; cursor: pointer; }
+
+
+.page-rank__leaderboard-my-share { margin-top: 8rpx; height: 56rpx; padding: 0 28rpx; background: linear-gradient(135deg,#7c3aed,#a78bfa); color: #fff; border-radius: 28rpx; font-size: 22rpx; font-weight: 600; border: none; display: flex; align-items: center; justify-content: center; line-height: 56rpx; }
 
 </style>
