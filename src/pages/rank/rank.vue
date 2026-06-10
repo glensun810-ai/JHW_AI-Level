@@ -144,9 +144,12 @@
             <text class="page-rank__leaderboard-count">{{ weeklyTotal }} 人参与</text>
           </view>
           <view v-if="myWeeklyEntry" class="page-rank__leaderboard-my">
-            <text class="page-rank__leaderboard-my-label">我的排名</text>
+            <text class="page-rank__leaderboard-my-label">🏆 你的排名</text>
             <text class="page-rank__leaderboard-my-rank">#{{ myWeeklyEntry.rank }}</text>
+            <text class="page-rank__leaderboard-my-tier">{{ myWeeklyEntry.currentTier }}</text>
             <text class="page-rank__leaderboard-my-score">AI商数 {{ toAIQ(myWeeklyEntry.score) }}</text>
+            <text v-if="myWeeklyEntry.rankChange > 0" class="page-rank__leaderboard-my-change page-rank__leaderboard-my-change--up">⬆️ +{{ myWeeklyEntry.rankChange }}</text>
+            <text v-else-if="myWeeklyEntry.rankChange < 0" class="page-rank__leaderboard-my-change page-rank__leaderboard-my-change--down">⬇️ {{ myWeeklyEntry.rankChange }}</text>
             <text v-if="myWeeklyEntry.rankChange !== 0" class="page-rank__rank-change" :class="myWeeklyEntry.rankChange > 0 ? 'page-rank__rank-change--up' : 'page-rank__rank-change--down'">
               {{ myWeeklyEntry.rankChange > 0 ? '↑' : '↓' }}{{ Math.abs(myWeeklyEntry.rankChange) }}
             </text>
@@ -157,6 +160,7 @@
               <image class="page-rank__avatar" :src="r.avatar || defaultAvatar" mode="aspectFill" />
               <view class="page-rank__info">
                 <text class="page-rank__name">{{ r.nickname }}</text>
+                <text v-if="myOpenid && r._openid === myOpenid" class="page-rank__me-tag">👈 这是你</text>
                 <text class="page-rank__tier-tag">{{ r.currentTier }}</text>
               </view>
               <view class="page-rank__score-col">
@@ -1063,4 +1067,17 @@ onShareTimeline(() => {
   font-size: 22rpx;
   color: $color-accent;
 }
+
+
+.page-rank__me-tag { font-size: 20rpx; color: #f59e0b; font-weight: 600; margin-left: 6rpx; }
+.page-rank__item--me { background: rgba(245,158,11,0.08) !important; border: 1rpx solid rgba(245,158,11,0.2) !important; }
+.page-rank__leaderboard-my { display: flex; flex-direction: column; align-items: center; gap: 6rpx; padding: 24rpx; margin-bottom: 16rpx; background: linear-gradient(135deg,rgba(124,58,237,0.1),rgba(245,158,11,0.06)); border: 1rpx solid rgba(124,58,237,0.25); border-radius: 20rpx; }
+.page-rank__leaderboard-my-label { font-size: 24rpx; color: rgba(255,255,255,0.5); }
+.page-rank__leaderboard-my-rank { font-size: 48rpx; font-weight: bold; color: #f59e0b; }
+.page-rank__leaderboard-my-tier { font-size: 24rpx; color: rgba(255,255,255,0.6); }
+.page-rank__leaderboard-my-score { font-size: 28rpx; color: #fff; }
+.page-rank__leaderboard-my-change { font-size: 24rpx; font-weight: 600; }
+.page-rank__leaderboard-my-change--up { color: #4ade80; }
+.page-rank__leaderboard-my-change--down { color: #f87171; }
+
 </style>
