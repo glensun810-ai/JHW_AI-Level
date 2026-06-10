@@ -117,26 +117,8 @@
 
     <!-- ====== 首屏可见区 ====== -->
     <view class="page-index__hero" :class="{ 'page-index__hero--shrink': btnShrink }">
-      <text v-if="!showReturningHero" class="page-index__title">进化湾 · AI段位测评</text>
-      <text v-if="!showReturningHero" class="page-index__subtitle">AI时代，你处在哪个段位？</text>
-
-      <!-- Phase 4: 回访用户段位卡片（大号段位展示） -->
-      <view v-if="showReturningHero" class="page-index__returning-card">
-        <text class="page-index__returning-tier-large">{{ returningTierEmoji }}</text>
-        <text class="page-index__returning-tier-name">{{ returningTierName }}</text>
-        <text class="page-index__returning-aiq">AI商数 {{ returningAIQ }}</text>
-        <text v-if="returningScoreRange" class="page-index__returning-range">近期 {{ returningScoreRange.lowAIQ }} ~ {{ returningScoreRange.highAIQ }}</text>
-        <text class="page-index__returning-pct">超越全国 {{ returningPercentile }}% 用户</text>
-        <text v-if="returningPBLabel" class="page-index__returning-pb-badge">{{ returningPBLabel }}</text>
-        <view class="page-index__returning-actions">
-          <button class="page-index__returning-btn page-index__returning-btn--share" open-type="share" @click="trackShareClick('home', 'returning_hero')">
-            📤 分享我的段位
-          </button>
-          <button class="page-index__returning-btn page-index__returning-btn--view" @click="viewMyResult">
-            📋 详情
-          </button>
-        </view>
-      </view>
+      <text class="page-index__title">进化湾 · AI段位测评</text>
+      <text class="page-index__subtitle">AI时代，你处在哪个段位？</text>
 
       <!-- Phase 9: AI身份卡 — 让段位真正属于你 -->
       <view v-if="showIdentityCard" class="page-index__identity-card">
@@ -175,12 +157,12 @@
       </view>
 
       <!-- C2: 首次AI身份预判 -->
-      <view v-if="isFirstVisit" class="page-index__prejudge">
+      <view v-if="!returningTierName" class="page-index__prejudge">
         <text class="page-index__prejudge-text">{{ prejudgeText }}</text>
       </view>
 
       <!-- 新用户：首次体验引导（精简易读） -->
-      <view v-if="isFirstVisit" class="page-index__quick-start">
+      <view v-if="!returningTierName" class="page-index__quick-start">
         <text class="page-index__quick-start-text">5题 · 2分钟 · 测出你的真实AI水平</text>
       </view>
 
