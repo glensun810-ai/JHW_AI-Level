@@ -244,7 +244,7 @@ if (action === 'getShareFeedbacks') {
       .get();
     return { code: 0, data: data || [] };
   } catch (e) {
-    return { code: 500, message: e.message };
+    return { code: 0, data: [] };
   }
 }
 
