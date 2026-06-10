@@ -23,9 +23,17 @@
       </button>
     </view>
 
-    <!-- 奖励提示 -->
-    <view v-if="showReward" class="page-checkin__reward-pop">
-      <text class="page-checkin__reward-pop-text">{{ rewardText }}</text>
+    <!-- E5: 全屏成就卡 -->
+    <view v-if="showReward" class="page-checkin__achievement-overlay" @click="closeAchievement">
+      <view class="page-checkin__achievement-card" @click.stop>
+        <text class="page-checkin__achievement-emoji">{{ rewardIcon || '🎉' }}</text>
+        <text class="page-checkin__achievement-title">{{ rewardText }}</text>
+        <text class="page-checkin__achievement-days">连续签到 {{ consecutiveDays }} 天</text>
+        <view class="page-checkin__achievement-actions">
+          <button class="page-checkin__achievement-share-btn" open-type="share" @click="onShareClick">📤 分享给好友炫耀</button>
+          <text class="page-checkin__achievement-close" @click="closeAchievement">继续签到</text>
+        </view>
+      </view>
     </view>
 
     <!-- 签到后分享引导（损失厌恶：断签会重置） -->
@@ -332,6 +340,8 @@ onShareTimeline(() => {
     query: uid ? `from_uid=${uid}` : '',
   };
 });
+
+function closeAchievement() { showReward.value = false; }
 </script>
 
 <style scoped lang="scss">
@@ -642,4 +652,15 @@ onShareTimeline(() => {
   50% { transform: scale(1.02); background: rgba(245, 158, 11, 0.12); }
   100% { transform: scale(1); }
 }
+
+
+.page-checkin__achievement-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 500; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; }
+.page-checkin__achievement-card { width: 560rpx; max-width: 85vw; background: linear-gradient(180deg,#1a0a33,#0d1b2a); border: 1rpx solid rgba(245,158,11,0.3); border-radius: 32rpx; padding: 48rpx 32rpx 36rpx; display: flex; flex-direction: column; align-items: center; box-shadow: 0 16rpx 64rpx rgba(0,0,0,0.5); }
+.page-checkin__achievement-emoji { font-size: 80rpx; margin-bottom: 16rpx; }
+.page-checkin__achievement-title { font-size: 36rpx; font-weight: 700; color: #f59e0b; text-align: center; margin-bottom: 12rpx; }
+.page-checkin__achievement-days { font-size: 24rpx; color: rgba(255,255,255,0.5); margin-bottom: 32rpx; }
+.page-checkin__achievement-actions { display: flex; flex-direction: column; align-items: center; gap: 16rpx; width: 100%; }
+.page-checkin__achievement-share-btn { width: 80%; height: 80rpx; background: linear-gradient(135deg,#7c3aed,#a78bfa); color: #fff; border-radius: 40rpx; font-size: 28rpx; font-weight: 600; border: none; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 80rpx; }
+.page-checkin__achievement-close { font-size: 24rpx; color: rgba(255,255,255,0.3); padding: 8rpx 16rpx; }
+
 </style>
