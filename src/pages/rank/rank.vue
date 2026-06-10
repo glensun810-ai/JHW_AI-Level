@@ -65,6 +65,7 @@
               <text class="page-rank__tier-tag">{{ f.currentTier || '?' }}</text>
             </view>
             <text class="page-rank__score">{{ toAIQ(f.highestScore) }}</text>
+            <text v-if="f._openid !== myOpenid" class="page-rank__challenge-btn" @click="challengeFriend(f)">⚔️</text>
           </view>
         </view>
         <view v-else class="page-rank__empty">
@@ -559,6 +560,32 @@ onShareTimeline(() => {
     query: uid ? `from_uid=${uid}` : '',
   };
 });
+
+
+function challengeFriend(friend) {
+  if (!friend || !friend._openid) return;
+  uni.showModal({
+    title: `向 ${friend.nickname || '好友'} 发起挑战`,
+    content: `比比谁的AI段位更高？`,
+    confirmText: '发起挑战',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await callCloudFunction('sendChallenge', {
+            action: 'create',
+            targetUid: friend._openid,
+            targetName: friend.nickname,
+            targetTier: friend.currentTier,
+          });
+          uni.showToast({ title: '挑战已发送！', icon: 'success' });
+        } catch (e) {
+          uni.showToast({ title: '发送失败，请重试', icon: 'none' });
+        }
+      }
+    },
+  });
+}
+
 </script>
 
 <style scoped lang="scss">
@@ -1079,5 +1106,8 @@ onShareTimeline(() => {
 .page-rank__leaderboard-my-change { font-size: 24rpx; font-weight: 600; }
 .page-rank__leaderboard-my-change--up { color: #4ade80; }
 .page-rank__leaderboard-my-change--down { color: #f87171; }
+
+
+.page-rank__challenge-btn { font-size: 32rpx; padding: 8rpx 12rpx; flex-shrink: 0; cursor: pointer; }
 
 </style>

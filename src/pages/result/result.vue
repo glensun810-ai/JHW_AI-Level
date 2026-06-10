@@ -530,6 +530,7 @@
           <!-- 再测一次（唯一入口） -->
           <view class="page-result__correct">
             <button class="page-result__correct-btn" @click="retryQuiz">再测一次，继续进化</button>
+          <button class="page-result__challenge-btn" @click="goToChallenge">⚔️ 挑战好友</button>
           </view>
         </view>
 
@@ -2141,6 +2142,12 @@ function triggerShareReward(xp) {
   setTimeout(() => { showShareReward.value = false; }, 3000);
 }
 function closeShareReward() { showShareReward.value = false; }
+
+
+
+function goToChallenge() {
+  uni.switchTab({ url: '/pages/rank/rank' });
+}
 
 </script>
 
@@ -4316,5 +4323,8 @@ function closeShareReward() { showShareReward.value = false; }
 .page-result__share-reward-actions { display: flex; flex-direction: column; align-items: center; gap: 16rpx; width: 100%; }
 .page-result__share-reward-btn { width: 80%; height: 80rpx; background: linear-gradient(135deg,#7c3aed,#a78bfa); color: #fff; border-radius: 40rpx; font-size: 28rpx; font-weight: 600; border: none; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 80rpx; }
 .page-result__share-reward-close { font-size: 24rpx; color: rgba(255,255,255,0.3); padding: 8rpx 16rpx; }
+
+
+.page-result__challenge-btn { height: 72rpx; padding: 0 24rpx; background: rgba(124,58,237,0.15); border: 1rpx solid rgba(124,58,237,0.3); border-radius: 36rpx; font-size: 26rpx; color: #c0a0ff; font-weight: 600; display: flex; align-items: center; justify-content: center; margin-left: 12rpx; line-height: 72rpx; }
 
 </style>
