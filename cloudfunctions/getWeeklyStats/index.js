@@ -232,7 +232,23 @@ exports.main = async (event, context) => {
     }
 
     // Phase 3: 本周积分排行榜
-    if (action === 'weeklyLeaderboard') {
+    
+if (action === 'getShareFeedbacks') {
+  try {
+    const wxContext = cloud.getWXContext();
+    const _ = db.command;
+    const { data } = await db.collection('share_feedback')
+      .where({ inviterUid: wxContext.OPENID, isRead: false, expiresAt: _.gt(new Date()) })
+      .orderBy('createdAt', 'desc')
+      .limit(3)
+      .get();
+    return { code: 0, data: data || [] };
+  } catch (e) {
+    return { code: 500, message: e.message };
+  }
+}
+
+if (action === 'weeklyLeaderboard') {
       const weekStart = getWeekStart();
       const weekEnd = new Date(new Date(weekStart).getTime() + 7 * 86400000);
       const weekLabel = `${weekStart.slice(5)} - ${weekEnd.toISOString().slice(5, 10)}`;

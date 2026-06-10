@@ -175,7 +175,8 @@ export default {
     }
   },
   onHide() {},
-  async tryJoinGroupSession() {
+  methods: {
+    async tryJoinGroupSession() {
     try {
       const res = await wx.getGroupEnterInfo();
       if (res && res.encryptedData) {
@@ -191,6 +192,7 @@ export default {
         }
       }
     } catch (e) {}
+    },
   },
 };
 </script>

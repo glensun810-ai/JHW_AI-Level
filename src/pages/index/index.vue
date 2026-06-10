@@ -517,18 +517,14 @@ const showShareFeedback = ref(false);
 
 async function loadShareFeedbacks() {
   try {
-    const db = uniCloud.database();
-    const { result } = await db.collection('share_feedback')
-      .where({
-        inviterUid: getUserOpenidSync(),
-        isRead: false,
-        expiresAt: _.gt(new Date()),
-      })
-      .orderBy('createdAt', 'desc')
-      .limit(3)
-      .get();
-    if (result && result.data && result.data.length > 0) {
-      shareFeedbacks.value = result.data;
+    // 通过云函数查询
+    const res = await callCloudFunction('getWeeklyStats', {
+      action: 'getShareFeedbacks',
+      uid: getUserOpenidSync(),
+    })
+      ;
+    if (res.code === 0 && res.data && res.data.length > 0) {
+      shareFeedbacks.value = res.data;
       showShareFeedback.value = true;
     }
   } catch (e) {
