@@ -212,6 +212,13 @@
 
     <!-- ====== 滚动探索区 ====== -->
     <view class="page-index__scroll">
+      <!-- 每日一题快速入口（始终显示，消除空白） -->
+      <view class="page-index__daily-entry" @click="handleDailyStart">
+        <text class="page-index__daily-entry-icon">⚡</text>
+        <text class="page-index__daily-entry-text">每日一题 · 30秒</text>
+        <text class="page-index__daily-entry-arrow">→</text>
+      </view>
+
 <!-- 连续进化天数 -->
       <view v-if="streakDays >= 1" class="page-index__streak">
         <view class="page-index__streak-flame">
@@ -243,13 +250,6 @@
         <view class="page-index__exp-primary-track">
           <view class="page-index__exp-primary-fill" :style="{ width: expStore.levelProgress + '%' }" />
         </view>
-
-      <!-- 每日一题快速入口 -->
-      <view class="page-index__daily-entry" @click="handleDailyStart">
-        <text class="page-index__daily-entry-icon">⚡</text>
-        <text class="page-index__daily-entry-text">每日一题 · 30秒</text>
-        <text class="page-index__daily-entry-arrow">→</text>
-      </view>
 
 
 
@@ -766,7 +766,7 @@ onMounted(async () => {
     isUrgent.value = true;
     trackHomeHesitate(5000);
   }, 5000);
-  t10 = setTimeout(() => { showHint.value = true; }, 10000);
+  t10 = setTimeout(() => { showHint.value = true; }, 3000);
 });
 
 onBeforeUnmount(() => { clearTimeout(t5); clearTimeout(t10); clearInterval(ctaTimer); clearInterval(aiEvalTimer); clearInterval(animateTimer); });
