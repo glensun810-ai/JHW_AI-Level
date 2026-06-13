@@ -166,8 +166,8 @@
         <text class="page-index__quick-start-text">5题 · 2分钟 · 测出你的真实AI水平</text>
       </view>
 
-      
-        <text class="page-index__exp-primary-hint">测试 +10 XP · 签到 +5 XP · 分享 +15 XP</text>
+      <view style="display:none;height:0;overflow:hidden"></view>
+        <text style="display:none"></text>
       </view>
 
       <!-- CTA下方轻量社交证明 -->
@@ -176,31 +176,8 @@
         <text class="page-index__proof-label">人已完成定段 · 5题2分钟</text>
       </view>
 
-    </view>
+      <text v-if="showHint" class="page-index__hint">3秒测出你的AI段位</text>
 
-    <text v-if="showHint" class="page-index__hint">3秒测出你的AI段位</text>
-
-    <!-- Phase 2: 邀请进度横幅 -->
-    <view v-if="inviteStatsLoaded && freeTestRemaining === 0" class="page-index__invite-banner" :class="{ 'page-index__invite-banner--has-unlocks': inviteStats.inviteUnlocks > 0 }">
-      <template v-if="inviteStats.inviteUnlocks > 0">
-        <view class="page-index__invite-banner-inner" @click="handleStart">
-          <text class="page-index__invite-banner-icon">🎁</text>
-          <text class="page-index__invite-banner-text">{{ inviteStats.inviteUnlocks }} 次额外测试机会可用</text>
-          <text class="page-index__invite-banner-action">立即使用 →</text>
-        </view>
-      </template>
-      <template v-else-if="inviteStats.inviteCount > 0">
-        <view class="page-index__invite-banner-inner">
-          <text class="page-index__invite-banner-icon">📤</text>
-          <text class="page-index__invite-banner-text">已邀请 {{ inviteStats.inviteCount }} 位好友完成测试，累计 {{ inviteStats.inviteCount }} 次额外机会</text>
-        </view>
-      </template>
-      <template v-else>
-        <button class="page-index__invite-banner-share-btn" open-type="share" @click="trackInviteSent('private')">
-          <text class="page-index__invite-banner-icon">👥</text>
-          <text class="page-index__invite-banner-text">邀请好友测试 → 解锁额外次数</text>
-        </button>
-      </template>
     </view>
 
     <!-- Phase 3: 本周排名徽章 -->
@@ -1251,7 +1228,7 @@ onShareTimeline(() => {
   &__hero {
     position: relative; z-index: 10;
     display: flex; flex-direction: column; align-items: center;
-    padding-top: 168rpx; transition: transform 0.3s ease-out;
+    padding-top: 350rpx; padding-bottom: 24rpx; transition: transform 0.3s ease-out;
     &--shrink { transform: scale(0.92); opacity: 0.7; }
   }
 
@@ -1338,7 +1315,7 @@ onShareTimeline(() => {
   &__returning-actions {
     display: flex;
     gap: 16rpx;
-    margin-top: 12rpx;
+    margin: 10rpx 32rpx 0;
   }
 
   &__returning-btn {
@@ -1470,8 +1447,8 @@ onShareTimeline(() => {
     flex-direction: column;
     align-items: center;
     gap: 4rpx;
-    margin-top: 20rpx;
-    padding: 14rpx 32rpx;
+    margin: 12rpx 32rpx 0;
+    padding: 12rpx 32rpx;
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(255, 152, 0, 0.04));
     border: 1rpx solid rgba(245, 158, 11, 0.25);
     border-radius: 20rpx;
@@ -1576,7 +1553,7 @@ onShareTimeline(() => {
   &__scroll {
     position: relative; z-index: 10;
     display: flex; flex-direction: column; align-items: center;
-    padding: 0 0 160rpx;
+    padding: 16rpx 0 40rpx;
   }
 
   // 每日一题快速入口
@@ -1584,11 +1561,12 @@ onShareTimeline(() => {
     display: flex;
     align-items: center;
     gap: 8rpx;
-    padding: 14rpx 24rpx;
+    margin: 0 32rpx;
+    padding: 12rpx 24rpx;
     background: rgba(0, 200, 255, 0.08);
     border: 1rpx solid rgba(0, 200, 255, 0.15);
     border-radius: 20rpx;
-    margin-bottom: 20rpx;
+    margin-bottom: 16rpx;
     transition: background 0.15s, transform 0.15s;
     &:active { background: rgba(0, 200, 255, 0.15); transform: scale(0.97); }
 
@@ -1623,8 +1601,8 @@ onShareTimeline(() => {
 
   // 今日状态条
   &__status-bar {
-    margin-top: 14rpx;
-    padding: 8rpx 24rpx;
+    margin: 8rpx 32rpx 0;
+    padding: 6rpx 24rpx;
     background: rgba(245, 158, 11, 0.06);
     border: 1rpx solid rgba(245, 158, 11, 0.12);
     border-radius: 12rpx;
@@ -1657,7 +1635,7 @@ onShareTimeline(() => {
   }
 
   &__cta {
-    min-width: 360rpx; max-width: 90vw; height: 112rpx; margin-top: 32rpx;
+    min-width: 360rpx; max-width: 90vw; height: 88rpx; margin-top: 16rpx;
     padding: 0 36rpx;
     background: linear-gradient(135deg, #7c3aed, #f59e0b);
     border-radius: 56rpx; font-size: 32rpx; font-weight: 700;
@@ -1714,7 +1692,7 @@ onShareTimeline(() => {
 &__identity-panel-share-btn { flex: 1; height: 72rpx; background: linear-gradient(135deg,#7c3aed,#a78bfa); color: #fff; border-radius: 36rpx; font-size: 26rpx; font-weight: 600; border: none; padding: 0; line-height: 72rpx; }
 &__identity-panel-log-btn { flex: 1; height: 72rpx; background: rgba(255,255,255,0.08); color: #fff; border-radius: 36rpx; font-size: 26rpx; font-weight: 500; border: 1rpx solid rgba(255,255,255,0.15); padding: 0; line-height: 72rpx; }
 
-&__exp-primary { width: 100%; margin-top: 24rpx; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
+&__exp-primary { width: 100%; margin: 12rpx 32rpx; display: flex; flex-direction: column; align-items: center; gap: 4rpx; }
 &__exp-primary-label { font-size: 22rpx; color: rgba(255,255,255,0.6); font-weight: 500; }
 &__exp-primary-track { width: 70%; height: 8rpx; background: rgba(255,255,255,0.08); border-radius: 4rpx; overflow: hidden; }
 &__exp-primary-fill { height: 100%; background: linear-gradient(90deg,#7c3aed,#f59e0b); border-radius: 4rpx; transition: width 0.5s ease-out; }
@@ -1728,7 +1706,7 @@ onShareTimeline(() => {
 &__quick-start { margin-top: 16rpx; display: flex; justify-content: center; }
 &__quick-start-text { font-size: 24rpx; color: rgba(255,255,255,0.4); }
 
-&__streak { margin-top: 24rpx; display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
+
 &__streak-flame { display: flex; align-items: center; gap: 6rpx; }
 &__streak-emoji { font-size: 32rpx; }
 &__streak-count { font-size: 36rpx; font-weight: bold; color: #f59e0b; text-shadow: 0 0 16rpx rgba(245,158,11,0.5); }
@@ -1743,11 +1721,11 @@ onShareTimeline(() => {
     text-align: center;
     font-size: 22rpx;
     color: rgba(255, 255, 255, 0.4);
-    margin-top: 12rpx;
+    margin: 10rpx 32rpx 0;
   }
 
   &__hint {
-    font-size: 26rpx; color: #f59e0b; margin-top: 16rpx;
+    font-size: 26rpx; color: #f59e0b; margin-top: 10rpx;
     animation: fade-in 0.4s ease-out;
     display: block;
     width: 100%;
@@ -1755,7 +1733,7 @@ onShareTimeline(() => {
   }
 
   &__proof {
-    display: flex; align-items: baseline; gap: 6rpx; margin-top: 20rpx;
+    display: flex; align-items: baseline; justify-content: center; gap: 6rpx; margin-top: 20rpx;
     &-num { font-size: 28rpx; font-weight: 700; color: rgba(255,255,255,0.5); }
     &-label { font-size: 22rpx; color: rgba(255,255,255,0.3); }
   }
@@ -1764,7 +1742,7 @@ onShareTimeline(() => {
   &__invite-banner {
     position: relative;
     z-index: 10;
-    margin: 24rpx 32rpx 0;
+    margin: 12rpx 32rpx 0;
     border-radius: 16rpx;
     overflow: hidden;
 
@@ -1825,11 +1803,11 @@ onShareTimeline(() => {
 
   // Phase 3: 本周排名徽章
   &__weekly-rank {
-    margin: 20rpx 32rpx 0;
+    margin: 14rpx 32rpx 0;
     display: flex;
     align-items: center;
     gap: 8rpx;
-    padding: 14rpx 24rpx;
+    padding: 12rpx 24rpx;
     background: rgba(124, 58, 237, 0.06);
     border: 1rpx solid rgba(124, 58, 237, 0.15);
     border-radius: 20rpx;
@@ -1840,8 +1818,8 @@ onShareTimeline(() => {
 
   // F2: 好友段位气泡
   &__friend-bubble {
-    margin-top: 24rpx;
-    padding: 16rpx 28rpx;
+    margin: 12rpx 32rpx 0;
+    padding: 14rpx 28rpx;
     background: rgba(245, 158, 11, 0.08);
     border: 1rpx solid rgba(245, 158, 11, 0.2);
     border-radius: 20rpx;
@@ -1890,8 +1868,8 @@ onShareTimeline(() => {
     flex-direction: column;
     align-items: center;
     gap: 8rpx;
-    margin-top: 24rpx;
-    padding: 16rpx 28rpx;
+    margin: 12rpx 32rpx 0;
+    padding: 14rpx 28rpx;
     background: rgba(245, 158, 11, 0.06);
     border: 1rpx solid rgba(245, 158, 11, 0.12);
     border-radius: 16rpx;
@@ -1931,8 +1909,8 @@ onShareTimeline(() => {
     flex-direction: column;
     align-items: center;
     gap: 4rpx;
-    margin-top: 28rpx;
-    padding: 18rpx 32rpx;
+    margin: 14rpx 32rpx 0;
+    padding: 14rpx 32rpx;
     background: rgba(124, 58, 237, 0.08);
     border: 1rpx solid rgba(124, 58, 237, 0.2);
     border-radius: 16rpx;
