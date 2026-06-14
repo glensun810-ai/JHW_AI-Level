@@ -1059,7 +1059,7 @@ onShareTimeline(() => {
 
 <style scoped lang="scss">
 .page-index {
-  position: relative; min-height: 100vh; overflow-x: hidden;
+  position: relative; min-height: auto; overflow-x: hidden;
   background: linear-gradient(180deg, #1a0533 0%, #0d1b2a 100%);
 
   &__overlay {
