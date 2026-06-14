@@ -161,6 +161,20 @@
         <text class="page-index__prejudge-text">{{ prejudgeText }}</text>
       </view>
 
+      <button
+        class="page-index__cta"
+        :class="{ 'page-index__cta--urgent': isUrgent, 'page-index__cta--no-free': freeTestRemaining === 0 }"
+        :disabled="transitioning"
+        @click="handleStart"
+      >
+        <template v-if="freeTestRemaining > 0">{{ ctaText }}（剩{{ freeTestRemaining }}次）</template>
+        <template v-else>📤 邀请好友，解锁免费次数</template>
+      </button>
+
+      <!-- 免费次数提示 -->
+      <text v-if="freeTestRemaining === 0" class="page-index__cta-hint">今日免费次数已用完 · 分享即可获得新次数</text>
+
+
       <!-- 新用户：首次体验引导（精简易读） -->
       <view class="page-index__quick-start">
         <text class="page-index__quick-start-text">5题 · 2分钟 · 测出你的真实AI水平</text>
@@ -208,18 +222,6 @@
       </view>
 
       <!-- CTA 按钮 -->
-      <button
-        class="page-index__cta"
-        :class="{ 'page-index__cta--urgent': isUrgent, 'page-index__cta--no-free': freeTestRemaining === 0 }"
-        :disabled="transitioning"
-        @click="handleStart"
-      >
-        <template v-if="freeTestRemaining > 0">{{ ctaText }}（剩{{ freeTestRemaining }}次）</template>
-        <template v-else>📤 邀请好友，解锁免费次数</template>
-      </button>
-
-      <!-- 免费次数提示 -->
-      <text v-if="freeTestRemaining === 0" class="page-index__cta-hint">今日免费次数已用完 · 分享即可获得新次数</text>
 
       <!-- 经验值进度条（显性化等级成长） -->
       <view class="page-index__exp-primary">
@@ -1228,7 +1230,7 @@ onShareTimeline(() => {
   &__hero {
     position: relative; z-index: 10;
     display: flex; flex-direction: column; align-items: center;
-    padding-top: 350rpx; padding-bottom: 24rpx; transition: transform 0.3s ease-out;
+    padding-top: 200rpx; padding-bottom: 24rpx; transition: transform 0.3s ease-out;
     &--shrink { transform: scale(0.92); opacity: 0.7; }
   }
 
