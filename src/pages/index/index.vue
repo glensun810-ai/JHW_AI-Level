@@ -151,14 +151,14 @@
       </view>
 
       <!-- A3: AI实时评价 -->
-      <view class="page-index__ai-eval">
-        <text class="page-index__ai-eval-dot" />
-        <text class="page-index__ai-eval-text">{{ aiEvalText }}</text>
-      </view>
 
       <!-- C2: 首次AI身份预判 -->
       <view class="page-index__prejudge">
         <text class="page-index__prejudge-text">{{ prejudgeText }}</text>
+      <view class="page-index__proof">
+        <text class="page-index__proof-num">{{ displayUsers.toLocaleString() }}</text>
+        <text class="page-index__proof-label">人已完成定段 · 5题2分钟</text>
+      </view>
       </view>
 
       <button
@@ -175,6 +175,10 @@
       <text v-if="freeTestRemaining === 0" class="page-index__cta-hint">今日免费次数已用完 · 分享即可获得新次数</text>
 
 
+      <view class="page-index__ai-eval">
+        <text class="page-index__ai-eval-dot" />
+        <text class="page-index__ai-eval-text">{{ aiEvalText }}</text>
+      </view>
       <!-- 新用户：首次体验引导（精简易读） -->
       <view class="page-index__quick-start">
         <text class="page-index__quick-start-text">5题 · 2分钟 · 测出你的真实AI水平</text>
@@ -185,10 +189,6 @@
       </view>
 
       <!-- CTA下方轻量社交证明 -->
-      <view class="page-index__proof">
-        <text class="page-index__proof-num">{{ displayUsers.toLocaleString() }}</text>
-        <text class="page-index__proof-label">人已完成定段 · 5题2分钟</text>
-      </view>
 
       <text v-if="showHint" class="page-index__hint">3秒测出你的AI段位</text>
 
